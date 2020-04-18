@@ -210,9 +210,9 @@ public class BakaUtils {
      * TODO popis metody
      * TODO napsat testy
      *
-     * @param surname
-     * @param givenName
-     * @param attempt
+     * @param surname příjmení
+     * @param givenName jméno
+     * @param attempt číslo pokusu
      * @return
      */
     public static String createUPNfromName(String surname, String givenName, String domain, Integer attempt) {
@@ -220,7 +220,8 @@ public class BakaUtils {
         String[] snParts = surname.replace("-", " ")
                 .replaceAll("\\s+", " ")
                 .replaceFirst("^(v|V)(a|o)n ", "$1$2n")
-                .replaceFirst("^(d|D)(a|i) ", "$1$2")
+                .replaceFirst("^(d|D)(a|e|i) ", "$1$2")
+                .replaceFirst("^(a|A)l ", "$1l")
                 .split(" ");
 
         String[] gnParts = givenName.replace("-", " ")
@@ -250,7 +251,8 @@ public class BakaUtils {
         String[] snParts = surname.replace("-", " ")
                 .replaceAll("\\s+", " ")
                 .replaceFirst("^(v|V)(a|o)n ", "$1$2n")
-                .replaceFirst("^(d|D)(a|i) ", "$1$2")
+                .replaceFirst("^(d|D)(a|e|i) ", "$1$2")
+                .replaceFirst("^(a|A)l ", "$1l")
                 .split(" ");
 
         String[] gnParts = givenName.replace("-", " ")

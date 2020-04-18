@@ -5,6 +5,11 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
+/**
+ * Testy pro manipulační jednotku BakaUtils.
+ *
+ * (c) Jan Hladěna
+ */
 public class BakaUtilsTest {
 
     static final String DOMAIN = "test.org";
@@ -27,6 +32,8 @@ public class BakaUtilsTest {
         assertEquals("ciperna.sarah", BakaUtils.createSAMloginFromName("Čiperná", "Sarah- Vanessa"));
         assertEquals("ciperna.sarah", BakaUtils.createSAMloginFromName("Čiperná", "Sarah -Vanessa"));
         assertEquals("vesela.julie2", BakaUtils.createSAMloginFromName("Veselá-Smutná", "Julie Magdaléna", 2));
+        assertEquals("davinci.leonardo", BakaUtils.createSAMloginFromName("Da Vinci", "Leonardo"));
+        assertEquals("davinci.leonardo", BakaUtils.createSAMloginFromName("Da-Vinci", "Leonardo"));
     }
 
     @Test
@@ -46,6 +53,8 @@ public class BakaUtilsTest {
         assertEquals("ciperna.sarah@test.org", BakaUtils.createUPNfromName("Čiperná", "Sarah- Vanessa", DOMAIN));
         assertEquals("ciperna.sarah@test.org", BakaUtils.createUPNfromName("Čiperná", "Sarah -Vanessa", DOMAIN));
         assertEquals("vesela.julie2@test.org", BakaUtils.createUPNfromName("Veselá-Smutná", "Julie Magdaléna", DOMAIN, 2));
+        assertEquals("davinci.leonardo@test.org", BakaUtils.createUPNfromName("Da Vinci", "Leonardo", DOMAIN));
+        assertEquals("davinci.leonardo@test.org", BakaUtils.createUPNfromName("Da-Vinci", "Leonardo", DOMAIN));
     }
 
 }
