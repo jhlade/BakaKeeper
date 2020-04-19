@@ -29,6 +29,7 @@ public class Test {
         System.out.println("Evidence:\t" + evidence.count());
 
 
+        
         // testovací výpis
         //System.out.println(evidence.toString());
 
