@@ -493,7 +493,7 @@ public class Zak implements IUzivatelAD {
                 EBakaLDAPAttributes.MEMBER_OF.attribute()
         };
 
-        Map<String, Object> user = BakaADAuthenticator.getInstance().getUserInfo(this.ad_login, data);
+        Map<String, Object> user = null;//BakaADAuthenticator.getInstance().getUserInfo(this.ad_login, data);
 
         if (user != null && user.size() > 0) {
             ArrayList groups = (ArrayList) user.get(EBakaLDAPAttributes.MEMBER_OF);
@@ -578,14 +578,14 @@ public class Zak implements IUzivatelAD {
         };
 
         // 1) AD
-        Map<String, Object> user = BakaADAuthenticator.getInstance().getUserInfo(ad_login, ad_data);
+        Map<String, Object> user = null;//BakaADAuthenticator.getInstance().getUserInfo(ad_login, ad_data);
 
         if (user != null && user.size() > 0) {
 
             String jmeno = user.get(EBakaLDAPAttributes.NAME_FIRST.attribute()).toString();
             String prijmeni = user.get(EBakaLDAPAttributes.NAME_LAST).toString();
 
-            String trida = BakaUtils.tridaFromDN(user.get(EBakaLDAPAttributes.DN.attribute()).toString());
+            String trida = "1.A";//BakaUtils.tridaFromDN(user.get(EBakaLDAPAttributes.DN.attribute()).toString());
 
             if (trida == null) {
                 // TODO err

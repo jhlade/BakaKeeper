@@ -2,6 +2,7 @@ package cz.zsstudanka.skola.bakakeeper.model.collections;
 
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaADAuthenticator;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
+import cz.zsstudanka.skola.bakakeeper.model.interfaces.IRecords;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 
 import java.util.*;
@@ -11,11 +12,11 @@ import java.util.*;
  *
  * @author Jan Hladěna
  */
-public class LDAPrecords {
+public class LDAPrecords implements IRecords {
 
     final String FLAG_ID = "baka_flag";
-    final String FLAG_0 = "0";
-    final String FLAG_1 = "1";
+    final String FLAG_0  = "0";
+    final String FLAG_1  = "1";
 
     /** klíčový atribut */
     private EBakaLDAPAttributes keyAttribute;
@@ -29,10 +30,14 @@ public class LDAPrecords {
     /** základní OU pro záznamy */
     private String base;
 
+    /** instanční iterátor */
     private Iterator iterator;
 
     /** hrubá data; klíč = UPN pro uživatele, mail pro kontakty, obsah = interní data podle požadavků */
     private LinkedHashMap<String, Map> data;
+
+    /** hrubá data k zápisu; klíč = DN, obsah = data k zápisu */
+    private LinkedHashMap<String, Map<EBakaLDAPAttributes, Object>> writeData = new LinkedHashMap<>();
 
     /**
      * Konstrukce kolekce podle bázové OU z daného typu záznamů.
@@ -221,6 +226,54 @@ public class LDAPrecords {
         return this.data.size();
     }
 
+    /**
+     * Příprava dat ke zpětnému zápisu.
+     *
+     * @param dn plné DN objektu
+     * @param data data k zápisu
+     */
+    public void writeData(String dn, Map<EBakaLDAPAttributes, Object> data) {
+
+        if (this.writeData.containsKey(dn)) {
+            for (Map.Entry<EBakaLDAPAttributes, Object> dataEntry : data.entrySet()) {
+                this.writeData.get(dn).put(dataEntry.getKey(), dataEntry.getValue());
+            }
+        } else {
+            this.writeData.put(dn, data);
+        }
+    }
+
+    public Integer writesRemaining() {
+        return this.writeData.size();
+    }
+
+    /**
+     * Provedení zápisu čekajících dat zpět přímo do LDAPu.
+     *
+     */
+    public boolean commit() {
+
+        if (this.writeData.size() > 0)
+        {
+            for (Map.Entry<String, Map<EBakaLDAPAttributes, Object>> dataEntry : this.writeData.entrySet()) {
+
+                Boolean attrMod = true;
+                for (Map.Entry<EBakaLDAPAttributes, Object> dataMap : dataEntry.getValue().entrySet()) {
+                    attrMod &= BakaADAuthenticator.getInstance().replaceAttribute(dataEntry.getKey(), dataMap.getKey(), dataMap.getValue());
+                }
+
+                if (attrMod) {
+                    this.writeData.remove(dataEntry.getKey());
+                }
+
+            }
+
+            return (this.writeData.size() == 0);
+        }
+
+        return true;
+    }
+
 
     @Override
     public String toString() {
@@ -242,6 +295,7 @@ public class LDAPrecords {
         return records.toString();
     }
 
+    @Override
     public Iterator<Map.Entry<String, Map>> iterator() {
 
         if (this.iterator == null) {
@@ -251,6 +305,7 @@ public class LDAPrecords {
         return this.iterator;
     }
 
+    @Override
     public void resetIterator() {
         this.iterator = null;
     }

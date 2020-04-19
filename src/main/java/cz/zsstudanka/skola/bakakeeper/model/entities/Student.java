@@ -33,17 +33,25 @@ public class Student implements IRecordLDAP, IRecordSQL {
 
     // E_MAIL
 
-    private Map rawAttributes;
+    private Map<String, Object> rawAttributes;
 
     // metoda reset/prepare? Pr.Jm.##C_TR_VYK
 
+    /**
+     * Primární konstruktor aktivního žáka.
+     *
+     * @param upn UserPrincipalName = primární e-mail v Bakalářích
+     */
+    public Student(String upn) {
+
+    }
 
     /**
-     * Neúplný konstruktor z LDAP procházení.
+     * Dočasný konstruktor z procházení.
      *
      * @param rawAttributes
      */
-    public Student(Map rawAttributes) {
+    public Student(Map<String, Object> rawAttributes) {
         this.rawAttributes = rawAttributes;
     }
 
@@ -113,9 +121,9 @@ public class Student implements IRecordLDAP, IRecordSQL {
         String newClassSG = "Zaci-Trida-" + year + letter.toUpperCase();
         String newTitle = year + "." + letter.toUpperCase();
 
-        // přesun do OU
+        // TODO přesun do OU
 
-        // změna skupiny
+        // TODO změna skupiny
 
         // změna pracovního zařazení
         BakaADAuthenticator.getInstance().replaceAttribute(this.getDN(), EBakaLDAPAttributes.TITLE, newTitle);

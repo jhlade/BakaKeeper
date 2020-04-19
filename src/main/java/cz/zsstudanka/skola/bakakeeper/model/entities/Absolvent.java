@@ -203,7 +203,7 @@ public class Absolvent implements IUzivatelAD {
                 EBakaLDAPAttributes.UAC.attribute()
         };
 
-        Map<String, Object> user = BakaADAuthenticator.getInstance().getUserInfo(ad_login, info);
+        Map<String, Object> user = null;//BakaADAuthenticator.getInstance().getUserInfo(ad_login, info);
 
         if (user != null && user.size() > 0) {
 

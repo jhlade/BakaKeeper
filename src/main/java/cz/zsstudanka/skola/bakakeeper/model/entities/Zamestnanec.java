@@ -39,7 +39,7 @@ public class Zamestnanec implements IUzivatelAD {
 
         if (BakaADAuthenticator.getInstance().isAuthenticated()) {
 
-            Map getData = BakaADAuthenticator.getInstance().getUserInfo(login, new String[]{"sAMAccountName", "mail", "displayName"});
+            Map getData = null;//BakaADAuthenticator.getInstance().getUserInfo(login, new String[]{"sAMAccountName", "mail", "displayName"});
 
             this.ad_login = getData.get("sAMAccountName").toString();
             this.ad_mail = getData.get("mail").toString();
@@ -113,7 +113,7 @@ public class Zamestnanec implements IUzivatelAD {
                 EBakaLDAPAttributes.NAME_DISPLAY.attribute()
         };
 
-        Map<String, Object> user = BakaADAuthenticator.getInstance().getUserInfo(ad_login, info);
+        Map<String, Object> user = null;//BakaADAuthenticator.getInstance().getUserInfo(ad_login, info);
 
         if (user != null && user.size() > 0) {
             return new Zamestnanec(

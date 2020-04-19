@@ -41,9 +41,9 @@ public class BakaADAuthenticator {
 
 
     /**
-     * AD ověření jako singleton.
+     * LDAP připojení jako singleton.
      *
-     * @return instance AD spojení.
+     * @return instance LDAP spojení.
      */
     public static BakaADAuthenticator getInstance() {
         if (BakaADAuthenticator.instance == null) {
@@ -65,6 +65,7 @@ public class BakaADAuthenticator {
 
             authenticate(Settings.getInstance().getUser(), Settings.getInstance().getPass());
         } catch (Exception e) {
+            // TODO log
             // nelze přistupovat k nastavení
         }
     }
@@ -111,17 +112,23 @@ public class BakaADAuthenticator {
             setAuthSucceeded(true);
 
             if (Settings.getInstance().beVerbose()) {
-                System.err.println("[ INFO ] Ověření proti Active Directory proběhlo úspěšně.");
+                System.out.println("[ INFO ] Ověření proti Active Directory proběhlo úspěšně.");
             }
 
             // uložení lokálních informací
-            this.authUser = getUserInfo(user, new String[]{
+            HashMap<String, String> userLDAPquery = new HashMap<String, String>();
+
+            userLDAPquery.put(EBakaLDAPAttributes.ST_USER.attribute(), EBakaLDAPAttributes.ST_USER.value());
+            userLDAPquery.put(EBakaLDAPAttributes.OC_USER.attribute(), EBakaLDAPAttributes.OC_USER.value());
+            userLDAPquery.put(EBakaLDAPAttributes.LOGIN.attribute(), user);
+
+            this.authUser = getInfoInOU(Settings.getInstance().getLDAP_base(), userLDAPquery, new String[]{
                     EBakaLDAPAttributes.UPN.attribute(),
                     EBakaLDAPAttributes.NAME_DISPLAY.attribute()
             });
 
             if (Settings.getInstance().debugMode()) {
-                System.err.println("[ DEBUG ] Přihlášení do Active Directory pod účtem " + authUserInfo().get(EBakaLDAPAttributes.NAME_DISPLAY.attribute()) + " (" + authUserInfo().get(EBakaLDAPAttributes.UPN.attribute()) + ").");
+                System.out.println("[ DEBUG ] Přihlášení do Active Directory pod účtem " + authUserInfo().get(EBakaLDAPAttributes.NAME_DISPLAY.attribute()) + " (" + authUserInfo().get(EBakaLDAPAttributes.UPN.attribute()) + ").");
             }
 
         } catch (Exception e) {
@@ -133,7 +140,7 @@ public class BakaADAuthenticator {
             }
 
             if (Settings.getInstance().debugMode()) {
-                e.printStackTrace();
+                e.printStackTrace(System.err);
             }
 
             setAuthSucceeded(false);
@@ -170,34 +177,12 @@ public class BakaADAuthenticator {
     }
 
     /**
-     * Základní informace o jednom uživateli podle SAM názvu účtu v bázovém stromu.
-     *
-     * @param sAMAaccountName název účtu bez domény (AD login)
-     * @param retAttributes seznam vyhledávaných atributů
-     * @return informace o účtu
-     *
-     * @deprecated
-     */
-    public Map getUserInfo(String sAMAaccountName, String[] retAttributes) {
-
-        HashMap<String, String> ldapQ = new HashMap<String, String>();
-
-        ldapQ.put(EBakaLDAPAttributes.ST_USER.attribute(), EBakaLDAPAttributes.ST_USER.value());
-        ldapQ.put(EBakaLDAPAttributes.OC_USER.attribute(), EBakaLDAPAttributes.OC_USER.value());
-        ldapQ.put(EBakaLDAPAttributes.LOGIN.attribute(), sAMAaccountName);
-
-        Map<Integer, Map> info = getInfoInOU(Settings.getInstance().getLDAP_base(), ldapQ, retAttributes);
-
-        return info.get(0);
-    }
-
-    /**
      * Základní informace o jednom kontaktu na základě e-mailové adresy.
      *
      * @param mail
      * @return
      */
-    public Map getContactInfo(String mail) {
+    public Map<Integer, Map> getContactInfo(String mail) {
 
         // dotaz
         HashMap<String, String> ldapQ = new HashMap<String, String>();
@@ -215,7 +200,8 @@ public class BakaADAuthenticator {
                 EBakaLDAPAttributes.MOBILE.attribute(),
                 EBakaLDAPAttributes.DN.attribute(),
                 EBakaLDAPAttributes.MSXCH_GAL_HIDDEN.attribute(),
-                EBakaLDAPAttributes.MEMBER_OF.attribute()
+                EBakaLDAPAttributes.MEMBER_OF.attribute(),
+                EBakaLDAPAttributes.EXT01.attribute(),
         };
 
         return ((Map<Integer, Map>) getInfoInOU(Settings.getInstance().getLDAP_baseContacts(), ldapQ, retAttributes)).get(0);
@@ -522,9 +508,9 @@ public class BakaADAuthenticator {
     /**
      * Vytvoření distribuční skupiny.
      *
-     * @param cn
-     * @param targetOU
-     * @param memberOf
+     * @param cn common name distribučnáho seznamu
+     * @param targetOU cílová OU
+     * @param memberOf pole přímých nadřazených skupin
      * @param data
      */
     public void createDistributionGroup(String cn, String targetOU, String[] memberOf, HashMap<String, String> data) {
@@ -538,7 +524,7 @@ public class BakaADAuthenticator {
      * @param cn common name skupiny
      * @param targetOU cílová organizační jednotka
      * @param memberOf pole přímých nadřazených skupin (může být prázdné nebo null)
-     * @param data mapa požadovaných atributů
+     * @param data mapa dalších požadovaných atributů
      */
     public void createGroup(String cn, String targetOU, String[] memberOf, HashMap<String, String> data) {
 
@@ -656,119 +642,6 @@ public class BakaADAuthenticator {
 
     }
 
-    // TODO -- přepis pro init třeba
-    /**
-     *
-     * @param OU
-     * @param nameInput
-     *
-     * @deprecated
-     */
-    public void test_createNewGroup(String OU, String nameInput) {
-
-        String basename = "Rodice-Trida-";
-        String name = basename + nameInput; // Rodice-Trida-1A
-        String description = "Rodiče žáků třídy " + nameInput.substring(0, 1) + "." + nameInput.substring(1, 2);
-        String display = "Rodiče " + nameInput.substring(0, 1) + "." + nameInput.substring(1, 2);
-        String mail = name.toLowerCase() + "@zs-studanka.cz";
-
-        // Create a container set of attributes
-        Attributes container = new BasicAttributes();
-
-        // Create the objectclass to add
-        Attribute objClasses = new BasicAttribute("objectClass");
-        objClasses.add("top");
-        objClasses.add("group");//OfUniqueNames");
-
-        // Assign name to the group
-        Attribute cn = new BasicAttribute("cn", name);
-        Attribute groupType = new BasicAttribute(EBakaLDAPAttributes.GT_DISTRIBUTION.attribute(), EBakaLDAPAttributes.GT_DISTRIBUTION.value());
-        Attribute desc = new BasicAttribute(EBakaLDAPAttributes.DESCRIPTION.attribute(), description);
-        Attribute dispname = new BasicAttribute(EBakaLDAPAttributes.NAME_DISPLAY.attribute(), display);
-        Attribute hide = new BasicAttribute(EBakaLDAPAttributes.MSXCH_GAL_HIDDEN.attribute(), "TRUE");
-        Attribute email = new BasicAttribute(EBakaLDAPAttributes.MAIL.attribute(), mail);
-
-        // Add these to the container
-        container.put(objClasses);
-        container.put(cn);
-        container.put(groupType);
-        container.put(desc);
-
-        // hidden from GAL
-        container.put(hide);
-        container.put(email);
-        container.put(dispname);
-
-        container.put(new BasicAttribute(EBakaLDAPAttributes.MSXCH_REQ_AUTH.attribute(), EBakaLDAPAttributes.MSXCH_REQ_AUTH.value()));
-
-        // kontext
-        LdapContext ctxGC = null;
-
-        try {
-
-            ctxGC = new InitialLdapContext(env, null);
-            ctxGC.createSubcontext("cn=" + name + "," + OU, container); // TODO
-
-        } catch (Exception e) {
-            e.printStackTrace(System.err);
-        }
-
-    }
-
-    /**
-     * oprava atributů
-     * @deprecated
-     */
-    public void test_updateGroups() {
-
-        String baseOU = "OU=DistribucniSeznamyZZ," + Settings.getInstance().getLDAP_baseContacts();
-
-        // msExch.
-        Attribute pridat = new BasicAttribute(EBakaLDAPAttributes.MSXCH_REQ_AUTH.attribute(), EBakaLDAPAttributes.MSXCH_REQ_AUTH.value());
-
-        ModificationItem[] mods = new ModificationItem[1];
-        mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, pridat);
-
-        String dn_base = "";
-
-        // cela skola, stupen-1, stupen-2, rocnik-{1-9}, trida-{1-9}{A-E}
-
-        String[] cn = {
-                "Rodice-Vsichni",
-                "Rodice-Stupen-1", "Rodice-Stupen-2",
-                "Rodice-Rocnik-1", "Rodice-Rocnik-2", "Rodice-Rocnik-3", "Rodice-Rocnik-4",
-                "Rodice-Rocnik-5", "Rodice-Rocnik-6", "Rodice-Rocnik-7", "Rodice-Rocnik-8", "Rodice-Rocnik-9",
-                "Rodice-Trida-1A", "Rodice-Trida-1B", "Rodice-Trida-1C", "Rodice-Trida-1D", "Rodice-Trida-1E",
-                "Rodice-Trida-2A", "Rodice-Trida-2B", "Rodice-Trida-2C", "Rodice-Trida-2D", "Rodice-Trida-2E",
-                "Rodice-Trida-3A", "Rodice-Trida-3B", "Rodice-Trida-3C", "Rodice-Trida-3D", "Rodice-Trida-3E",
-                "Rodice-Trida-4A", "Rodice-Trida-4B", "Rodice-Trida-4C", "Rodice-Trida-4D", "Rodice-Trida-4E",
-                "Rodice-Trida-5A", "Rodice-Trida-5B", "Rodice-Trida-5C", "Rodice-Trida-5D", "Rodice-Trida-5E",
-                "Rodice-Trida-6A", "Rodice-Trida-6B", "Rodice-Trida-6C", "Rodice-Trida-6D", "Rodice-Trida-6E",
-                "Rodice-Trida-7A", "Rodice-Trida-7B", "Rodice-Trida-7C", "Rodice-Trida-7D", "Rodice-Trida-7E",
-                "Rodice-Trida-8A", "Rodice-Trida-8B", "Rodice-Trida-8C", "Rodice-Trida-8D", "Rodice-Trida-8E",
-                "Rodice-Trida-9A", "Rodice-Trida-9B", "Rodice-Trida-9C", "Rodice-Trida-9D", "Rodice-Trida-9E"
-        };
-
-
-        for (int k = 0; k < cn.length; k++) {
-
-            // kontext
-            LdapContext ctxGC = null;
-            try {
-
-                String dn = "cn=" + cn[k] + "," + baseOU;
-
-                System.out.println("Mění se DN: " + dn);
-
-                ctxGC = new InitialLdapContext(env, null);
-                ctxGC.modifyAttributes(dn, mods);
-
-            } catch (Exception e) {
-                e.printStackTrace(System.err);
-            }
-        } // for
-    }
-
     /**
      * Uzamčení uživatelského účtu podle loginu.
      *
@@ -778,7 +651,6 @@ public class BakaADAuthenticator {
         // TODO
     }
 
-
     /**
      * Modifikace hodnoty atributu pro požadovaný objekt.
      *
@@ -787,7 +659,7 @@ public class BakaADAuthenticator {
      * @param attribute název atributu
      * @param value nová hodnota
      */
-    private void modifyAttribute(int modOp, String dn, EBakaLDAPAttributes attribute, Object value) {
+    private boolean modifyAttribute(int modOp, String dn, EBakaLDAPAttributes attribute, Object value) {
 
         LdapContext bakaContext = null;
 
@@ -817,8 +689,10 @@ public class BakaADAuthenticator {
                 e.printStackTrace(System.err);
             }
 
+            return false;
         }
 
+        return true;
     }
 
     /**
@@ -850,8 +724,13 @@ public class BakaADAuthenticator {
      * @param attribute požadovaný atribut k nahrazení
      * @param newValue nová hodnota
      */
-    public void replaceAttribute(String dn, EBakaLDAPAttributes attribute, Object newValue) {
-        modifyAttribute(DirContext.REPLACE_ATTRIBUTE, dn, attribute, newValue);
+    public Boolean replaceAttribute(String dn, EBakaLDAPAttributes attribute, Object newValue) {
+
+        if (modifyAttribute(DirContext.REPLACE_ATTRIBUTE, dn, attribute, newValue)) {
+            return true;
+        } else {
+            return modifyAttribute(DirContext.ADD_ATTRIBUTE, dn, attribute, newValue);
+        }
     }
 
     /**
@@ -1027,31 +906,5 @@ public class BakaADAuthenticator {
 
     }
 
-    /**
-     * Odebrání kontaktu z distribuční skupiny.
-     *
-     * @param contactDN plné DN kontaktu
-     * @param distributionListDN plné DN distribučního seznamu
-     */
-    public void removeContactFromDL(String contactDN, String distributionListDN) {
-
-        removeAttribute(distributionListDN, EBakaLDAPAttributes.MEMBER, contactDN);
-
-        /*
-        LdapContext ctxGC = null;
-
-        try {
-            ctxGC = new InitialLdapContext(env, null);
-
-            ModificationItem member[] = new ModificationItem[1];
-            member[0] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, new BasicAttribute(EBakaLDAPAttributes.MEMBER.attribute(), contactDN));
-            // modifikace DL
-            ctxGC.modifyAttributes(distributionListDN, member);
-
-        } catch (Exception e) {
-            // TODO
-        }
-        */
-    }
 
 }

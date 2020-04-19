@@ -5,9 +5,13 @@ import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
 import cz.zsstudanka.skola.bakakeeper.model.collections.LDAPrecords;
 import cz.zsstudanka.skola.bakakeeper.model.collections.SQLrecords;
+import cz.zsstudanka.skola.bakakeeper.model.entities.Student;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
+import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
 
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 public class Test {
 
@@ -17,7 +21,8 @@ public class Test {
         // načíst do struktur LDAP: existující FAC, ALU, STU
         LDAPrecords zaměstnanci = new LDAPrecords(Settings.getInstance().getLDAP_baseFaculty(), EBakaLDAPAttributes.OC_USER);
         LDAPrecords absolventi = new LDAPrecords(Settings.getInstance().getLDAP_baseAlumni(), EBakaLDAPAttributes.OC_USER);
-        LDAPrecords žáci = new LDAPrecords(Settings.getInstance().getLDAP_baseStudents(), EBakaLDAPAttributes.OC_USER);
+        //LDAPrecords žáci = new LDAPrecords(Settings.getInstance().getLDAP_baseStudents(), EBakaLDAPAttributes.OC_USER);
+        LDAPrecords žáci = new LDAPrecords("OU=Trida-A,OU=Rocnik-1," + Settings.getInstance().getLDAP_baseStudents(), EBakaLDAPAttributes.OC_USER);
         LDAPrecords kontakty = new LDAPrecords(Settings.getInstance().getLDAP_baseContacts(), EBakaLDAPAttributes.OC_CONTACT);
 
         System.out.println("Zaměstnanci:\t" + zaměstnanci.count());
@@ -29,11 +34,171 @@ public class Test {
         SQLrecords evidence = new SQLrecords();
         System.out.println("Evidence:\t" + evidence.count());
 
-        // 2020-04-19 testování mailu
-        BakaMailer.getInstance().mail("Test systému", "Toto je kontrola posílání prosté zprávy se žluťučkým koněm úpějícím ďábelské ódy.");
+        // 1) najít v SQL žáky bez e-mailu v doméně školy
+        // 2) vytvořit e-mail v doméně školy
+        // 3) vyhledat v LDAP daný záznam
+        // 4) pokud bude existovat v FAC, ABS, zkusit znovu
+        // 5) pokud bude existovat v STU, vyhledat daný záznam a ověřit EXT01
+        //  5a) pokud bude již exisotvat, porovnat EXT01 s INTERN_KOD
+        //   5aa) pokud se nebude shodovat, vytvořit nový e-mail zkusit to znovu
+        //   5ab) pokud se bude shodovat, přiřadit e-mail k žákovi
+        // 5b) pokud nebude existovat, přiřadit mail k žákovi a provést do EXT01 zápis INTERN_KOD
+        while (evidence.iterator().hasNext()) {
+
+            // objekt?
+            Map.Entry<String, Map> žák = evidence.iterator().next();
+
+            System.out.println("========================================");
+            System.out.println("Žák:\t\t" + žák.getValue().get("PRIJMENI").toString() + " " + žák.getValue().get("JMENO").toString());
+            System.out.println("Třída:\t\t" + žák.getValue().get("B_ROCNIK").toString() + "." + žák.getValue().get("B_TRIDA").toString());
+
+            if (žák.getValue().get("E_MAIL").toString().toLowerCase().contains(Settings.getInstance().getMailDomain())) {
+                System.out.println("STAV:\t\tŽák má mail v doméně školy");
+                // TODO
+
+                // 6) kontrola existence žáka v LDAP
+                // 7) pokud ne, vytvořit nového a inicializovat vše
+                // 8) pokud ano, kontrola správného přiřazení do OU a do skupin
+
+                // TODO 9) práce se zákonným zástupcem
+
+            } else {
+                if (žák.getValue().get("E_MAIL").toString().length() > 0) {
+                    System.out.println("STAV:\t\tŽák nemá mail v doméně školy.");
+                } else {
+                    System.out.println("STAV:\t\tŽák nemá vyplněný žádný mail.");
+                }
+
+                String návrh;
+                Boolean obsazený;
+                Integer pokus = 0;
+
+                do {
+                    obsazený = false;
+
+                    návrh = BakaUtils.createUPNfromName(žák.getValue().get("PRIJMENI").toString(), žák.getValue().get("JMENO").toString(), Settings.getInstance().getMailDomain(), pokus);
+                    System.out.println("Návrh " + (pokus+1) + ":\t" + návrh);
+                    pokus++;
+
+
+                    if (zaměstnanci.get(návrh) != null) {
+                        obsazený = true;
+                        System.out.println("\t\t[x] " + "obsazeno zaměstnancem.");
+                        continue;
+                    }
+
+                    if (absolventi.get(návrh) != null) {
+                        obsazený = true;
+                        System.out.println("\t\t[x] " + "obsazeno vyřazeným žákem.");
+                        continue;
+                    }
+
+                    if (žáci.get(návrh) != null) {
+                        obsazený = true;
+                        System.out.println("\t\t[!] " + "obsazeno aktivním žákem, bude provedena podrobná kontrola.");
+
+                        Map<String, String> shodnýŽák = žáci.get(návrh);
+                        System.out.println("\t\tShoda s:\t" + shodnýŽák.get(EBakaLDAPAttributes.NAME_LAST.attribute()) + " " + shodnýŽák.get(EBakaLDAPAttributes.NAME_FIRST.attribute()) + " (" + BakaUtils.classYearFromDn(shodnýŽák.get(EBakaLDAPAttributes.DN.attribute())).toString() + "." + BakaUtils.classLetterFromDn(shodnýŽák.get(EBakaLDAPAttributes.DN.attribute())) + ")");
+
+                        String ext01atribut = (shodnýŽák.containsKey(EBakaLDAPAttributes.EXT01.attribute())) ? shodnýŽák.get(EBakaLDAPAttributes.EXT01.attribute()) : "[!] žák nemá vyplněný atribut EXT01";
+                        System.out.println("\t\tEXT01:\t\t" + ext01atribut);
+
+                        if (!shodnýŽák.containsKey(EBakaLDAPAttributes.EXT01.attribute())) {
+                            System.out.println("\t\t\t\tProběhne porovnání jména a třídy obou záznamů:");
+
+                            Boolean test_příjmení, test_jméno, test_ročník, test_třída;
+
+                            test_příjmení = shodnýŽák.get(EBakaLDAPAttributes.NAME_LAST.attribute()).equals(žák.getValue().get("PRIJMENI").toString());
+                            test_jméno = shodnýŽák.get(EBakaLDAPAttributes.NAME_FIRST.attribute()).equals(žák.getValue().get("JMENO").toString());
+                            test_ročník = BakaUtils.classYearFromDn(shodnýŽák.get(EBakaLDAPAttributes.DN.attribute())).toString().equals(žák.getValue().get("B_ROCNIK").toString());
+                            test_třída = BakaUtils.classLetterFromDn(shodnýŽák.get(EBakaLDAPAttributes.DN.attribute())).equals(žák.getValue().get("B_TRIDA").toString());
+
+                            System.out.println("\t\t\t\tPříjmení:\t[ " + ((test_příjmení) ? "SHODA" : "ROZDÍL") + " ]");
+                            System.out.println("\t\t\t\tJméno:\t\t[ " + ((test_jméno) ? "SHODA" : "ROZDÍL") + " ]");
+                            System.out.println("\t\t\t\tRočník:\t\t[ " + ((test_ročník) ? "SHODA" : "ROZDÍL") + " ]");
+                            System.out.println("\t\t\t\tTřída:\t\t[ " + ((test_třída) ? "SHODA" : "ROZDÍL") + " ]");
+
+                            float dělenec = 0;
+
+                            if (test_příjmení) {
+                                dělenec += 1;
+                            }
+
+                            if (test_jméno) {
+                                dělenec += 1;
+                            }
+
+                            if (test_ročník) {
+                                dělenec += 1;
+                            }
+
+                            if (test_třída) {
+                                dělenec += 1;
+                            }
+
+                            float faktorShody = (dělenec / 4) * 100;
+
+                            System.out.println("\t\t\t\tShoda:\t\t[ " + String.format("%.2f", faktorShody) + "% ]");
+
+                            // návrh 2020-04-19
+                            // 0.75 || (>=0.5 && ročník)
+                            if (faktorShody >= 0.75 ||  (faktorShody >= 0.5 && test_ročník)) {
+                                System.out.println("\t\t\t\tBylo dosaženo požadované míry shody.\n\t\t\t\tBude provedeno párování nalezených objektů\n\t\t\t\tpodle identifikátoru [" + žák.getValue().get("INTERN_KOD").toString() + "]");
+
+                                Map<EBakaLDAPAttributes, Object> zápis = new HashMap<>();
+                                zápis.put(EBakaLDAPAttributes.EXT01, žák.getValue().get("INTERN_KOD").toString());
+                                žáci.writeData(shodnýŽák.get(EBakaLDAPAttributes.DN.attribute()), zápis);
+
+
+                            } else {
+                                System.out.println("\t\t\t\tObjekt nemá kandidáta na párování, bude vygenerována nová adresa.");
+                                continue;
+                            }
+
+                        } else {
+                            // EXT01 existuje
+                            System.out.println("\t\t\t\tProběhné porovnání interního kódu nalezených objektů.");
+
+                            if (shodnýŽák.get(EBakaLDAPAttributes.EXT01.attribute()).equals(žák.getValue().get("INTERN_KOD").toString())) {
+                                // OK!
+                                System.out.println("\t\t\t\t=> Jedná se o tohoto žáka! Proběhne zápis adresy do ostrých dat.");
+
+                                // TODO
+
+                            } else {
+                                System.out.println("\t\t\t\t=> Jedná se o zcela jiného žáka.");
+                                continue;
+                            }
+                        }
+
+                        continue;
+                    }
+
+                } while (obsazený || pokus >= 10); // TODO ve finále nastavit globální limit (50? Nováků)
+
+            }
+
+            /*
+            System.out.println("Žák " + žák.getValue().get("PRIJMENI").toString() + " "
+                    + žák.getValue().get("JMENO").toString() + "\t\t" + žák.getValue().get("E_MAIL").toString() + " "
+                    + "délka ["+žák.getValue().get("E_MAIL").toString().length()+"]");
+            */
+
+        }
+
+        System.out.println("======");
+        System.out.println("LDAP Data k zápisu: " + žáci.writesRemaining());
+        System.out.println("LDAP probíhá zápis...");
+        žáci.commit();
+        System.out.println("LDAP Data k zápisu: " + žáci.writesRemaining());
+
+        // 2020-04-19 testování mailu ///
+        //BakaMailer.getInstance().mail("Test systému", "Toto je kontrola posílání prosté zprávy se žluťučkým koněm úpějícím ďábelské ódy.");
+        /*
         BakaMailer.getInstance().mail(new String[]{"jan.hladena@zs-studanka.cz"},
-        "Test multipart", "Toto je kontrola poslání přílohy se žluťučkým koněm úpějícím ďábelské ódy.",
+        "Test multipart s podpisem", "Toto je kontrola poslání přílohy se žluťučkým koněm úpějícím ďábelské ódy.",
         new String[]{"./test.txt"});
+        */
 
         // testovací výpis
         //System.out.println(evidence.toString());
