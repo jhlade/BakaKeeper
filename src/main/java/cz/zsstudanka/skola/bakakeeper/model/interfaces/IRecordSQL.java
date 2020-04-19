@@ -1,5 +1,10 @@
 package cz.zsstudanka.skola.bakakeeper.model.interfaces;
 
+/**
+ * Interface záznamu v SQL.
+ *
+ * @author Jan Hladěna
+ */
 public interface IRecordSQL {
 
     /**
