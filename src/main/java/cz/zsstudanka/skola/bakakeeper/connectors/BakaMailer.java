@@ -5,13 +5,14 @@ import cz.zsstudanka.skola.bakakeeper.settings.Version;
 
 import java.util.Date;
 import java.util.Properties;
-import javax.mail.Message;
-import javax.mail.Transport;
+import javax.activation.DataHandler;
+import javax.activation.DataSource;
+import javax.activation.FileDataSource;
+import javax.mail.*;
 import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
-import javax.mail.Authenticator;
-import javax.mail.PasswordAuthentication;
-import javax.mail.Session;
+import javax.mail.internet.MimeMultipart;
 
 /**
  * E-mailový konektor a klient.
@@ -69,13 +70,26 @@ public class BakaMailer {
         this.session = Session.getInstance(props, auth);
     }
 
+
     /**
-     * Odeslání zprávy správci systému.
+     * Odeslání informační zprávy správci systému.
      *
      * @param subject předmět zprávy
      * @param message zpráva
      */
     public void mail(String subject, String message) {
+        this.mail(new String[]{Settings.getInstance().getAdminMail()}, subject, message, null);
+    }
+
+    /**
+     * Obecné odeslání zprávy.
+     *
+     * @param recipients pole se seznamem příjemců
+     * @param subject předmět zprávy
+     * @param message tělo zprávy
+     * @param attachments pole se seznamem cest k souborům, které budou vloženy jako přílohy
+     */
+    public void mail(String[] recipients, String subject, String message, String[] attachments) {
 
         // TLS autentizace
         this.authenticate();
@@ -94,17 +108,43 @@ public class BakaMailer {
 
             msg.setFrom(new InternetAddress(Settings.getInstance().getSMTP_user(), Version.getInstance().getName()));
             msg.setSentDate(new Date());
-            msg.setRecipients(Message.RecipientType.TO, InternetAddress.parse(Settings.getInstance().getAdminMail(), false));
+            for (String rcpt : recipients) {
+                msg.addRecipients(Message.RecipientType.TO, InternetAddress.parse(rcpt, false));
+            }
 
             msg.setSubject(subject, "UTF-8");
-            msg.setText(message, "UTF-8");
+
+            // přílohy
+            if (attachments == null) {
+                msg.setText(message, "UTF-8");
+            } else {
+                System.setProperty("mail.mime.charset", "utf-8");
+
+                // tělo zprávy
+                BodyPart messageBodyPart = new MimeBodyPart();
+                messageBodyPart.setText(message);
+
+                Multipart multipart = new MimeMultipart();
+                multipart.addBodyPart(messageBodyPart);
+
+                // přílohy
+                for (String att : attachments) {
+                    MimeBodyPart filePart = new MimeBodyPart();
+                    DataSource source = new FileDataSource(att);
+                    filePart.setDataHandler(new DataHandler(source));
+                    filePart.setFileName(att);
+                    multipart.addBodyPart(filePart);
+                }
+
+                msg.setContent(multipart);
+            }
 
             Transport.send(msg);
 
         } catch (Exception e) {
 
             if (Settings.getInstance().beVerbose()) {
-                System.err.println("[ CHYBA ] Došlo k chybě při odesílání informačního e-mailu.");
+                System.err.println("[ CHYBA ] Došlo k chybě při odesílání e-mailu.");
             }
 
             if (Settings.getInstance().debugMode()) {
