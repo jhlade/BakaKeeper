@@ -95,6 +95,12 @@ public class BakaMailer {
         // TLS autentizace
         this.authenticate();
 
+        StringBuilder messageBuilder = new StringBuilder();
+        messageBuilder.append(message);
+        // podpis
+        messageBuilder.append("\n\n---\n");
+        messageBuilder.append(Version.getInstance().getTag() + "\n" + Settings.getInstance().systemInfoTag() + "\n\n");
+
         if (Settings.getInstance().beVerbose()) {
             System.out.println("[ INFO ] Začíná odesílání e-mailu.");
         }
@@ -119,7 +125,7 @@ public class BakaMailer {
                 msg.addHeader("format", "flowed");
                 msg.addHeader("Content-type", "text/plain; charset=UTF-8");
 
-                msg.setText(message, "UTF-8");
+                msg.setText(messageBuilder.toString(), "UTF-8");
             } else {
                 System.setProperty("mail.mime.charset", "utf-8");
                 msg.addHeader("Conent-type", "multipart/mixed");
@@ -127,7 +133,7 @@ public class BakaMailer {
                 // tělo zprávy
                 BodyPart messageBodyPart = new MimeBodyPart();
                 messageBodyPart.setHeader("Content-type", "text/plain; charset=UTF-8");
-                messageBodyPart.setText(message);
+                messageBodyPart.setText(messageBuilder.toString());
 
                 Multipart multipart = new MimeMultipart();
                 multipart.addBodyPart(messageBodyPart);
