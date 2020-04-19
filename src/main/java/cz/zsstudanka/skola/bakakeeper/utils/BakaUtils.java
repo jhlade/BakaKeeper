@@ -206,12 +206,11 @@ public class BakaUtils {
     }
 
     /**
-     * TODO 2020-04-08 nové -- je potřeba přepsat pro SURNAME, GIVEN_NAME
-     * TODO popis metody
-     * TODO napsat testy
+     * Vytvoření plného UPN pro zadané jméno, příjmení a číslo pokusu.
      *
      * @param surname příjmení
      * @param givenName jméno
+     * @param domain doména
      * @param attempt číslo pokusu
      * @return
      */
@@ -231,18 +230,26 @@ public class BakaUtils {
         return removeAccents(snParts[0]).toLowerCase() + "." + removeAccents(gnParts[0]).toLowerCase() + ((attempt == 0) ? "" : attempt.toString()) + "@" + domain;
     }
 
+    /**
+     * Vytvoření plného UPN pro zadané jméno, příjmení v prvním pokusu.
+     *
+     * @param surname příjmení
+     * @param givenName jméno
+     * @param domain doména
+     * @return UPN v prvním pokusu
+     */
     public static String createUPNfromName(String surname, String givenName, String domain) {
         return createUPNfromName(surname, givenName, domain, 0);
     }
 
     /**
-     * TODO 2020-04-08 popis metody
-     * TODO napsat testy
+     * Vytvoření pre-Windows 2000 přihlašovacího jména (do 20 znaků) na základě
+     * příjmení, jména a čísla pokusu.
      *
-     * @param surname
-     * @param givenName
-     * @param attempt
-     * @return
+     * @param surname příjmení
+     * @param givenName jméno
+     * @param attempt číslo pokusu
+     * @return pre-Windows 2000 login (sAMAccountName)
      */
     public static String createSAMloginFromName(String surname, String givenName, Integer attempt) {
 
@@ -268,6 +275,14 @@ public class BakaUtils {
         }
     }
 
+    /**
+     * Vytvoření pre-Windows 2000 přihlašovacího jména (do 20 znaků) na základě
+     * příjmení a jména v prvním pokusu.
+     *
+     * @param surname příjmení
+     * @param givenName jméno
+     * @return pre-Windows 2000 login (sAMAccountName) v prvním pokusu
+     */
     public static String createSAMloginFromName(String surname, String givenName) {
         return createSAMloginFromName(surname, givenName, 0);
     }
@@ -284,27 +299,49 @@ public class BakaUtils {
     }
 
     /**
-     * Třída v textovém tvaru "1.B" z plné cesty DN v Active Directory.
-     * TODO jestli je to vůbec ještě potřeba?
-     * TODO překlad o angličtiny
-     * TODO případně ještě inverzní funkce DN do třídy
+     * Zpracování DN objektu pro identifikaci zařazení do školní třídy.
+     * Pokud objekt není aktivním žákem (nachází se mimo OU pro žáky),
+     * je vráceno pole prázdných položek.
      *
-     * @param dn DN ve tvaru CN=Novák Jan,OU=Trida-E,OU=Rocnik-2,OU=Zaci,OU=Uzivatele,OU=Skola,DC=zs,DC=local
-     * @return textové označení třídy
+     * @param dn celé DN objektu
+     * @return pole řetězců ve tvaru {ročník, písmeno třídy}
      */
-    public static String tridaFromDN(String dn) {
+    public static String[] classFromDn(String dn) {
+
+        // null[2]
+        String[] result = new String[2];
 
         if (dn.contains("Trida-") && dn.contains("Rocnik-")) {
 
+            // 0 = CN, 1 = Trida, 2 = Rocnik, 3 = Zaci, ...
             String[] ous = dn.split(",");
 
-            String pismeno = ous[1].replace("OU=Trida-", "");
-            String rocnik = ous[2].replace("OU=Rocnik-", "");
-
-            return (rocnik + "." + pismeno).toUpperCase();
+            result[0] = ous[1].replace("OU=Trida-", "");
+            result[1] = ous[2].replace("OU=Rocnik-", "").toUpperCase();
         }
 
-        return null;
+        return result;
+    }
+
+    /**
+     * Číslo ročníku žáka na základě jeho DN, která musí obsahovat
+     * odpovídající OU.
+     *
+     * @param dn plné DN žáka
+     * @return číslo ročníku
+     */
+    public static Integer classYearFromDn(String dn) {
+        return Integer.parseInt(classFromDn(dn)[1]);
+    }
+
+    /**
+     * TODO popisek
+     *
+     * @param dn
+     * @return písmeno třídy
+     */
+    public static String classLetterFromDn(String dn) {
+        return classFromDn(dn)[0];
     }
 
 }
