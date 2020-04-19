@@ -273,6 +273,17 @@ public class BakaUtils {
     }
 
     /**
+     * Bázové jméno souboru.
+     *
+     * @param path cesta k souboru
+     * @return jednoduchý tvar jména
+     */
+    public static String fileBaseName(String path) {
+        String[] parts = path.split(".+?/(?=[^/]+$)");
+        return parts[parts.length - 1];
+    }
+
+    /**
      * Třída v textovém tvaru "1.B" z plné cesty DN v Active Directory.
      * TODO jestli je to vůbec ještě potřeba?
      * TODO překlad o angličtiny

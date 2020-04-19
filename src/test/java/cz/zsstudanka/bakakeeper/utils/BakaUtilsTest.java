@@ -57,4 +57,10 @@ public class BakaUtilsTest {
         assertEquals("davinci.leonardo@test.org", BakaUtils.createUPNfromName("Da-Vinci", "Leonardo", DOMAIN));
     }
 
+    @Test
+    public void fileBaseName() {
+        assertEquals("test.txt", BakaUtils.fileBaseName("./test.txt"));
+        assertEquals("test.1A.pdf", BakaUtils.fileBaseName("/složka/adresář/test.1A.pdf"));
+    }
+
 }
