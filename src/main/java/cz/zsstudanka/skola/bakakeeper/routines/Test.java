@@ -28,6 +28,7 @@ public class Test {
         SQLrecords evidence = new SQLrecords();
         System.out.println("Evidence:\t" + evidence.count());
 
+
         // testovací výpis
         //System.out.println(evidence.toString());
 
