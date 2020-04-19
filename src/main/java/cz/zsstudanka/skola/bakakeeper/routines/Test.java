@@ -1,6 +1,7 @@
 package cz.zsstudanka.skola.bakakeeper.routines;
 
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaADAuthenticator;
+import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
 import cz.zsstudanka.skola.bakakeeper.model.collections.LDAPrecords;
 import cz.zsstudanka.skola.bakakeeper.model.collections.SQLrecords;
@@ -28,11 +29,14 @@ public class Test {
         SQLrecords evidence = new SQLrecords();
         System.out.println("Evidence:\t" + evidence.count());
 
+        // 2020-04-19 testování mailu
+        BakaMailer.getInstance().mail("Test systému", "Toto je kontrola posílání prosté zprávy se žluťučkým koněm úpějícím ďábelské ódy.");
+        BakaMailer.getInstance().mail(new String[]{"jan.hladena@zs-studanka.cz"},
+        "Test multipart", "Toto je kontrola poslání přílohy se žluťučkým koněm úpějícím ďábelské ódy.",
+        new String[]{"./test.txt"});
 
-        
         // testovací výpis
         //System.out.println(evidence.toString());
-
 
         // 2020-04-18 proveden přepis title na třídy -- OK
         /*
