@@ -2,6 +2,7 @@ package cz.zsstudanka.skola.bakakeeper.connectors;
 
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.settings.Version;
+import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
 
 import java.util.Date;
 import java.util.Properties;
@@ -101,8 +102,6 @@ public class BakaMailer {
         try {
             MimeMessage msg = new MimeMessage(this.session);
 
-            msg.addHeader("format", "flowed");
-            msg.addHeader("Content-type", "text/plain; charset=UTF-8");
             msg.addHeader("Content-Transfer-Encoding", "8bit");
             msg.setHeader("X-Mailer", Version.getInstance().getTag());
 
@@ -116,12 +115,18 @@ public class BakaMailer {
 
             // přílohy
             if (attachments == null) {
+
+                msg.addHeader("format", "flowed");
+                msg.addHeader("Content-type", "text/plain; charset=UTF-8");
+
                 msg.setText(message, "UTF-8");
             } else {
                 System.setProperty("mail.mime.charset", "utf-8");
+                msg.addHeader("Conent-type", "multipart/mixed");
 
                 // tělo zprávy
                 BodyPart messageBodyPart = new MimeBodyPart();
+                messageBodyPart.setHeader("Content-type", "text/plain; charset=UTF-8");
                 messageBodyPart.setText(message);
 
                 Multipart multipart = new MimeMultipart();
@@ -131,8 +136,11 @@ public class BakaMailer {
                 for (String att : attachments) {
                     MimeBodyPart filePart = new MimeBodyPart();
                     DataSource source = new FileDataSource(att);
+
                     filePart.setDataHandler(new DataHandler(source));
-                    filePart.setFileName(att);
+                    filePart.setHeader("Content-type", source.getContentType());
+                    filePart.setFileName(BakaUtils.fileBaseName(att));
+
                     multipart.addBodyPart(filePart);
                 }
 
