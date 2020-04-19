@@ -1,15 +1,11 @@
 package cz.zsstudanka.skola.bakakeeper.settings;
 
-import cz.zsstudanka.skola.bakakeeper.connectors.BakaSQL;
-import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
-
 import javax.crypto.*;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.*;
 import java.security.spec.KeySpec;
-import java.sql.ResultSet;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
@@ -74,11 +70,6 @@ public class Settings {
 
     /** nastavení ve formátu tabulky */
     private Map<String, String> settings_data;
-
-    /** aktuální školní rok z Bakalářů */
-    @Deprecated
-    private String skolni_rok;
-
 
     /**
      * Nastavení je implementováno jako singleton.
@@ -522,18 +513,6 @@ public class Settings {
     }
 
     /**
-     * Výpis nastavení.
-     *
-     * @deprecated
-     */
-    public void printSettings() {
-        if (beVerbose) {
-            System.err.println("[ DEBUG ] Načtená konfigurace:");
-            System.err.println(this.toString());
-        }
-    }
-
-    /**
      * Okamžitá změna nastavení - určeno pouze pro účely vývoje.
      *
      * @param param parametr nastavení
@@ -896,102 +875,11 @@ public class Settings {
     }
 
     /**
-     * Textová reprezentace aktuálního školního roku v Bakalářích.
-     *
-     * @return školní rok ve formátu 2019/2020
-     *
-     * @deprecated
-     */
-    public String getSkolniRok() {
-
-        if (this.skolni_rok == null) {
-
-            BakaSQL.getInstance().connect();
-
-            String sql1 = "SELECT TOP 1 SKOLNI_ROK FROM dbo.skupina ORDER BY SKOLNI_ROK DESC";
-            String sql2 = "SELECT TOP 1 SKOLNI_ROK FROM dbo.rskupina ORDER BY SKOLNI_ROK DESC";
-
-            String result = null;
-
-            try {
-
-                ResultSet rs1 = BakaSQL.getInstance().select(sql1);
-
-                // očekává se jeden výsledek
-                if (rs1.getFetchSize() >= 1 && rs1.next()) {
-                    result = rs1.getString("SKOLNI_ROK").trim();
-                } else {
-                    // alternativní pokus
-                    ResultSet rs2 = BakaSQL.getInstance().select(sql2);
-
-                    System.err.println("RS2: " +rs1.getFetchSize());
-
-                    // očekává se opět pouze jeden výsledek
-                    if (rs2.getFetchSize() >= 1 && rs2.next()) {
-                        result = rs2.getString("SKOLNI_ROK").trim();
-                    }
-                }
-
-                // výsledek nebyl nalezen nebo je zmršený
-                if (result == null || BakaUtils.parseSkolniRok(result) == false) throw new Exception();
-
-            } catch (Exception e) {
-
-                System.err.println("[ POZOR ] Nezdařilo se získat informace o školním roce z Bakalářů, používá se kalendářní datum.");
-
-                // fallback na aktuální datum
-                Date today = new Date();
-
-                Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("Europe/Prague"));
-                cal.setTime(today);
-
-                // YYYY/YYYY
-                Integer y1, y2;
-
-                // 1. pololetí
-                if (cal.get(Calendar.MONTH) >= 9) {
-                    y1 = cal.get(Calendar.YEAR);
-                    y2 = y1 + 1;
-                } else {
-                    // 2. pololetí
-                    y2 = cal.get(Calendar.YEAR);
-                    y1 = y2 - 1;
-                }
-
-                // textový řetězec původního formátu
-                result = y1.toString() + "/" + y2.toString().substring(2);
-            }
-
-            // formát 2019/20 => 2019/2020
-            // !!! potenciální chyba pro příští století
-            this.skolni_rok = result.replace("/", "/20");
-        }
-
-        return this.skolni_rok;
-    }
-
-    /**
-     * Textová reprezentace loňského školního roku.
-     *
-     * @return loňský rok ve formátu 2018/2019
-     *
-     * @deprecated
-     */
-    public String getMinulyRok() {
-        String rok = this.getSkolniRok();
-
-        Integer rok1 = Integer.valueOf(rok.split("/")[0]) - 1;
-        Integer rok2 = Integer.valueOf(rok.split("/")[1]) - 1;
-
-        return rok1.toString() + "/" + rok2.toString();
-    }
-
-    /**
-     * Informační značka o aktuálním zpracování.
+     * Informační značka o aktuálním zpracování požadavku.
      *
      * @return značka ve tvaru YYYY-MM-DD HH:mmm:ss @ hostname
      */
-    public String infoTag() {
+    public String systemInfoTag() {
         String hostname;
         String os;
 
