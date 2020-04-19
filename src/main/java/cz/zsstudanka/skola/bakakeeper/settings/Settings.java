@@ -758,7 +758,8 @@ public class Settings {
     }
 
     /**
-     * Nastavení SMTP uživatele. Předpokládá se server Exchange/O365.
+     * Nastavení SMTP uživatele. Předpokládá se použití lokálního Exchange nebo Office 365.
+     * Uživatelem SMTP je globálně definovaná služba pro správu AD.
      *
      * @return celé UPN SMTP uživatele
      */
@@ -773,7 +774,8 @@ public class Settings {
     }
 
     /**
-     * Heslo uživatele SMTP serveru. Předpokládá se použití lokálního Exchange nebo AzureAD O365.
+     * Heslo uživatele SMTP serveru. Předpokládá se použití lokálního Exchange nebo Office 365.
+     * Uživatelem SMTP je globálně definovaná služba pro správu AD.
      *
      * @return heslo SMTP uživatele
      */
