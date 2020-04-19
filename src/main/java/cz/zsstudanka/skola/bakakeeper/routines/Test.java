@@ -28,7 +28,8 @@ public class Test {
         SQLrecords evidence = new SQLrecords();
         System.out.println("Evidence:\t" + evidence.count());
 
-        System.out.println(evidence.toString());
+        // testovací výpis
+        //System.out.println(evidence.toString());
 
 
         // 2020-04-18 proveden přepis title na třídy -- OK
@@ -62,11 +63,6 @@ public class Test {
 
         } // for
         */
-
-        // 2020-04-08
-        // načtení tabulky jako v exportu
-        // přečtení INTERN_KOD
-        // zápis INTERN_KOD do EXT01
 
         // 2020-04-07 funguje
         //Structure.checkAndRepairADStructure(true);
