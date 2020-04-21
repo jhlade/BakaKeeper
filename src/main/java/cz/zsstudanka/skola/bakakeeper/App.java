@@ -12,9 +12,6 @@ import cz.zsstudanka.skola.bakakeeper.components.KeyStoreManager;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.settings.Version;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.*;
 
 /**
@@ -87,7 +84,7 @@ public class App {
                 FLAG_VERBOSE = true;
                 Settings.getInstance().verbosity(FLAG_VERBOSE);
 
-                System.err.println("[ INFO ] Aktivován výstup podrobných informací.");
+                System.out.println("[ INFO ] Aktivován výstup podrobných informací.");
             }
 
             // společná nastavení - ladící režim
@@ -99,7 +96,7 @@ public class App {
                 FLAG_DEBUG = true;
                 Settings.getInstance().debug(FLAG_DEBUG);
 
-                System.err.println("[ DEBUG ] Aktivován výstup ladících informací.");
+                System.out.println("[ DEBUG ] Aktivován výstup ladících informací.");
             }
 
             if (params.containsKey("log")) {

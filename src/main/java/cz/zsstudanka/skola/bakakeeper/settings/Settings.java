@@ -347,7 +347,7 @@ public class Settings {
             validity.updateAndGet(v -> v & keyValid);
 
             if (debugMode) {
-                System.err.println("[ DEBUG ] Porovnává se klíč " + key + " s načtenými daty... [ " + ((keyValid) ? "OK" : "CHYBA") + " ]");
+                System.out.println("[ DEBUG ] Porovnává se klíč " + key + " s načtenými daty... [ " + ((keyValid) ? "OK" : "CHYBA") + " ]");
             }
         });
         } catch (Exception e) {
@@ -411,7 +411,7 @@ public class Settings {
             BufferedReader reader = new BufferedReader(new InputStreamReader(input));
 
             if (this.beVerbose) {
-                System.err.println("[ INFO ] Probíhá načítání konfigurace ze souboru.");
+                System.out.println("[ INFO ] Probíhá načítání konfigurace ze souboru.");
             }
 
             String line;
@@ -419,9 +419,9 @@ public class Settings {
 
                 if (this.debugMode) {
                     if (line.contains("pass=")) {
-                        System.err.println("[ DEBUG ] Načítá se: pass=*****");
+                        System.out.println("[ DEBUG ] Načítá se: pass=*****");
                     } else {
-                        System.err.println("[ DEBUG ] Načítá se: " + line);
+                        System.out.println("[ DEBUG ] Načítá se: " + line);
                     }
                 }
 
