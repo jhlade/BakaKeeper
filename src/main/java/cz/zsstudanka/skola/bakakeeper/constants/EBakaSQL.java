@@ -34,7 +34,7 @@ public enum EBakaSQL {
     S_STU_BK_CLASSYEAR("SUBSTRING(" + TBL_STU.field + "." + "TRIDA, 1, 1) AS " + F_STU_BK_CLASSYEAR.field, "Výběr: ročník žáka."),
     S_STU_BK_CLASSLETTER("SUBSTRING(" + TBL_STU.field + "." + "TRIDA, 3, 1) AS " + F_STU_BK_CLASSLETTER.field, "Výběr: písmeno třídy žáka."),
 
-    XX("", "");
+    DEBUG("DEBUG_FIELD", "Pro účely ladění.");
 
     private final String field;
     private final String description;
@@ -46,6 +46,14 @@ public enum EBakaSQL {
 
     public String field() {
         return this.field;
+    }
+
+    public String basename() {
+        if (field.contains(".")) {
+            return field().split("\\.")[field().split("\\.").length - 1];
+        }
+
+        return field();
     }
 
     public EBakaSQL primaryKey() {
