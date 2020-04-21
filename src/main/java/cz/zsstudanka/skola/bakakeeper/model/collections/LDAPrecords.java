@@ -249,23 +249,25 @@ public class LDAPrecords implements IRecords {
 
     /**
      * Provedení zápisu čekajících dat zpět přímo do LDAPu.
-     *
      */
     public boolean commit() {
 
         if (this.writeData.size() > 0)
         {
-            for (Map.Entry<String, Map<EBakaLDAPAttributes, Object>> dataEntry : this.writeData.entrySet()) {
+            Iterator<String> writeIterator = this.writeData.keySet().iterator();
+            while (writeIterator.hasNext()) {
+                String dn = writeIterator.next();
+                Map<EBakaLDAPAttributes, Object> dataSet = this.writeData.get(dn);
 
                 Boolean attrMod = true;
-                for (Map.Entry<EBakaLDAPAttributes, Object> dataMap : dataEntry.getValue().entrySet()) {
-                    attrMod &= BakaADAuthenticator.getInstance().replaceAttribute(dataEntry.getKey(), dataMap.getKey(), dataMap.getValue());
+
+                for (Map.Entry<EBakaLDAPAttributes, Object> data : dataSet.entrySet()) {
+                    attrMod &= BakaADAuthenticator.getInstance().replaceAttribute(dn, data.getKey(), data.getValue());
                 }
 
                 if (attrMod) {
-                    this.writeData.remove(dataEntry.getKey());
+                    writeIterator.remove();
                 }
-
             }
 
             return (this.writeData.size() == 0);
