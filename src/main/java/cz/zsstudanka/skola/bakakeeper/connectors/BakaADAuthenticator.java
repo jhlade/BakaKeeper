@@ -37,7 +37,7 @@ public class BakaADAuthenticator {
     private String baseLDAP;
 
     /** získané informace */
-    private Map authUser;
+    private Map<Integer, Map> authUser;
 
 
     /**
@@ -173,7 +173,7 @@ public class BakaADAuthenticator {
      */
     public Map authUserInfo() {
         if (!isAuthenticated()) return null;
-        return this.authUser;
+        return this.authUser.get(0);
     }
 
     /**
