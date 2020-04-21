@@ -1,14 +1,5 @@
 package cz.zsstudanka.skola.bakakeeper.routines;
 
-import cz.zsstudanka.skola.bakakeeper.connectors.BakaSQL;
-import cz.zsstudanka.skola.bakakeeper.model.collections.Trida;
-import cz.zsstudanka.skola.bakakeeper.model.entities.Zak;
-import cz.zsstudanka.skola.bakakeeper.settings.Settings;
-
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.PrintStream;
-
 /**
  * Práce s exporty.
  *
@@ -35,7 +26,10 @@ public class Export {
      * ZZ_EMAIL    - e-mail primárního zákonného zástupce žáka z Bakalářů
      *
      * @param outFile výstupní soubor
+     * @deprecated
      */
+
+    /*
     public static void exportStudentCSVdata(String outFile) {
 
         Settings.getInstance().load();
@@ -138,6 +132,6 @@ public class Export {
             System.out.println(outputBuffer.toString());
         }
 
-    }
+    }*/
 
 }

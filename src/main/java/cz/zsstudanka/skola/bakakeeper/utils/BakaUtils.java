@@ -1,15 +1,10 @@
 package cz.zsstudanka.skola.bakakeeper.utils;
 
-import cz.zsstudanka.skola.bakakeeper.settings.Settings;
-
-import java.math.BigInteger;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.text.Normalizer;
 import java.util.Base64;
 
 /**
- * Nástroje pro úpravu dat.
+ * Pomocné statické nástroje pro úpravu dat.
  *
  * @author Jan Hladěna
  */
@@ -57,73 +52,13 @@ public class BakaUtils {
     }
 
     /**
-     *
-     * @param input
-     * @return
-     *
-     * @deprecated
-     */
-    public static Boolean parseSkolniRok(String input) {
-        boolean check = true;
-
-        // 2019/20
-        if (input.length() != 7) {
-            check = false;
-        }
-
-        if (!input.contains("/")) {
-            check = false;
-        }
-
-        return check;
-    }
-
-    /**
-     * MD5 hash vstupního řetězce
-     *
-     * @param input vstupní řetězec
-     * @return MD5 hash velkými písmeny
-     * @deprecated
-     */
-    public static String hashMD5(String input) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] messageDigest = md.digest(input.getBytes());
-            BigInteger no = new BigInteger(1, messageDigest);
-
-            String hashtext = no.toString(16);
-            while (hashtext.length() < 32) {
-                hashtext = "0" + hashtext;
-            }
-            return hashtext.toUpperCase();
-
-        } catch (NoSuchAlgorithmException e) {
-            // TODO
-        }
-
-        return "";
-    }
-
-    /**
-     * B64 zakódování
+     * Zakódování vstupu do Base64.
      *
      * @param input vstupní řetězec
      * @return b64 kódovaný výstup
-     * @deprecated
      */
     public static String base64encode(String input) {
         return Base64.getEncoder().encodeToString(input.getBytes());
-    }
-
-    /**
-     * B64 dekódování.
-     *
-     * @param b64input b64-vstupní řetězec
-     * @return dekódovaný výstup
-     * @deprecated
-     */
-    public static String base64decode(String b64input) {
-        return Base64.getDecoder().decode(b64input.getBytes()).toString();
     }
 
     /**
@@ -149,60 +84,17 @@ public class BakaUtils {
         return login.toString();
     }
 
-    /**
-     * Vytvoří neověřený plný login z celého jména.
-     *
-     * @param displayName zobrazované jméno (Příjmení Jméno Jméno)
-     * @return plný login
-     *
-     * @deprecated
-     */
-    public static String createFullLogin(String displayName) {
-
-        final String PREFIX = "x"; // prefix pro speciální případy?
-
-        StringBuilder login = new StringBuilder();
-
-        String[] parts = BakaUtils.removeAccents(displayName.toLowerCase()).split(" ");
-
-        if (parts.length <= 2) {
-            login.append(PREFIX);
-            login.append(parts[0]);
-        } else {
-            login.append(parts[0]);
-            login.append(".");
-            login.append(parts[1]);
-        }
-
-        return login.toString();
-    }
 
     /**
-     * Vytvoří neověřený tvar loginu ze jména a příjmení.
+     * TODO - refaktor create4p2
      *
-     * @param prijmeni celé příjmení (Svobodová Nováková)
-     * @param jmeno celé křestní jméno (Jana Kateřina)
-     * @return login ve tvaru prijmeni.jmeno (svobodova.katerina)
-     *
-     * @deprecated
+     * @param surname
+     * @param givenName
+     * @param attempt
+     * @return
      */
-    public static String createFullLogin(String prijmeni, String jmeno) {
-        return createFullLogin(prijmeni + " " + jmeno);
-    }
-
-    /**
-     * Na základě loginu vytvoří tvar e-mailové adresy.
-     *
-     * @param login očekává se tvar svobodova.katerina nebo svobodova.katerina1
-     * @return e-mailová adresa
-     *
-     * @deprecated
-     */
-    public static String createFullMail(String login) {
-
-        if (!login.contains(".")) return login + "@" + Settings.getInstance().getMailDomain();
-
-        return login.split("\\.")[1] + "." + login.split("\\.")[0] + "@" + Settings.getInstance().getMailDomain();
+    public static String createLegacyLogin(String surname, String givenName, Integer attempt) {
+        return null;
     }
 
     /**
@@ -253,6 +145,7 @@ public class BakaUtils {
      */
     public static String createSAMloginFromName(String surname, String givenName, Integer attempt) {
 
+        // maximální limit délky řetězce hodnoty atributu sAMAccountNate v AD
         final int MAX_LIMIT = 20;
 
         String[] snParts = surname.replace("-", " ")
@@ -303,11 +196,13 @@ public class BakaUtils {
      * Pokud objekt není aktivním žákem (nachází se mimo OU pro žáky),
      * je vráceno pole prázdných položek.
      *
+     * CN=Novák Josef,OU=Trida-A,OU=Rocnik-1,OU=Zaci,OU=Uzivatele,OU=Skola,DC=skola,DC=local
+     * => String[2] = {"1", "A"}
+     *
      * @param dn celé DN objektu
      * @return pole řetězců ve tvaru {ročník, písmeno třídy}
      */
     public static String[] classFromDn(String dn) {
-
         // null[2]
         String[] result = new String[2];
 
@@ -324,8 +219,11 @@ public class BakaUtils {
     }
 
     /**
-     * Číslo ročníku žáka na základě jeho DN, která musí obsahovat
+     * Číslo ročníku žáka na základě jeho DN, které musí obsahovat
      * odpovídající OU.
+     *
+     * CN=Novák Josef,OU=Trida-A,OU=Rocnik-1,OU=Zaci,OU=Uzivatele,OU=Skola,DC=skola,DC=local
+     * => 1
      *
      * @param dn plné DN žáka
      * @return číslo ročníku
@@ -335,9 +233,13 @@ public class BakaUtils {
     }
 
     /**
-     * TODO popisek
+     * Písmeno třídy žáka na základě jeho DN, které musí obsahovat
+     * odpovídající OU.
      *
-     * @param dn
+     * CN=Novák Josef,OU=Trida-A,OU=Rocnik-1,OU=Zaci,OU=Uzivatele,OU=Skola,DC=skola,DC=local
+     * => A
+     *
+     * @param dn plné DN žáka
      * @return písmeno třídy
      */
     public static String classLetterFromDn(String dn) {

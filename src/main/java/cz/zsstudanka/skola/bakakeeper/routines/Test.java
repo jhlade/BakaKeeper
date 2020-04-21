@@ -1,19 +1,15 @@
 package cz.zsstudanka.skola.bakakeeper.routines;
 
-import cz.zsstudanka.skola.bakakeeper.connectors.BakaADAuthenticator;
-import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
+
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaSQL;
 import cz.zsstudanka.skola.bakakeeper.model.collections.LDAPrecords;
 import cz.zsstudanka.skola.bakakeeper.model.collections.SQLrecords;
-import cz.zsstudanka.skola.bakakeeper.model.entities.Student;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
-import java.util.Set;
 
 public class Test {
 
@@ -68,7 +64,8 @@ public class Test {
                 // TODO 9) práce se zákonným zástupcem
 
             } else {
-                if (žák.getValue().get("E_MAIL").toString().length() > 0) {
+                // null nebo není v doméně - OK
+                if (žák.getValue().get(EBakaSQL.F_STU_MAIL.basename()).toString().length() > 0) {
                     System.out.println("STAV:\t\tŽák nemá mail v doméně školy.");
                     // TODO dojde k přepisu
                 } else {
