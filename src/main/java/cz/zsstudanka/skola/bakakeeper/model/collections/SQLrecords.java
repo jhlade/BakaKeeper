@@ -11,35 +11,49 @@ import java.util.*;
 
 public class SQLrecords implements IRecords {
 
-    final String FLAG_ID = "baka_flag";
-    final String FLAG_0  = "0";
-    final String FLAG_1  = "1";
+    static final String FLAG_ID = "baka_flag";
+    static final String FLAG_0  = "0";
+    static final String FLAG_1  = "1";
 
     private EBakaSQL sql_table;
 
-    private final String[] STUDENT_DATA_STRUCTURE = {
-            EBakaSQL.F_STU_ID.basename(), EBakaSQL.F_STU_CLASS_ID.basename(),
-            EBakaSQL.F_GUA_SURNAME.basename(), EBakaSQL.F_GUA_GIVENNAME.basename(),
-            EBakaSQL.F_STU_CLASS.basename(), EBakaSQL.F_STU_BK_CLASSYEAR.basename(), EBakaSQL.F_STU_BK_CLASSLETTER.basename(),
-            EBakaSQL.F_STU_MAIL.basename(), // žák
-            //"INTERN_KOD", "C_TR_VYK", "PRIJMENI", "JMENO", "TRIDA", "B_ROCNIK", "B_TRIDA", "E_MAIL", // žák
-            "ZZ_KOD", "ZZ_PRIJMENI", "ZZ_JMENO", "ZZ_TELEFON", "ZZ_MAIL" // zákonný zástupce
+    /**
+     * Pole žáka a s ním spjatého promárního zákonného zůástupce.
+     */
+    private final EBakaSQL[] STUDENT_DATA_STRUCTURE = {
+            EBakaSQL.F_STU_ID, // PK
+            EBakaSQL.F_STU_CLASS_ID,
+            EBakaSQL.F_GUA_SURNAME, EBakaSQL.F_GUA_GIVENNAME,
+            EBakaSQL.F_STU_CLASS, EBakaSQL.F_STU_BK_CLASSYEAR, EBakaSQL.F_STU_BK_CLASSLETTER,
+            EBakaSQL.F_STU_MAIL, // [žák]
+            EBakaSQL.S_STU_BK_GUA_ID, // ZZ PK
+            EBakaSQL.S_STU_BK_GUA_SURNAME, EBakaSQL.S_STU_BK_GUA_GIVENNAME,
+            EBakaSQL.S_STU_BK_GUA_MAIL, EBakaSQL.S_STU_BK_GUA_MOBILE // [zákonný zástupce]
     };
 
-    private final String[] FACULTY_DATA_STRUCTURE = {
+    private final EBakaSQL[] FACULTY_DATA_STRUCTURE = {
             // TODO - učitelé
     };
+
+    private final EBakaSQL[] GUARDIAN_DATA_STRUCTURE = {
+        // TODO - (zvlášť) zákonní zástupci
+    };
+
+    /** použitá struktura */
+    private EBakaSQL[] dataStructure;
+    /** konkrétní SELECT */
+    private String select;
 
     /** hrubá data; klíč INTERN_KOD, data = mapa podle SQL */
     private LinkedHashMap<String, Map<String, String>> data = new LinkedHashMap<>();
 
     /**
-     * TODO - přepis
-     * data připravená k zápisu pomocí UPDATE;
-     * klíč = pár tabulka + interní kód objektu,
-     * data = pár pole + nová hodnota
+     * Data připravená k atomickému transakčnímu zápisu pomocí UPDATE;
+     * klíč = pár tabulka + interní kód objektu (table, pk = 'id'),
+     * data = pár pole + nová hodnota (colName = 'newValue')
      *
-     * Z bezpečnostních důvodů by mělo být používáno pouze pro pole e-mailové adresy žáka.
+     * [!] Z bezpečnostních důvodů by mělo být v praxi používáno
+     * pouze pro pole e-mailové adresy žáka.
      */
     private LinkedHashMap<Map<EBakaSQL, HashMap<EBakaSQL, String>>, Map<EBakaSQL, String>> writeData = new LinkedHashMap<>();
 
@@ -54,8 +68,86 @@ public class SQLrecords implements IRecords {
 
         // tabulka s žáka
         this.sql_table = EBakaSQL.TBL_STU;
+        // struktura pro tabulku žáka a zákonného zástupce
+        this.dataStructure = STUDENT_DATA_STRUCTURE;
 
-        // TODO set + populate
+        StringBuilder selectBuilder = new StringBuilder();
+
+        // INTERN_KOD
+        selectBuilder.append(EBakaSQL.F_STU_ID.field());
+        selectBuilder.append(", ");
+        // C_TR_VYK
+        selectBuilder.append(EBakaSQL.F_STU_CLASS_ID.field());
+        selectBuilder.append(", ");
+        // PRIJMENI
+        selectBuilder.append(EBakaSQL.F_STU_SURNAME.field());
+        selectBuilder.append(", ");
+        // JMENO
+        selectBuilder.append(EBakaSQL.F_STU_GIVENNAME.field());
+        selectBuilder.append(", ");
+        // TRIDA
+        selectBuilder.append(EBakaSQL.F_STU_CLASS.field());
+        selectBuilder.append(", ");
+        // EMAIL
+        selectBuilder.append(EBakaSQL.F_STU_MAIL.field());
+        selectBuilder.append(", ");
+        // classYear
+        selectBuilder.append(EBakaSQL.S_STU_BK_CLASSYEAR.field());
+        selectBuilder.append(", ");
+        // classLetter
+        selectBuilder.append(EBakaSQL.S_STU_BK_CLASSLETTER.field());
+        selectBuilder.append(", ");
+
+        // GUARDIAN
+        selectBuilder.append(EBakaSQL.S_STU_BK_GUA_ID.field());
+        selectBuilder.append(", ");
+        selectBuilder.append(EBakaSQL.S_STU_BK_GUA_SURNAME.field());
+        selectBuilder.append(", ");
+        selectBuilder.append(EBakaSQL.S_STU_BK_GUA_GIVENNAME.field());
+        selectBuilder.append(", ");
+        selectBuilder.append(EBakaSQL.S_STU_BK_GUA_MOBILE.field());
+        selectBuilder.append(", ");
+        selectBuilder.append(EBakaSQL.S_STU_BK_GUA_MAIL.field());
+        selectBuilder.append(" ");
+
+        // FROM
+        selectBuilder.append("FROM " + EBakaSQL.TBL_STU.field() + " ");
+        selectBuilder.append("LEFT JOIN " + EBakaSQL.TBL_GUA.field() + " ");
+        selectBuilder.append("ON ");
+        selectBuilder.append("(");
+            selectBuilder.append(EBakaSQL.F_GUA_ID.field() + " = ");
+            selectBuilder.append("(");
+                selectBuilder.append("SELECT TOP 1 " + EBakaSQL.F_GS_GUAID.field() + " ");
+                selectBuilder.append("FROM " + EBakaSQL.TBL_STU_GUA.field() + " ");
+                selectBuilder.append("WHERE " + EBakaSQL.F_GS_STUID.field() + " = " + EBakaSQL.F_STU_ID.field() + " ");
+                selectBuilder.append("AND ");
+                selectBuilder.append("(");
+                    selectBuilder.append(EBakaSQL.FS_GS_IS_GUA.field() + " = '" + EBakaSQL.LIT_TRUE.field() + "'");
+                    selectBuilder.append(" AND ");
+                    selectBuilder.append(EBakaSQL.FS_GS_IS_PRI.field() + " = '" + EBakaSQL.LIT_TRUE.field() + "'");
+                selectBuilder.append(")");
+            selectBuilder.append(")");
+        selectBuilder.append(")");
+        selectBuilder.append(" ");
+
+        // WHERE
+        selectBuilder.append("WHERE ");
+        selectBuilder.append(EBakaSQL.F_STU_CLASS.field() + " LIKE '%.%' ");
+        selectBuilder.append("AND " + EBakaSQL.F_STU_EXPIRED.field() + " IS NULL ");
+
+        // filtrování podle ročníku/třídy
+        if (classYear != null || classLetter != null) {
+            String tmpLetter = (classLetter == null) ? "%" : classLetter;
+            String tmpYear = (classYear == null) ? "%" : classYear.toString();
+            selectBuilder.append("AND " + EBakaSQL.F_STU_CLASS.field() + " LIKE '" + tmpYear + "." + tmpLetter + "'");
+            selectBuilder.append(" ");
+        }
+
+        // pořadí
+        selectBuilder.append("ORDER BY " + EBakaSQL.F_STU_BK_CLASSYEAR.basename() + " DESC, " + EBakaSQL.F_STU_BK_CLASSLETTER.basename() + " ASC, " + EBakaSQL.F_STU_SURNAME.field() + " ASC, " + EBakaSQL.F_STU_GIVENNAME.field() + " ASC");
+
+        this.select = selectBuilder.toString();
+
         populate();
     }
 
@@ -64,31 +156,32 @@ public class SQLrecords implements IRecords {
         // připojení k databázi
         BakaSQL.getInstance().connect();
 
-        // TODO přepis pomocí EBakaSQL
-        // SQL dotaz
-        String select = "SELECT dbo.zaci.INTERN_KOD,dbo.zaci.C_TR_VYK,dbo.zaci.PRIJMENI,dbo.zaci.JMENO,dbo.zaci.TRIDA,dbo.zaci.E_MAIL,SUBSTRING(dbo.zaci.TRIDA, 1, 1) AS B_ROCNIK,SUBSTRING(dbo.zaci.TRIDA, 3, 1) AS B_TRIDA," // data žáka
-                + "dbo.zaci_zzd.ID AS ZZ_KOD,dbo.zaci_zzd.PRIJMENI AS ZZ_PRIJMENI,dbo.zaci_zzd.JMENO AS ZZ_JMENO,dbo.zaci_zzd.TEL_MOBIL AS ZZ_TELEFON,dbo.zaci_zzd.E_MAIL AS ZZ_MAIL " // data ZZ
-                + "FROM dbo.zaci LEFT JOIN dbo.zaci_zzd ON (dbo.zaci_zzd.ID = (SELECT TOP 1 dbo.zaci_zzr.ID_ZZ FROM dbo.zaci_zzr WHERE dbo.zaci_zzr.INTERN_KOD = dbo.zaci.INTERN_KOD AND (dbo.zaci_zzr.JE_ZZ = '1' AND dbo.zaci_zzr.PRIMARNI = '1'))) " // detekce primárního ZZ
-                + "WHERE dbo.zaci.TRIDA LIKE '%.%' AND dbo.zaci.EVID_DO IS NULL " // žák existuje
-                //+ "AND dbo.zaci.TRIDA = '" + this.getCisloRocniku() + "." + this.getPismeno() + "' " // jedna konkrétní třída
-                + "AND dbo.zaci.TRIDA LIKE '1.C' " // TODO - adhoc 2020-04-21
-                + "ORDER BY B_ROCNIK DESC, B_TRIDA ASC, dbo.zaci.PRIJMENI ASC, dbo.zaci.JMENO ASC;"; // seřazení podle třídy DESC, abecedy ASC
+        StringBuilder genSelect = new StringBuilder();
+        genSelect.append("SELECT ");
+        genSelect.append(this.select);
+        genSelect.append(";");
+
+        if (Settings.getInstance().debugMode()) {
+            System.out.println("[ DEBUG ] Provede se následující SQL dotaz:");
+            System.out.println("[ DEBUG ] [ SQL ] " + genSelect.toString());
+        }
 
         try {
             // provedení dotazu
-            ResultSet rs = BakaSQL.getInstance().select(select);
+            ResultSet rs = BakaSQL.getInstance().select(genSelect.toString());
 
             // řádek
             while (rs.next()) {
-                String rowID = rs.getString("INTERN_KOD");
+                // primární klíč je první položka v poli
+                String rowID = rs.getString(this.dataStructure[0].basename());
                 Map<String, String> rowData = new HashMap<String, String>();
 
-                for (String col : this.STUDENT_DATA_STRUCTURE) {
-                    rowData.put(col, (rs.getString(col) == null) ? "(NULL)" : rs.getString(col).trim());
+                for (EBakaSQL col : this.dataStructure) {
+                    rowData.put(col.basename(), (rs.getString(col.basename()) == null) ? "(NULL)" : rs.getString(col.basename()).trim());
 
                     if (Settings.getInstance().debugMode()) {
-                        if (rs.getString(col) == null) {
-                            System.out.println("[ DEBUG ] Nulová data pro položku [" + col + "] v záznamu [" + rowID + "]. Chybně vyplněné údaje v ecidenci?");
+                        if (rs.getString(col.basename()) == null) {
+                            System.out.println("[ DEBUG ] Nulová data pro položku [" + col.field() + "] v záznamu [" + rowID + "]. Chybně vyplněné údaje v ecidenci?");
                         }
                     }
                 }
@@ -292,7 +385,7 @@ public class SQLrecords implements IRecords {
 
                             if (Settings.getInstance().debugMode()) {
                                 System.out.println("[ DEBUG ] Proběhne pokus o SQL transakci s dotazem");
-                                System.out.println("UPDATE " + tableName.field() + " SET " + dataField.field()
+                                System.out.println("[ DEBUG ] [ SQL ] UPDATE " + tableName.field() + " SET " + dataField.field()
                                                 + " = '" + dataValue + "' "
                                                 + "WHERE " + primaryKeyField.field() + " = '" + primaryKeyValue + "';");
                             }
@@ -311,7 +404,7 @@ public class SQLrecords implements IRecords {
                                 if (!Settings.getInstance().develMode()) {
                                     update &= updatePS.execute();
                                 } else {
-                                    System.out.println("[ DEVEL ] SQL: Zde proběhne zápis do ostrých dat.");
+                                    System.out.println("[ DEVEL ] [ SQL ] Zde proběhne zápis do ostrých dat.");
                                 }
 
                                 // commit

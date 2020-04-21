@@ -14,9 +14,9 @@ import java.util.*;
  */
 public class LDAPrecords implements IRecords {
 
-    final String FLAG_ID = "baka_flag";
-    final String FLAG_0  = "0";
-    final String FLAG_1  = "1";
+    static final String FLAG_ID = "baka_flag";
+    static final String FLAG_0  = "0";
+    static final String FLAG_1  = "1";
 
     /** klíčový atribut */
     private EBakaLDAPAttributes keyAttribute;
@@ -266,7 +266,7 @@ public class LDAPrecords implements IRecords {
                         attrMod &= BakaADAuthenticator.getInstance().replaceAttribute(dn, data.getKey(), data.getValue());
                     } else {
                         // attrMod vždy true
-                        System.out.println("[ DEVEL ] LDAP: Zde proběhne zápis do ostrých dat.");
+                        System.out.println("[ DEVEL ] [ LDAP ] Zde proběhne zápis do ostrých dat.");
                     }
                 }
 
