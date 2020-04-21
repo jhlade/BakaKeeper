@@ -3,6 +3,7 @@ package cz.zsstudanka.skola.bakakeeper.routines;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaADAuthenticator;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaSQL;
 import cz.zsstudanka.skola.bakakeeper.model.collections.LDAPrecords;
 import cz.zsstudanka.skola.bakakeeper.model.collections.SQLrecords;
 import cz.zsstudanka.skola.bakakeeper.model.entities.Student;
@@ -11,6 +12,7 @@ import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
 public class Test {
@@ -18,11 +20,14 @@ public class Test {
     public static void test_01() {
         System.out.println("====== [ TEST ] ======");
 
+        String pismeno = "C";
+        String rocnik = "1";
+
         // načíst do struktur LDAP: existující FAC, ALU, STU
         LDAPrecords zaměstnanci = new LDAPrecords(Settings.getInstance().getLDAP_baseFaculty(), EBakaLDAPAttributes.OC_USER);
         LDAPrecords absolventi = new LDAPrecords(Settings.getInstance().getLDAP_baseAlumni(), EBakaLDAPAttributes.OC_USER);
-        //LDAPrecords žáci = new LDAPrecords(Settings.getInstance().getLDAP_baseStudents(), EBakaLDAPAttributes.OC_USER);
-        LDAPrecords žáci = new LDAPrecords("OU=Trida-A,OU=Rocnik-1," + Settings.getInstance().getLDAP_baseStudents(), EBakaLDAPAttributes.OC_USER);
+        LDAPrecords žáci = new LDAPrecords(Settings.getInstance().getLDAP_baseStudents(), EBakaLDAPAttributes.OC_USER);
+        //LDAPrecords žáci = new LDAPrecords("OU=Trida-"+pismeno+",OU=Rocnik-"+rocnik+"," + Settings.getInstance().getLDAP_baseStudents(), EBakaLDAPAttributes.OC_USER);
         LDAPrecords kontakty = new LDAPrecords(Settings.getInstance().getLDAP_baseContacts(), EBakaLDAPAttributes.OC_CONTACT);
 
         System.out.println("Zaměstnanci:\t" + zaměstnanci.count());
@@ -31,7 +36,7 @@ public class Test {
         System.out.println("Kontakty:\t" + kontakty.count());
 
         // načíst do struktur SQL: STU z Bakalářů
-        SQLrecords evidence = new SQLrecords();
+        SQLrecords evidence = new SQLrecords(Integer.parseInt(rocnik), pismeno);
         System.out.println("Evidence:\t" + evidence.count());
 
         // 1) najít v SQL žáky bez e-mailu v doméně školy
@@ -65,6 +70,7 @@ public class Test {
             } else {
                 if (žák.getValue().get("E_MAIL").toString().length() > 0) {
                     System.out.println("STAV:\t\tŽák nemá mail v doméně školy.");
+                    // TODO dojde k přepisu
                 } else {
                     System.out.println("STAV:\t\tŽák nemá vyplněný žádný mail.");
                 }
@@ -72,6 +78,12 @@ public class Test {
                 String návrh;
                 Boolean obsazený;
                 Integer pokus = 0;
+
+                // TEST 2020-04-21 17:23
+                /*
+                if (žák.getValue().get("PRIJMENI").toString().equalsIgnoreCase("Doležal")) {
+                    pokus = 1;
+                }*/
 
                 do {
                     obsazený = false;
@@ -142,14 +154,24 @@ public class Test {
 
                             // návrh 2020-04-19
                             // 0.75 || (>=0.5 && ročník)
-                            if (faktorShody >= 0.75 ||  (faktorShody >= 0.5 && test_ročník)) {
+                            if (faktorShody >= 0.75 || (faktorShody >= 0.5 && test_ročník)) {
                                 System.out.println("\t\t\t\tBylo dosaženo požadované míry shody.\n\t\t\t\tBude provedeno párování nalezených objektů\n\t\t\t\tpodle identifikátoru [" + žák.getValue().get("INTERN_KOD").toString() + "]");
 
+                                // párování
                                 Map<EBakaLDAPAttributes, Object> zápis = new HashMap<>();
-                                zápis.put(EBakaLDAPAttributes.EXT01, žák.getValue().get("INTERN_KOD").toString());
+                                zápis.put(EBakaLDAPAttributes.EXT01, žák.getValue().get(EBakaSQL.F_STU_ID.basename()).toString());
                                 žáci.writeData(shodnýŽák.get(EBakaLDAPAttributes.DN.attribute()), zápis);
 
+                                žáci.setFlag(shodnýŽák.get(EBakaLDAPAttributes.DN.attribute()), true);
 
+                                // mail je tedy v pořádku
+                                obsazený = false;
+                                // příprava dat
+                                HashMap<EBakaSQL, String> nováData = new HashMap<>();
+                                nováData.put(EBakaSQL.F_STU_MAIL, návrh);
+                                // příprava k zápisu
+                                evidence.addWriteData(žák.getValue().get(EBakaSQL.F_STU_ID.basename()).toString(), nováData);
+                                evidence.setFlag(žák.getValue().get(EBakaSQL.F_STU_ID.basename()).toString(), true);
                             } else {
                                 System.out.println("\t\t\t\tObjekt nemá kandidáta na párování, bude vygenerována nová adresa.");
                                 continue;
@@ -161,9 +183,26 @@ public class Test {
 
                             if (shodnýŽák.get(EBakaLDAPAttributes.EXT01.attribute()).equals(žák.getValue().get("INTERN_KOD").toString())) {
                                 // OK!
-                                System.out.println("\t\t\t\t=> Jedná se o tohoto žáka! Proběhne zápis adresy do ostrých dat.");
+                                žáci.setFlag(shodnýŽák.get(EBakaLDAPAttributes.DN.attribute()), true);
 
-                                // TODO
+                                System.out.println("\t\t\t\t=> Jedná se o tohoto žáka! Proběhne zápis adresy do ostrých dat.");
+                                obsazený = false;
+
+                                // příprava dat
+                                HashMap<EBakaSQL, String> nováData = new HashMap<>();
+                                nováData.put(EBakaSQL.F_STU_MAIL, návrh);
+
+                                /*
+                                Random rand = new Random();
+                                if (rand.nextInt(10) < 5) {
+                                    nováData.put(EBakaSQL.DEBUG, "KoKo_Data");
+                                }
+                                */
+
+                                // příprava k zápisu
+                                evidence.addWriteData(shodnýŽák.get(EBakaLDAPAttributes.EXT01.attribute()), nováData);
+                                // FLAG
+                                evidence.setFlag(žák.getValue().get(EBakaSQL.F_STU_ID.basename()).toString(), true);
 
                             } else {
                                 System.out.println("\t\t\t\t=> Jedná se o zcela jiného žáka.");
@@ -171,7 +210,7 @@ public class Test {
                             }
                         }
 
-                        continue;
+                        //continue; // "obsazeno aktivním žákem"
                     }
 
                 } while (obsazený || pokus >= 10); // TODO ve finále nastavit globální limit (50? Nováků)
@@ -191,6 +230,17 @@ public class Test {
         System.out.println("LDAP probíhá zápis...");
         žáci.commit();
         System.out.println("LDAP Data k zápisu: " + žáci.writesRemaining());
+
+        System.out.println("======");
+        System.out.println("SQL Data k zápisu: " + evidence.writesRemaining());
+        System.out.println("SQL probíhá zápis...");
+        evidence.commit();
+        System.out.println("SQL Data k zápisu: " + evidence.writesRemaining());
+
+        System.out.println("============");
+        System.out.println("Evidence: celkem " + evidence.count() + ", nezpracováno: " + evidence.getSubsetWithFlag(false).size());
+        System.out.println("AD: celkem " + žáci.count() + ", nezpracováno: " + žáci.getSubsetWithFlag(false).size());
+
 
         // 2020-04-19 testování mailu ///
         //BakaMailer.getInstance().mail("Test systému", "Toto je kontrola posílání prosté zprávy se žluťučkým koněm úpějícím ďábelské ódy.");

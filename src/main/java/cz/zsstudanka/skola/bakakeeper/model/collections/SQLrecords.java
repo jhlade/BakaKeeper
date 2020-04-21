@@ -71,7 +71,7 @@ public class SQLrecords implements IRecords {
                 + "FROM dbo.zaci LEFT JOIN dbo.zaci_zzd ON (dbo.zaci_zzd.ID = (SELECT TOP 1 dbo.zaci_zzr.ID_ZZ FROM dbo.zaci_zzr WHERE dbo.zaci_zzr.INTERN_KOD = dbo.zaci.INTERN_KOD AND (dbo.zaci_zzr.JE_ZZ = '1' AND dbo.zaci_zzr.PRIMARNI = '1'))) " // detekce primárního ZZ
                 + "WHERE dbo.zaci.TRIDA LIKE '%.%' AND dbo.zaci.EVID_DO IS NULL " // žák existuje
                 //+ "AND dbo.zaci.TRIDA = '" + this.getCisloRocniku() + "." + this.getPismeno() + "' " // jedna konkrétní třída
-                + "AND dbo.zaci.TRIDA LIKE '1.B' " // TODO - adhoc 2020-04-21
+                + "AND dbo.zaci.TRIDA LIKE '1.C' " // TODO - adhoc 2020-04-21
                 + "ORDER BY B_ROCNIK DESC, B_TRIDA ASC, dbo.zaci.PRIJMENI ASC, dbo.zaci.JMENO ASC;"; // seřazení podle třídy DESC, abecedy ASC
 
         try {
@@ -249,8 +249,6 @@ public class SQLrecords implements IRecords {
             String genericUpdatePreparedStatement = "UPDATE {tableName} SET {colName} = ? WHERE {primaryKey} = ?";
             PreparedStatement updatePS = null;
 
-            //  LinkedHashMap<Map<EBakaSQL, HashMap<EBakaSQL, String>>,
-            //  Map<EBakaSQL, String>> writeData
             Iterator<Map<EBakaSQL, HashMap<EBakaSQL, String>>> writeKeyIterator = this.writeData.keySet().iterator();
             while (writeKeyIterator.hasNext()) {
                 Map<EBakaSQL, HashMap<EBakaSQL, String>> writeKey = writeKeyIterator.next();
@@ -294,7 +292,7 @@ public class SQLrecords implements IRecords {
 
                             if (Settings.getInstance().debugMode()) {
                                 System.out.println("[ DEBUG ] Proběhne pokus o SQL transakci s dotazem");
-                                System.out.println("UPDATE " + tableName + " SET " + dataField.field()
+                                System.out.println("UPDATE " + tableName.field() + " SET " + dataField.field()
                                                 + " = '" + dataValue + "' "
                                                 + "WHERE " + primaryKeyField.field() + " = '" + primaryKeyValue + "';");
                             }
@@ -329,7 +327,7 @@ public class SQLrecords implements IRecords {
                                         BakaSQL.getInstance().getConnection().rollback();
                                     }
                                 } catch (Exception eR) {
-                                    // nepovedl se ani rollback
+                                    // TODO nepovedl se ani rollback
                                 }
 
                             } finally {
@@ -377,15 +375,15 @@ public class SQLrecords implements IRecords {
                 print.append(recEntry.getKey());
                 print.append(" : ");
 
-                print.append(recEntry.getValue().get("TRIDA").toString());
+                print.append(recEntry.getValue().get(EBakaSQL.F_STU_CLASS.basename()).toString());
                 print.append(" : ");
 
-                print.append(String.format("%02d", Integer.parseInt(recEntry.getValue().get("C_TR_VYK"))));
+                print.append(String.format("%02d", Integer.parseInt(recEntry.getValue().get(EBakaSQL.F_STU_CLASS_ID.basename()))));
                 print.append(" : ");
 
-                print.append(recEntry.getValue().get("PRIJMENI").toString());
+                print.append(recEntry.getValue().get(EBakaSQL.F_STU_SURNAME.basename()).toString());
                 print.append(" ");
-                print.append(recEntry.getValue().get("JMENO").toString());
+                print.append(recEntry.getValue().get(EBakaSQL.F_STU_GIVENNAME.basename()).toString());
 
                 print.append("\n");
             }

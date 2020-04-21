@@ -205,14 +205,14 @@ public class BakaSQL {
         if (Settings.getInstance().debugMode()) {
             try {
 
-                System.err.println("[ DEBUG ] Ověřování SQL: " + (Settings.getInstance().sql_NTLM() ? "NTLMv2" : "Kerberos V"));
-                System.err.println("[ DEBUG ] Uživatel SQL: " + Settings.getInstance().getKrbUser());
+                System.out.println("[ DEBUG ] Ověřování SQL: " + (Settings.getInstance().sql_NTLM() ? "NTLMv2" : "Kerberos V"));
+                System.out.println("[ DEBUG ] Uživatel SQL: " + Settings.getInstance().getKrbUser());
 
                 DatabaseMetaData dbmd = con.getMetaData();
-                System.err.println("[ DEBUG ] dbmd:verze ovladače = " + dbmd.getDriverVersion());
-                System.err.println("[ DEBUG ] dbmd:název ovladače = " + dbmd.getDriverName());
-                System.err.println("[ DEBUG ] db software = " + dbmd.getDatabaseProductName());
-                System.err.println("[ DEBUG ] db verze    = " + dbmd.getDatabaseProductVersion());
+                System.out.println("[ DEBUG ] dbmd:verze ovladače = " + dbmd.getDriverVersion());
+                System.out.println("[ DEBUG ] dbmd:název ovladače = " + dbmd.getDriverName());
+                System.out.println("[ DEBUG ] db software = " + dbmd.getDatabaseProductName());
+                System.out.println("[ DEBUG ] db verze    = " + dbmd.getDatabaseProductVersion());
 
             } catch (Exception e) {
                 System.err.println("[ CHYBA ] Nebylo možné získat ladící informace o SQL spojení.");
