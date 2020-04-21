@@ -262,7 +262,12 @@ public class LDAPrecords implements IRecords {
                 Boolean attrMod = true;
 
                 for (Map.Entry<EBakaLDAPAttributes, Object> data : dataSet.entrySet()) {
-                    attrMod &= BakaADAuthenticator.getInstance().replaceAttribute(dn, data.getKey(), data.getValue());
+                    if (!Settings.getInstance().develMode()) {
+                        attrMod &= BakaADAuthenticator.getInstance().replaceAttribute(dn, data.getKey(), data.getValue());
+                    } else {
+                        // attrMod vždy true
+                        System.out.println("[ DEVEL ] LDAP: Zde proběhne zápis do ostrých dat.");
+                    }
                 }
 
                 if (attrMod) {
