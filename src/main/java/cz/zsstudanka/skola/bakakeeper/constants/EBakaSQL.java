@@ -15,9 +15,11 @@ public enum EBakaSQL {
 
     // fields - Student
     F_STU_ID(TBL_STU.field + "." + "INTERN_KOD", "Interní kód žáka."),
+    F_STU_CLASS_ID(TBL_STU.field + "." + "C_TR_VYK", "Číslo žáka v třídním výkazu."),
     F_STU_SURNAME(TBL_STU.field + "." + "PRIJMENI", "Příjmení žáka."),
     F_STU_GIVENNAME(TBL_STU.field + "." + "JMENO", "Jméno žáka."),
     F_STU_CLASS(TBL_STU.field + "." + "TRIDA", "Třída žáka ve tvaru X.Y."),
+    F_STU_MAIL(TBL_STU.field + "." + "E_MAIL", "E-mailová adresa žáka."),
     F_STU_BK_CLASSYEAR("B_ROCNIK", "Ročník žáka."),
     F_STU_BK_CLASSLETTER("B_TRIDA", "Písmeno třídy žáka."),
 
@@ -44,6 +46,29 @@ public enum EBakaSQL {
 
     public String field() {
         return this.field;
+    }
+
+    public EBakaSQL primaryKey() {
+        switch (this) {
+
+            case TBL_STU:
+                return F_STU_ID;
+
+            // TODO
+            /*
+            case TBL_FAC:
+                return F_FAC_ID; */
+
+            case TBL_GUA:
+                return F_GUA_ID;
+
+            // TODO
+            /*
+            case TBL_STU_GUA:
+                return F_STU_GUA_ID;  */
+        }
+
+        return null;
     }
 
     public String description() {
