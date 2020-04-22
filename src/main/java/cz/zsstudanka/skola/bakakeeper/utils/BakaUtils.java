@@ -184,6 +184,23 @@ public class BakaUtils {
     }
 
     /**
+     * Vytvoří počáteční heslo žáka na základě jeho příjmení, jména a čísla v třídním výkazu
+     * ve formátu Pr.Jm.##
+     *
+     * @param surname příjmení žáka
+     * @param givenName jméno žáka
+     * @param classID číslo v třídním výkazu
+     * @return počáteční heslo
+     */
+    public static String createInitialPassword(String surname, String givenName, Integer classID) {
+        return BakaUtils.removeAccents(surname.substring(0, 2))
+                + "."
+                + BakaUtils.removeAccents(givenName.substring(0, 2))
+                + "."
+                + String.format("%2d", classID);
+    }
+
+    /**
      * Bázové jméno souboru.
      *
      * @param path cesta k souboru
