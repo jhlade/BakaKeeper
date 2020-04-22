@@ -33,11 +33,13 @@ public class LDAPrecords implements IRecords {
     /** instanční iterátor */
     private Iterator iterator;
 
+    private Iterator keyIterator;
+
     /** hrubá data; klíč = UPN pro uživatele, mail pro kontakty, obsah = interní data podle požadavků */
-    private LinkedHashMap<String, Map> data;
+    private HashMap<String, Map<String, Object>> data;
 
     /** hrubá data k zápisu; klíč = DN, obsah = data k zápisu */
-    private LinkedHashMap<String, Map<EBakaLDAPAttributes, Object>> writeData = new LinkedHashMap<>();
+    private HashMap<String, Map<EBakaLDAPAttributes, String>> dataToWrite = new LinkedHashMap<>();
 
     /**
      * Konstrukce kolekce podle bázové OU z daného typu záznamů.
@@ -50,7 +52,7 @@ public class LDAPrecords implements IRecords {
         this.recordType = type;
 
         // inicializace
-        this.data = new LinkedHashMap<String, Map>();
+        this.data = new LinkedHashMap<String, Map<String, Object>>();
 
         // dotaz na LDAP - hledání dle typu objektu
         HashMap<String, String> ldapQ = new HashMap<String, String>();
@@ -75,7 +77,7 @@ public class LDAPrecords implements IRecords {
 
                     EBakaLDAPAttributes.MSXCH_REQ_AUTH.attribute(),
                     EBakaLDAPAttributes.MSXCH_GAL_HIDDEN.attribute(),
-                    EBakaLDAPAttributes.MEMBER_OF.attribute(),
+                    //EBakaLDAPAttributes.MEMBER_OF.attribute(),
 
                     EBakaLDAPAttributes.EXT01.attribute(),
             };
@@ -104,7 +106,7 @@ public class LDAPrecords implements IRecords {
         }
 
         // naplnění daty
-        Map<Integer, Map> info = BakaADAuthenticator.getInstance().getInfoInOU(
+        Map<Integer, Map> info = BakaADAuthenticator.getInstance().getObjectInfo(
                 base,
                 ldapQ,
                 retAttributes
@@ -157,7 +159,7 @@ public class LDAPrecords implements IRecords {
      * @param key UPN - klíč
      * @return záznam
      */
-    public Map get(String key) {
+    public Map<String, Object> get(String key) {
 
         if (this.data.containsKey(key)) {
             return this.data.get(key);
@@ -187,7 +189,6 @@ public class LDAPrecords implements IRecords {
      * @param flag příznak
      */
     public void setFlag(String key, Boolean flag) {
-
         if (this.data.containsKey(key)) {
             this.data.get(key).replace(FLAG_ID, (flag) ? FLAG_1 : FLAG_0);
         }
@@ -199,18 +200,16 @@ public class LDAPrecords implements IRecords {
      * @param flag příznak
      * @return podmnožina s daným příznakem
      */
-    public LinkedHashMap<String, Map> getSubsetWithFlag(Boolean flag) {
-        LinkedHashMap<String, Map> subset = new LinkedHashMap<>();
+    public LinkedHashMap<String, Map<String, Object>> getSubsetWithFlag(Boolean flag) {
+        LinkedHashMap<String, Map<String, Object>> subset = new LinkedHashMap<>();
 
-        // nový interní iterátor
-        Iterator<Map.Entry<String, Map>> internalIterator = this.data.entrySet().iterator();
+        Iterator<String> subsetIterator = this.data.keySet().iterator();
+        while (subsetIterator.hasNext()) {
 
-        while (internalIterator.hasNext()) {
-            Map.Entry<String, Map> record = internalIterator.next();
+            String subID = subsetIterator.next();
 
-            // naplnění podmnožiny záznamy s daným příznakem
-            if (record.getValue().get(FLAG_ID).equals((flag) ? FLAG_1 : FLAG_0)) {
-                subset.put(record.getKey(), record.getValue());
+            if (get(subID).get(FLAG_ID).equals((flag) ? FLAG_1 : FLAG_0)) {
+                subset.put(subID, get(subID));
             }
         }
 
@@ -230,21 +229,40 @@ public class LDAPrecords implements IRecords {
      * Příprava dat ke zpětnému zápisu.
      *
      * @param dn plné DN objektu
-     * @param data data k zápisu
+     * @param preparedData data k zápisu
      */
-    public void writeData(String dn, Map<EBakaLDAPAttributes, Object> data) {
+    public void writeData(String dn, Map<EBakaLDAPAttributes, String> preparedData) {
 
-        if (this.writeData.containsKey(dn)) {
-            for (Map.Entry<EBakaLDAPAttributes, Object> dataEntry : data.entrySet()) {
-                this.writeData.get(dn).put(dataEntry.getKey(), dataEntry.getValue());
+        if (this.dataToWrite.containsKey(dn)) {
+            for (Map.Entry<EBakaLDAPAttributes, String> dataEntry : preparedData.entrySet()) {
+                this.dataToWrite.get(dn).put(dataEntry.getKey(), dataEntry.getValue());
             }
         } else {
-            this.writeData.put(dn, data);
+            this.dataToWrite.put(dn, preparedData);
         }
     }
 
+    /**
+     * Úprava živých dat.
+     *
+     * @param key ientifikátor
+     * @param newData data k okamžitému zápisu do mezipaměti
+     */
+    public void liveUpdate(String key, Map<EBakaLDAPAttributes, Object> newData) {
+
+        HashMap<String, Object> refinedData = new HashMap<>();
+
+        Iterator<EBakaLDAPAttributes> newDataIterator = newData.keySet().iterator();
+        while (newDataIterator.hasNext()) {
+            EBakaLDAPAttributes attr = newDataIterator.next();
+            refinedData.put(attr.attribute(), newData.get(attr));
+        }
+
+        this.data.put(key, refinedData);
+    }
+
     public Integer writesRemaining() {
-        return this.writeData.size();
+        return this.dataToWrite.size();
     }
 
     /**
@@ -252,16 +270,21 @@ public class LDAPrecords implements IRecords {
      */
     public boolean commit() {
 
-        if (this.writeData.size() > 0)
+        if (this.dataToWrite.size() > 0)
         {
-            Iterator<String> writeIterator = this.writeData.keySet().iterator();
+            Iterator<String> writeIterator = this.dataToWrite.keySet().iterator();
             while (writeIterator.hasNext()) {
                 String dn = writeIterator.next();
-                Map<EBakaLDAPAttributes, Object> dataSet = this.writeData.get(dn);
+                Map<EBakaLDAPAttributes, String> dataSet = this.dataToWrite.get(dn);
 
                 Boolean attrMod = true;
 
-                for (Map.Entry<EBakaLDAPAttributes, Object> data : dataSet.entrySet()) {
+                for (Map.Entry<EBakaLDAPAttributes, String> data : dataSet.entrySet()) {
+
+                    if (Settings.getInstance().debugMode()) {
+                        System.out.println("[ DEBUG ] [ LDAP ] REPLACE [" + data.getKey() + "] = [" + data.getValue().toString() + "] @ [" + dn + "]");
+                    }
+
                     if (!Settings.getInstance().develMode()) {
                         attrMod &= BakaADAuthenticator.getInstance().replaceAttribute(dn, data.getKey(), data.getValue());
                     } else {
@@ -275,7 +298,7 @@ public class LDAPrecords implements IRecords {
                 }
             }
 
-            return (this.writeData.size() == 0);
+            return (this.dataToWrite.size() == 0);
         }
 
         return true;
@@ -290,8 +313,9 @@ public class LDAPrecords implements IRecords {
 
             records.append("Seznam obsahuje celkem " + this.data.size() + " položek.\n");
 
-            for (Map.Entry<String, Map> recEntry : data.entrySet()) {
-                records.append(recEntry.getKey());
+            Iterator<String> keyIterator = this.data.keySet().iterator();
+            while (keyIterator.hasNext()) {
+                records.append(keyIterator.next());
                 records.append("\n");
             }
 
@@ -310,6 +334,16 @@ public class LDAPrecords implements IRecords {
         }
 
         return this.iterator;
+    }
+
+    // TODO
+    public Iterator<String> keyIterator() {
+
+        if (this.keyIterator == null) {
+            this.keyIterator = this.data.keySet().iterator();
+        }
+
+        return this.keyIterator;
     }
 
     @Override

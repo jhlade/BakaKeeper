@@ -216,6 +216,20 @@ public class SQLrecords implements IRecords {
     }
 
     /**
+     * Získání jednoho záznamu podle ID.
+     *
+     * @param id interní kód
+     * @return data
+     */
+    public Map<String, String> get(String id) {
+        if (this.data.containsKey(id)) {
+            return this.data.get(id);
+        }
+
+        return null;
+    }
+
+    /**
      * Přidání záznamu do kolekce.
      *
      * @param id interní kód záznamu
@@ -400,9 +414,19 @@ public class SQLrecords implements IRecords {
                                                 .replace("{primaryKey}", primaryKeyField.field())
                                 );
 
-                                // provedení dotazu
+                                updatePS.setString(1, dataValue);
+                                updatePS.setString(2, primaryKeyValue);
+
+                                // provedení atomického dotazu
                                 if (!Settings.getInstance().develMode()) {
-                                    update &= updatePS.execute();
+
+                                    int executeResult = updatePS.executeUpdate();
+
+                                    if (Settings.getInstance().debugMode()) {
+                                        System.out.println("[ DEBUG ] [ SQL ] Bylo ovlivněno " + executeResult + " řádků.");
+                                    }
+
+                                    update &= (executeResult == 1);
                                 } else {
                                     System.out.println("[ DEVEL ] [ SQL ] Zde proběhne zápis do ostrých dat.");
                                 }
@@ -434,7 +458,7 @@ public class SQLrecords implements IRecords {
                                     // znovuzapnutí autocommitu
                                     BakaSQL.getInstance().getConnection().setAutoCommit(true);
                                 } catch (Exception eF) {
-                                    // TODO -- asi spadlo celé spojení
+                                    // TODO -- slovní popis - asi spadlo celé spojení
                                 }
                             } // transakce
                         } //data

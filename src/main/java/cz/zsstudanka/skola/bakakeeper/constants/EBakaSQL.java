@@ -9,7 +9,7 @@ public enum EBakaSQL {
 
     // litarals
     LIT_TRUE("1", "Logická hodnota PRAVDA."),
-    LIT_FALSE("0", "Logická hodnota nepravda."),
+    LIT_FALSE("0", "Logická hodnota NEPRAVDA."),
 
     // tables
     TBL_STU("dbo.zaci", "Tabulka s daty žáků."),

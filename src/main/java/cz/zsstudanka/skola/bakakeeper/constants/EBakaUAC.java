@@ -26,7 +26,7 @@ public enum EBakaUAC {
     NOT_DELEGATED (0x100000),
     USE_DES_KEY_ONLY (0x200000),
     DONT_REQ_PREAUTH (0x400000),
-    PASSWORD_EXPIRED (0x800000),
+    PASSWORD_EXPIRED (0x800000), // platnost hesla vypršela
     TRUSTED_TO_AUTH_FOR_DELEGATION (0x1000000),
     PARTIAL_SECRETS_ACCOUNT (0x04000000);
 
@@ -46,6 +46,10 @@ public enum EBakaUAC {
         return ( (userAccountControls&this.value) != 0 ) ? true : false;
     }
 
+    public boolean checkFlag(String userAccountControls) {
+        return checkFlag(Integer.parseInt(userAccountControls));
+    }
+
     /**
      * Hodnota příznaku.
      *
@@ -54,4 +58,10 @@ public enum EBakaUAC {
     public int value() {
         return this.value;
     }
+
+    @Override
+    public String toString() {
+        return String.format("%d", value);
+    }
+
 }

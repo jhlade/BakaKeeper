@@ -43,7 +43,9 @@ public class Student implements IRecordLDAP, IRecordSQL {
      * @param upn UserPrincipalName = primární e-mail v Bakalářích
      */
     public Student(String upn) {
-
+        // načíst SQL (závazná data)
+        // načíst LDAP
+        // check&repair (SQL->LDAP)
     }
 
     /**
@@ -81,17 +83,6 @@ public class Student implements IRecordLDAP, IRecordSQL {
      * @return úspěch operace
      */
     public Boolean setPassword(String newPassword, Boolean forceChange) {
-
-        // unicodePassword
-        try {
-            BakaADAuthenticator.getInstance().replaceAttribute(this.getDN(),
-                    EBakaLDAPAttributes.PW_UNICODE,
-                    ("\"" + newPassword + "\"").getBytes("UTF-16LE")
-            );
-        } catch (UnsupportedEncodingException e) {
-            // TODO
-            //e.printStackTrace();
-        }
 
         if (forceChange) {
             BakaADAuthenticator.getInstance().replaceAttribute(this.getDN(),

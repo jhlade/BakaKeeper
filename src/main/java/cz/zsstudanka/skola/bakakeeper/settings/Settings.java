@@ -633,7 +633,7 @@ public class Settings {
         return "OU=DistribucniSeznamyZZ," + this.settings_data.get("ad_base_kontakty");
     }
 
-    public String getLDAP_baseGroups() {
+    public String getLDAP_baseStudentGroups() {
         return this.settings_data.get("ad_base_skupiny_zaci");
     }
 

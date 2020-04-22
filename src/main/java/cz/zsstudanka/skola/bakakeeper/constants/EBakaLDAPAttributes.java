@@ -12,6 +12,7 @@ public enum EBakaLDAPAttributes {
     NAME_FIRST("givenName", null), // křestní jméno
     LOGIN ("sAMAccountName", null), // přihlašovací jméno pro pre-WIN2000 (<=20 znaků)
     UPN ("userPrincipalName", null), // přihlašovací jméno s primární doménou
+    UID ("uid", null), // unikátní UID
     UAC ("userAccountControl", null), // řídící atributy účtu
     MEMBER_OF ("memberOf", null), // seznam skupin, kterých je objekt členem
     MEMBER ("member", null), // člen skupiny
@@ -48,6 +49,9 @@ public enum EBakaLDAPAttributes {
     OC_GENERAL ("objectClass", null), // třída objektu
     OC_TOP ("objectClass", "top"), // vrcholná třída objektu
     OC_USER ("objectClass", "user"), // objekt = uživatel
+    OC_ORG_PERSON ("objectClass", "organizationalPerson"), // objekt = osoba
+    OC_PERSON ("objectClass", "person"), // objekt = osoba
+    OC_INET_PERSON("objectClass", "inetOrgPerson"), // objekt - osoba
     OC_CONTACT ("objectClass", "contact"), // objekt = kontakt
     OC_GROUP ("objectClass", "group"), // objekt = obecná skupina
     OC_OU ("objectClass", "organizationalUnit"), // objekt = organizační jednotka
@@ -74,5 +78,9 @@ public enum EBakaLDAPAttributes {
 
     public String value() {
         return (this.value != null) ? this.value : "";
+    }
+
+    public String toString() {
+        return attribute();
     }
 }

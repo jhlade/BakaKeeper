@@ -460,24 +460,13 @@ public class BakaADAuthenticator {
         while (dataIterator.hasNext()) {
             String attrKey = dataIterator.next();
 
-            // common name - překosčit
-            if (attrKey.equals(EBakaLDAPAttributes.CN.attribute())) {
-                continue;
-            }
-
-            // řízení účtu
-            if (attrKey.equals(EBakaLDAPAttributes.UAC.attribute())) {
-                attrs[a] = new BasicAttribute(attrKey, Integer.parseInt(data.get(attrKey), 16));
-                a++;
-                continue;
-            }
-
             // heslo
             if (attrKey.equals(EBakaLDAPAttributes.PW_UNICODE.attribute())) {
                 String password = "\"" + data.get(attrKey) + "\"";
                 try {
                     byte[] unicodePwd = password.getBytes("UTF-16LE");
                     attrs[a] = new BasicAttribute(attrKey, unicodePwd);
+                    a++;
                 } catch (Exception e) {
                     System.err.println("[ CHYBA ] Nebylo možné vytvořit heslo.");
 
@@ -488,12 +477,11 @@ public class BakaADAuthenticator {
                     if (Settings.getInstance().debugMode()) {
                         e.printStackTrace(System.err);
                     }
-
-                    // krok zpět
-                    a--;
                 }
+                continue;
             }
 
+            // vše ostatní
             attrs[a] = new BasicAttribute(attrKey, data.get(attrKey));
             // inkrementace
             a++;
@@ -763,9 +751,6 @@ public class BakaADAuthenticator {
                         e.printStackTrace(System.err);
                     }
                 }
-            // UAC
-            } else if (attribute.equals(EBakaLDAPAttributes.UAC)) {
-                mod[0] = new ModificationItem(modOp, new BasicAttribute(attribute.attribute(), Integer.parseInt(value, 16)));
             } else {
                 // vše ostatní
                 mod[0] = new ModificationItem(modOp, new BasicAttribute(attribute.attribute(), value));

@@ -1,33 +1,17 @@
 package cz.zsstudanka.skola.bakakeeper.routines;
 
+import cz.zsstudanka.skola.bakakeeper.settings.Settings;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.PrintStream;
+
 /**
  * Práce s exporty.
  *
  * @author Jan Hladěna
  */
 public class Export {
-
-    /**
-     * Export žákovských informací ve formě CSV.
-     *
-     * Pole obsahují
-     * INTERN_KOD  - interní ID žáka z Bakalářů
-     * ROCNIK      - číslo ročníku z Bakalářů
-     * TRIDA       - písmeno třídy z Bakalářů
-     * PRIJMENI    - příjméní žáka z Bakalářů
-     * JMENO       - jméno žáka z Bakalářů
-     * AD_LOGIN    - přihlašovací jméno žáka z LDAP
-     * AD_EMAIL    - primární e-mail žáka z LDAP
-     * EMAIL       - e-mail žáka z Bakalářů
-     * ZZ_KOD      - interní ID primárního zákonného zástupce žáka z Bakalářů
-     * ZZ_JMENO    - jméno primárního zákonného zástupce žáka z Bakalářů
-     * ZZ_PRIJMENI - příjmení primárního zákonného zástupce žáka z Bakalářů
-     * ZZ_TELEFON  - telefon primárního zákonného zástupce žáka z Bakalářů
-     * ZZ_EMAIL    - e-mail primárního zákonného zástupce žáka z Bakalářů
-     *
-     * @param outFile výstupní soubor
-     * @deprecated
-     */
 
     /*
     public static void exportStudentCSVdata(String outFile) {
@@ -106,9 +90,50 @@ public class Export {
             }
         }
 
+
+
+    }*/
+
+    /**
+     * Export žákovských informací ve formě CSV.
+     *
+     * Pole obsahují
+     * INTERN_KOD  - interní ID žáka z Bakalářů
+     * ROCNIK      - číslo ročníku z Bakalářů
+     * TRIDA       - písmeno třídy z Bakalářů
+     * PRIJMENI    - příjméní žáka z Bakalářů
+     * JMENO       - jméno žáka z Bakalářů
+     * UPN         - přihlašovací jméno žáka z LDAP
+     * AD_RPWD     - výchozí heslo pro reset
+     * EMAIL       - e-mail žáka z Bakalářů
+     * ZZ_KOD      - interní ID primárního zákonného zástupce žáka z Bakalářů
+     * ZZ_JMENO    - jméno primárního zákonného zástupce žáka z Bakalářů
+     * ZZ_PRIJMENI - příjmení primárního zákonného zástupce žáka z Bakalářů
+     * ZZ_TELEFON  - telefon primárního zákonného zástupce žáka z Bakalářů
+     * ZZ_EMAIL    - e-mail primárního zákonného zástupce žáka z Bakalářů
+     *
+     * @param outFile výstupní soubor
+     */
+    public static void exportStudentCSVdata(String outFile) {
+
+        Settings.getInstance().load();
+
+        // rutina exportu
+        if (Settings.getInstance().debugMode()) {
+            System.out.println("====== [ EXPORT ] ======");
+        }
+
+        StringBuilder outputBuffer = new StringBuilder();
+
+        // header
+        outputBuffer.append("INTERN_KOD;ROCNIK;TRIDA;C_TR_VYK;PRIJMENI;JMENO;UPN;AD_RPWD;EMAIL;ZZ_KOD;ZZ_JMENO;ZZ_PRIJMENI;ZZ_TELEFON;ZZ_EMAIL");
+        outputBuffer.append("\n");
+
+        // TODO - naplnění bufferu daty
+
+
         // uložení nebo výstup
         if (outFile != null) {
-
             File outputFile = new File(outFile);
 
             try {
@@ -123,7 +148,7 @@ public class Export {
                 }
 
                 if (Settings.getInstance().debugMode()) {
-                    e.printStackTrace();
+                    e.printStackTrace(System.err);
                 }
             }
 
@@ -132,10 +157,9 @@ public class Export {
             System.out.println(outputBuffer.toString());
         }
 
-    }*/
-
-    public static void exportStudentCSVdata(String outFile) {
-        // TODO
+        if (Settings.getInstance().debugMode()) {
+            System.out.println("====== [ /EXPORT ] ======");
+        }
     }
 
 }
