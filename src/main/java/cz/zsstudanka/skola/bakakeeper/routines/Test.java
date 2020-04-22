@@ -27,6 +27,7 @@ public class Test {
         BakaADAuthenticator.getInstance().createOU("Test 1999", Settings.getInstance().getLDAP_baseAlumni());
          */
 
+        /*
         String testovacíOU = "OU=2020," + Settings.getInstance().getLDAP_baseAlumni();
         String cn = "Malý Kocour";
         String dn = "cn=" + cn + "," + testovacíOU;
@@ -57,6 +58,7 @@ public class Test {
         if (true) {
             return;
         }
+        */
 
         String pismeno = null;//"C";
         String rocnik = null;//"1";
@@ -289,6 +291,8 @@ public class Test {
                                 // příprava k zápisu
                                 evidence.addWriteData(žák.getValue().get(EBakaSQL.F_STU_ID.basename()).toString(), nováData);
                                 evidence.setFlag(žák.getValue().get(EBakaSQL.F_STU_ID.basename()).toString(), true);
+                                // hotovo
+                                break;
                             } else {
                                 System.out.println("\t\t\t\tObjekt nemá kandidáta na párování, bude vytvořena nová adresa.");
                                 continue;
@@ -321,6 +325,8 @@ public class Test {
                                 // FLAG
                                 evidence.setFlag(žák.getValue().get(EBakaSQL.F_STU_ID.basename()).toString(), true);
 
+                                // konec
+                                break;
                             } else {
                                 System.out.println("\t\t\t\t=> Jedná se o zcela jiného žáka.");
                                 continue;
@@ -328,6 +334,13 @@ public class Test {
                         }
 
                         //continue; // "obsazeno aktivním žákem"
+                    }
+
+                    // konec, zapsat data
+                    if (!obsazený) {
+                        HashMap<EBakaSQL, String> nováKokoData = new HashMap<>();
+                        nováKokoData.put(EBakaSQL.F_STU_MAIL, návrh);
+                        evidence.addWriteData(žák.getValue().get(EBakaSQL.F_STU_ID.basename()).toString(), nováKokoData);
                     }
 
                 } while (obsazený || pokus >= 10); // TODO ve finále nastavit globální limit (50? Nováků)
@@ -368,21 +381,70 @@ public class Test {
                         + " " + nezpracovanýZáznam.get(EBakaSQL.F_STU_GIVENNAME.basename())
                 );
 
-                System.out.println("Proběhne vytvoření nového žáka:");
-                // připravit OU
-                // připravit skupiny
-                // addObjectToGroup
+                System.out.println("====> Proběhne vytvoření nového žáka:");
 
+
+                Map<String, String> nováData = new HashMap<>();
                 String novýRočník = nezpracovanýZáznam.get(EBakaSQL.F_STU_BK_CLASSYEAR.basename()).toString();
                 String nováTřída = nezpracovanýZáznam.get(EBakaSQL.F_STU_BK_CLASSLETTER.basename()).toString().toUpperCase();
 
+                // připravit OU
                 String cílováOU = "OU=Trida-" + nováTřída + ",OU=Rocnik-" + novýRočník + "," + Settings.getInstance().getLDAP_baseStudents();
+                System.out.println("[OU] = " + cílováOU);
+
+                String jméno = nezpracovanýZáznam.get(EBakaSQL.F_STU_GIVENNAME.basename());
+                nováData.put(EBakaLDAPAttributes.NAME_FIRST.attribute(), jméno);
+                System.out.println("Jméno: " + jméno);
+                String příjmení = nezpracovanýZáznam.get(EBakaSQL.F_STU_SURNAME.basename());
+                nováData.put(EBakaLDAPAttributes.NAME_LAST.attribute(), příjmení);
+                System.out.println("Příjmení: " + příjmení);
+                String cn = příjmení + " " + jméno;
+                String display = cn;
+                nováData.put(EBakaLDAPAttributes.NAME_DISPLAY.attribute(), display);
+                System.out.println("Display: " + display);
+                String bakaMail = nezpracovanýZáznam.get(EBakaSQL.F_STU_MAIL.basename());
+                System.out.println("Bakamail: " + bakaMail);
+                String mail = BakaUtils.createUPNfromName(příjmení, jméno, "zs-studanka.cz");
+                nováData.put(EBakaLDAPAttributes.MAIL.attribute(), mail);
+                System.out.println("Mail: " + mail);
+                String upn = mail;
+                nováData.put(EBakaLDAPAttributes.UPN.attribute(), upn);
+                String login = BakaUtils.createSAMloginFromName(příjmení, jméno, 0);
+                nováData.put(EBakaLDAPAttributes.LOGIN.attribute(), login);
+                System.out.println("Legacy login: " + login);
+                String uid = upn;
+                nováData.put(EBakaLDAPAttributes.UID.attribute(), uid);
+
+                Integer čísloVýkazu = Integer.parseInt(nezpracovanýZáznam.get(EBakaSQL.F_STU_CLASS_ID.basename()));
+                System.out.println("Číslo výkazu: " + čísloVýkazu);
+
+                String heslo = BakaUtils.createInitialPassword(příjmení, jméno, čísloVýkazu);
+                System.out.println("Heslo: " + heslo);
+                nováData.put(EBakaLDAPAttributes.PW_UNICODE.attribute(), heslo);
+                nováData.put(EBakaLDAPAttributes.UAC.attribute(), EBakaUAC.NORMAL_ACCOUNT.toString());
+
+                String title = novýRočník + "." + nováTřída;
+                System.out.println("Pracovní pozice: " + title);
+                nováData.put(EBakaLDAPAttributes.TITLE.attribute(), title);
+
+                String internal_id = nezpracovanýZáznam.get(EBakaSQL.F_STU_ID.basename());
+                System.out.println("ID/EXT01: " + internal_id);
+                nováData.put(EBakaLDAPAttributes.EXT01.attribute(), internal_id);
+
+                // připravit skupiny
                 String skupinaZaci = "CN=Skupina-Zaci," + Settings.getInstance().getLDAP_baseGlobalGroups();
                 String třídníSkupina = "CN=Zaci-Trida-" + novýRočník + nováTřída + "," + Settings.getInstance().getLDAP_baseStudentGroups();
 
-                System.out.println("[OU] = " + cílováOU);
                 System.out.println("[SK] = " + skupinaZaci);
                 System.out.println("[SK] = " + třídníSkupina);
+
+                // create
+                BakaADAuthenticator.getInstance().createNewUser(cn, cílováOU, nováData);
+
+                // addObjectToGroup
+                String dn = "CN=" + cn + "," + cílováOU;
+                BakaADAuthenticator.getInstance().addObjectToGroup(dn, skupinaZaci);
+                BakaADAuthenticator.getInstance().addObjectToGroup(dn, třídníSkupina);
 
             }
 
