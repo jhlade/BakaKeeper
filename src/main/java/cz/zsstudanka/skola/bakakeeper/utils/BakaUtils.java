@@ -193,11 +193,17 @@ public class BakaUtils {
      * @return počáteční heslo
      */
     public static String createInitialPassword(String surname, String givenName, Integer classID) {
-        return BakaUtils.removeAccents(surname.substring(0, 2))
+        return BakaUtils.removeAccents(surname
+                .replace("-", " ")
+                .replaceAll("\\s+", " ")
+                .replaceAll("^(d|D)(a|e|i) ", "")
+                .replaceAll("(v|V)(a|o)n ", "")
+                .replaceAll("(a|A)l ", "")
+                .substring(0, 2))
                 + "."
                 + BakaUtils.removeAccents(givenName.substring(0, 2))
                 + "."
-                + String.format("%2d", classID);
+                + String.format("%02d", classID);
     }
 
     /**

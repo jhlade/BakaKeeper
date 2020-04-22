@@ -81,4 +81,12 @@ public class BakaUtilsTest {
         assertEquals("Kočky", BakaUtils.parseLastOU("OU=Kočky,OU=Zvířata,DC=test,DC=org"));
     }
 
+    @Test
+    public void createInitialPassword() {
+        assertEquals("No.Ja.01", BakaUtils.createInitialPassword("Novák", "Jakub", 1));
+        assertEquals("Pr.Sa.27", BakaUtils.createInitialPassword("Příkopová", "Šárka Sofie", 27));
+        assertEquals("Pi.Vo.11", BakaUtils.createInitialPassword("Pivoňka", "Vojtěch", 11));
+        assertEquals("Vi.Le.03", BakaUtils.createInitialPassword("Da Vinci", "Leonardo", 3));
+    }
+
 }
