@@ -1,6 +1,7 @@
 package cz.zsstudanka.skola.bakakeeper.connectors;
 
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaUAC;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
 
@@ -392,7 +393,7 @@ public class BakaADAuthenticator {
 
         // skupiny a seznamy
         if (
-                OU.contains(Settings.getInstance().getLDAP_baseGroups())
+                OU.contains(Settings.getInstance().getLDAP_baseStudentGroups())
                 || OU.contains(Settings.getInstance().getLDAP_baseDLContacts())
         ) {
             ldapQ.put(EBakaLDAPAttributes.OC_GROUP.attribute(), EBakaLDAPAttributes.OC_GROUP.value());
@@ -437,12 +438,69 @@ public class BakaADAuthenticator {
     /**
      * Vytvoření nového uživatele v Active Directory.
      *
-     * @param OU cílová organizační jednotka
-     * @param data
-     *
+     * @param cn Základní jméno uživatele
+     * @param targetOU cílová organizační jednotka
+     * @param data parametry uživatele
      */
-    public void createNewUser(String OU, Map data) {
-        // TODO
+    public void createNewUser(String cn, String targetOU, Map<String, String> data) {
+
+        // třída objektu - uživatel Active Directory
+        String[] objectClasses = {
+            EBakaLDAPAttributes.OC_TOP.value(),
+            EBakaLDAPAttributes.OC_PERSON.value(),
+            EBakaLDAPAttributes.OC_ORG_PERSON.value(),
+            EBakaLDAPAttributes.OC_USER.value()
+        };
+
+        // data objektu
+        Attribute[] attrs = new Attribute[data.size()];
+        int a = 0;
+
+        Iterator<String> dataIterator = data.keySet().iterator();
+        while (dataIterator.hasNext()) {
+            String attrKey = dataIterator.next();
+
+            // common name - překosčit
+            if (attrKey.equals(EBakaLDAPAttributes.CN.attribute())) {
+                continue;
+            }
+
+            // řízení účtu
+            if (attrKey.equals(EBakaLDAPAttributes.UAC.attribute())) {
+                attrs[a] = new BasicAttribute(attrKey, Integer.parseInt(data.get(attrKey), 16));
+                a++;
+                continue;
+            }
+
+            // heslo
+            if (attrKey.equals(EBakaLDAPAttributes.PW_UNICODE.attribute())) {
+                String password = "\"" + data.get(attrKey) + "\"";
+                try {
+                    byte[] unicodePwd = password.getBytes("UTF-16LE");
+                    attrs[a] = new BasicAttribute(attrKey, unicodePwd);
+                } catch (Exception e) {
+                    System.err.println("[ CHYBA ] Nebylo možné vytvořit heslo.");
+
+                    if (Settings.getInstance().beVerbose()) {
+                        System.err.println("[ CHYBA ] " + e.getLocalizedMessage());
+                    }
+
+                    if (Settings.getInstance().debugMode()) {
+                        e.printStackTrace(System.err);
+                    }
+
+                    // krok zpět
+                    a--;
+                }
+            }
+
+            attrs[a] = new BasicAttribute(attrKey, data.get(attrKey));
+            // inkrementace
+            a++;
+        }
+
+        // vytvoření záznamu - uživatele
+        createRecord(cn, targetOU, objectClasses, attrs);
     }
 
     /**
@@ -679,7 +737,7 @@ public class BakaADAuthenticator {
      * @param attribute název atributu
      * @param value nová hodnota
      */
-    private boolean modifyAttribute(int modOp, String dn, EBakaLDAPAttributes attribute, Object value) {
+    private boolean modifyAttribute(int modOp, String dn, EBakaLDAPAttributes attribute, String value) {
 
         LdapContext bakaContext = null;
 
@@ -688,10 +746,29 @@ public class BakaADAuthenticator {
 
             ModificationItem mod[] = new ModificationItem[1];
 
-            if (value instanceof String) {
-                mod[0] = new ModificationItem(modOp, new BasicAttribute(attribute.attribute(), value));
+            // heslo
+            if (attribute.equals(EBakaLDAPAttributes.PW_UNICODE)) {
+                String password = "\"" + value + "\"";
+                try {
+                    byte[] unicodePwd = password.getBytes("UTF-16LE");
+                    mod[0] = new ModificationItem(modOp, new BasicAttribute(attribute.attribute(), unicodePwd));
+                } catch (Exception e) {
+                    System.err.println("[ CHYBA ] Nebylo možné vytvořit heslo.");
+
+                    if (Settings.getInstance().beVerbose()) {
+                        System.err.println("[ CHYBA ] " + e.getLocalizedMessage());
+                    }
+
+                    if (Settings.getInstance().debugMode()) {
+                        e.printStackTrace(System.err);
+                    }
+                }
+            // UAC
+            } else if (attribute.equals(EBakaLDAPAttributes.UAC)) {
+                mod[0] = new ModificationItem(modOp, new BasicAttribute(attribute.attribute(), Integer.parseInt(value, 16)));
             } else {
-                mod[0] = new ModificationItem(modOp, new BasicAttribute(attribute.attribute(), (Attribute) value));
+                // vše ostatní
+                mod[0] = new ModificationItem(modOp, new BasicAttribute(attribute.attribute(), value));
             }
 
             bakaContext.modifyAttributes(dn, mod);
@@ -744,7 +821,7 @@ public class BakaADAuthenticator {
      * @param attribute požadovaný atribut k nahrazení
      * @param newValue nová hodnota
      */
-    public Boolean replaceAttribute(String dn, EBakaLDAPAttributes attribute, Object newValue) {
+    public Boolean replaceAttribute(String dn, EBakaLDAPAttributes attribute, String newValue) {
 
         if (modifyAttribute(DirContext.REPLACE_ATTRIBUTE, dn, attribute, newValue)) {
             return true;
