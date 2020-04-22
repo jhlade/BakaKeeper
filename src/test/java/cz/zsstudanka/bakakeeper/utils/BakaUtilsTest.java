@@ -63,4 +63,22 @@ public class BakaUtilsTest {
         assertEquals("test.1A.pdf", BakaUtils.fileBaseName("/složka/adresář/test.1A.pdf"));
     }
 
+    @Test
+    public void cnFromDn() {
+        assertEquals("Kocour Ušatý", BakaUtils.parseCN("CN=Kocour Ušatý,OU=Kočky,OU=Zvířata,DC=test,DC=org"));
+        assertEquals(null, BakaUtils.parseCN("OU=Kočky,OU=Zvířata,DC=test,DC=org"));
+    }
+
+    @Test
+    public void baseFromDn() {
+        assertEquals("OU=Kočky,OU=Zvířata,DC=test,DC=org", BakaUtils.parseBase("CN=Kocour Ušatý,OU=Kočky,OU=Zvířata,DC=test,DC=org"));
+        assertEquals("OU=Zvířata,DC=test,DC=org", BakaUtils.parseBase("OU=Kočky,OU=Zvířata,DC=test,DC=org"));
+    }
+
+    @Test
+    public void ouFromDn() {
+        assertEquals("Kočky", BakaUtils.parseLastOU("CN=Kocour Ušatý,OU=Kočky,OU=Zvířata,DC=test,DC=org"));
+        assertEquals("Kočky", BakaUtils.parseLastOU("OU=Kočky,OU=Zvířata,DC=test,DC=org"));
+    }
+
 }

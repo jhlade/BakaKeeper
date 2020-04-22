@@ -86,14 +86,17 @@ public class BakaUtils {
 
 
     /**
+     * Vytvoření historického loginu ve formátu 4+2 ("prijjm") jako v projektu INDOŠ z roku 2001.
+     * Použitelné pro vyučující. Číslo pokusu identifikuje posun písmen na pozici [3].
      * TODO - refaktor create4p2
      *
-     * @param surname
-     * @param givenName
-     * @param attempt
-     * @return
+     * @param surname celé příjmení
+     * @param givenName celé prnví jméno
+     * @param attempt číslpo pokusu
+     * @return histroická forma loginu ve tvaru 4+2
      */
     public static String createLegacyLogin(String surname, String givenName, Integer attempt) {
+        // TODO
         return null;
     }
 
@@ -202,7 +205,7 @@ public class BakaUtils {
      * @param dn celé DN objektu
      * @return pole řetězců ve tvaru {ročník, písmeno třídy}
      */
-    public static String[] classFromDn(String dn) {
+    private static String[] classFromDn(String dn) {
         // null[2]
         String[] result = new String[2];
 
@@ -244,6 +247,71 @@ public class BakaUtils {
      */
     public static String classLetterFromDn(String dn) {
         return classFromDn(dn)[0];
+    }
+
+    /**
+     * Zpracování DN do částí základního jména, názvu nejbližší organizační jendotky
+     * a celé bázové cesty.
+     *
+     * @param dn plné DN objektu
+     * @return pole řetězců [3] {název (cn), jméno nejbližší ou, bázová cesta}
+     */
+    private static String[] parseDN(String dn) {
+        String[] result = new String[3];
+
+        String[] split = dn.split(",");
+
+        // CN=xyz,OU=abc,OU=def,DC=domain,DC=tld
+        Integer ou = 1;
+
+        // CN=xyz
+        if (split[0].toLowerCase().contains("cn")) {
+            result[0] = split[0].split("=")[1];
+        } else {
+            // OU=abc, + [0] == null
+            ou = 0;
+        }
+
+        // nejbližší OU
+        result[1] = split[ou].split("=")[1];
+
+        // base
+        StringBuilder baseBulder = new StringBuilder();
+        for(int s = 1; s < split.length; s++) {
+            baseBulder.append(split[s]);
+
+            if (s < split.length - 1) {
+                baseBulder.append(",");
+            }
+        }
+
+        result[2] = baseBulder.toString();
+
+        return result;
+    }
+
+    public static String parseCN(String dn) {
+        return parseDN(dn)[0];
+    }
+
+    /**
+     * Název nejbližší organizační jednotky daného objektu.
+     *
+     * @param dn plné DN objektu
+     * @return název nejbližší OU
+     */
+    public static String parseLastOU(String dn) {
+        return parseDN(dn)[1];
+    }
+
+    /**
+     * Bázová LDAP cesta pro daný objekt.
+     *
+     * @param dn plné DN objektu
+     * @return bázová cesta
+     */
+    public static String parseBase(String dn) {
+        return parseDN(dn)[2];
     }
 
 }

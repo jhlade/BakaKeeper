@@ -2,6 +2,7 @@ package cz.zsstudanka.skola.bakakeeper.connectors;
 
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
+import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
 
 import java.util.*;
 import javax.naming.Context;
@@ -388,31 +389,26 @@ public class BakaADAuthenticator {
      * Vytvoření nové organizační jednotky v požadované cestě.
      *
      * @param name název nové OU
-     * @param locationDN výchozí umístění
+     * @param base výchozí umístění
      */
-    public void createOU(String name, String locationDN) {
+    public void createOU(String name, String base) {
 
         String[] objClass = {
                 EBakaLDAPAttributes.OC_TOP.value(),
                 EBakaLDAPAttributes.OC_OU.value()
         };
 
-        createRecord(name, locationDN, objClass, null);
+        createRecord(name, base, objClass, null);
     }
 
     /**
-     * Vytvoření nového žáka v Active Directory.
+     * Vytvoření nového uživatele v Active Directory.
      *
      * @param OU cílová organizační jednotka
-     * @param upn login v doméně
-     * @param email nový primární e-mail
-     * @param firstName křestní jméno žáka
-     * @param sn příjmení žáka
-     * @param displayName zobrazované jméno
-     * @param intern_kod INTERN_KOD z Bakalářů
-     * @param groups pole řetězců počátečních skupin
+     * @param data
+     *
      */
-    public void createNewUser(String OU, String upn, String email, String firstName, String sn, String displayName, String intern_kod, String[] groups) {
+    public void createNewUser(String OU, Map data) {
         // TODO
     }
 
@@ -561,7 +557,7 @@ public class BakaADAuthenticator {
     }
 
     /**
-     * Vytvoření nového objektu v Active Directory.
+     * Vytvoření nového obecného objektu v Active Directory.
      *
      * @param cnName základní jméno jednotky
      * @param targetOU cílová organizační jednotka
@@ -640,15 +636,6 @@ public class BakaADAuthenticator {
             // TODO
         }
 
-    }
-
-    /**
-     * Uzamčení uživatelského účtu podle loginu.
-     *
-     * @param upn přihlašovací jméno uživatele k uzamčení
-     */
-    public void lockAccount(String upn) {
-        // TODO
     }
 
     /**
@@ -753,16 +740,61 @@ public class BakaADAuthenticator {
 
     /**
      * Přesune požadovaný objekt do dané organizační jednotky.
-     * Pokud je nastaveno <i>createNewOu</i> a cílová OU neexituje,
+     * Pokud je nastaveno <i>createNewOUifNotExists</i> a cílová OU neexituje,
      * bude vytvořena.
      *
      * @param objectDN dn objektu
-     * @param OUName plná cesta cílové OU
-     * @param createNewOU vytvořit OU, pokud neexistuje
+     * @param ouName plná cesta cílové OU
+     * @param createNewOUifNotExists vytvořit OU, pokud neexistuje
      */
-    public void moveToOU(String objectDN, String OUName, Boolean createNewOU) {
-        // TODO
-        // All organizational unit objects	(objectCategory=organizationalUnit)
+    public void moveObject(String objectDN, String ouName, Boolean createNewOUifNotExists) {
+
+        // kontrola existence cílové ou
+        if (!createNewOUifNotExists && checkOU(ouName) == -1) {
+
+            if (Settings.getInstance().beVerbose()) {
+                System.err.println("[ CHYBA ] Cílová organizační jednotka pro přesun neexistuje.");
+            }
+
+            if (Settings.getInstance().debugMode()) {
+                System.err.println("[ CHYBA ] Nebylo možné přesunout objekt " + objectDN + " do umístění " + ouName + ".");
+            }
+
+            return;
+        }
+
+        // vytvoření nové organziační jednotky
+        if (createNewOUifNotExists && checkOU(ouName) == -1) {
+            // vlastní název
+            String cn = BakaUtils.parseLastOU(ouName);
+            // cílová cesta
+            String base = BakaUtils.parseBase(ouName);
+            // vytvoření
+            this.createOU(cn, base);
+        }
+
+        // změna názvu
+        String objCN = BakaUtils.parseCN(objectDN);
+        String newObjectDN = "CN=" + objCN + "," + ouName;
+
+        // kontext
+        LdapContext ctxOM = null;
+
+        // provedení přesunu
+        try {
+            ctxOM = new InitialLdapContext(env, null);
+            ctxOM.rename(objectDN, newObjectDN);
+        } catch (Exception e) {
+            System.err.println("[ CHYBA ] Nebylo možné přesunout objekt.");
+
+            if (Settings.getInstance().beVerbose()) {
+                System.err.println("[ CHYBA ] " + e.getLocalizedMessage());
+            }
+
+            if (Settings.getInstance().beVerbose()) {
+                e.printStackTrace(System.err);
+            }
+        }
     }
 
     /**
