@@ -57,6 +57,9 @@ public class SQLrecords implements IRecords {
      */
     private LinkedHashMap<Map<EBakaSQL, HashMap<EBakaSQL, String>>, Map<EBakaSQL, String>> writeData = new LinkedHashMap<>();
 
+    /** datový instanční iterátor */
+    @Deprecated
+    private Iterator dataIterator;
     /** instanční iterátor */
     private Iterator iterator;
 
@@ -513,17 +516,28 @@ public class SQLrecords implements IRecords {
     }
 
     @Override
-    public Iterator<Map.Entry<String, Map>> iterator() {
+    public Iterator<String> iterator() {
 
         if (this.iterator == null) {
-            this.iterator = this.data.entrySet().iterator();
+            this.iterator = this.data.keySet().iterator();
         }
 
         return this.iterator;
     }
 
     @Override
+    @Deprecated
+    public Iterator<Map.Entry<String, Map>> dataIterator() {
+
+        if (this.dataIterator == null) {
+            this.dataIterator = this.data.entrySet().iterator();
+        }
+
+        return this.dataIterator;
+    }
+
+    @Override
     public void resetIterator() {
-        this.iterator = null;
+        this.dataIterator = null;
     }
 }

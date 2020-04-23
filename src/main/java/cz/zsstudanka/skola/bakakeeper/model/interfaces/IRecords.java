@@ -11,11 +11,19 @@ import java.util.Map;
 public interface IRecords {
 
     /**
+     * Získání datového instančního iterátoru.
+     *
+     * @return datový instanční iterátor kolekce
+     * @deprecated
+     */
+    Iterator<Map.Entry<String, Map>> dataIterator();
+
+    /**
      * Získání instančního iterátoru.
      *
-     * @return instanční iterátor kolekce
+     * @return instanční iterátor
      */
-    Iterator<Map.Entry<String, Map>> iterator();
+    Iterator<String> iterator();
 
     /**
      * Reset instančního iterátoru.

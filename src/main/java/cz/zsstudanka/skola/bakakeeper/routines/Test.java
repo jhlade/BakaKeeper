@@ -15,9 +15,6 @@ import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -139,9 +136,9 @@ public class Test {
                 String template = "__CLASS_ID__ & __SURNAME__ & __GIVENNAME__ & \\texttt{__UPN__} & \\texttt{__PWD__} \\\\ \\hline\n";
 
                 // získání dat - iterace nad evidencí
-                while (dataTřídy.keyIterator().hasNext()) {
+                while (dataTřídy.iterator().hasNext()) {
 
-                    Map<String, String> žák = dataTřídy.get(dataTřídy.keyIterator().next());
+                    Map<String, String> žák = dataTřídy.get(dataTřídy.iterator().next());
 
                     // data
                     Integer číslo = Integer.parseInt(žák.get(EBakaSQL.F_STU_CLASS_ID.basename()));
@@ -332,10 +329,10 @@ public class Test {
         //   5aa) pokud se nebude shodovat, vytvořit nový e-mail zkusit to znovu
         //   5ab) pokud se bude shodovat, přiřadit e-mail k žákovi
         // 5b) pokud nebude existovat, přiřadit mail k žákovi a provést do EXT01 zápis INTERN_KOD
-        while (evidence.iterator().hasNext()) { // TODO přepis na keyIterator
+        while (evidence.dataIterator().hasNext()) { // TODO přepis na keyIterator
 
             // objekt?
-            Map.Entry<String, Map> žák = evidence.iterator().next();
+            Map.Entry<String, Map> žák = evidence.dataIterator().next();
 
             System.out.println("========================================");
             System.out.println("Žák:\t\t" + žák.getValue().get("PRIJMENI").toString() + " " + žák.getValue().get("JMENO").toString());

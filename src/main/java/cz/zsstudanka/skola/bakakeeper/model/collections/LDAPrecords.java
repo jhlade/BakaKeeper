@@ -30,10 +30,11 @@ public class LDAPrecords implements IRecords {
     /** základní OU pro záznamy */
     private String base;
 
+    /** datový instanční iterátor */
+    @Deprecated
+    private Iterator dataIterator;
     /** instanční iterátor */
     private Iterator iterator;
-
-    private Iterator keyIterator;
 
     /** hrubá data; klíč = UPN pro uživatele, mail pro kontakty, obsah = interní data podle požadavků */
     private HashMap<String, Map<String, Object>> data;
@@ -327,23 +328,24 @@ public class LDAPrecords implements IRecords {
     }
 
     @Override
-    public Iterator<Map.Entry<String, Map>> iterator() {
+    @Deprecated
+    public Iterator<Map.Entry<String, Map>> dataIterator() {
 
-        if (this.iterator == null) {
-            this.iterator = this.data.entrySet().iterator();
+        if (this.dataIterator == null) {
+            this.dataIterator = this.data.entrySet().iterator();
         }
 
         return this.iterator;
     }
 
-    // TODO
-    public Iterator<String> keyIterator() {
+    @Override
+    public Iterator<String> iterator() {
 
-        if (this.keyIterator == null) {
-            this.keyIterator = this.data.keySet().iterator();
+        if (this.iterator == null) {
+            this.iterator = this.data.keySet().iterator();
         }
 
-        return this.keyIterator;
+        return this.iterator;
     }
 
     @Override
