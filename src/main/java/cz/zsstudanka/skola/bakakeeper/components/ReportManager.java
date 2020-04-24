@@ -1,21 +1,24 @@
 package cz.zsstudanka.skola.bakakeeper.components;
 
 import cz.zsstudanka.skola.bakakeeper.App;
-import cz.zsstudanka.skola.bakakeeper.settings.Settings;
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
+
+import java.io.FileWriter;
+import java.io.PrintWriter;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 /**
- * Protokolování postupu.
+ * Protokolování postupu, sběr informací, vytváření sestav.
  *
  * @author Jan Hladěna
  */
 public class ReportManager {
 
-    // TODO -log soubor.log
-    static String LOGFILE;
-
     /** singleton reportovacího nástroje */
     private static ReportManager instance = null;
 
+    /** výstupní soubor protokolu */
     private String logfile;
 
     public ReportManager() {
@@ -38,26 +41,80 @@ public class ReportManager {
         this.logfile = filename;
 
         if (App.FLAG_DEBUG) {
-            System.out.println("[ DEBUG ] Byl nastaven soubor " + filename + " pro protokolování.");
+            System.out.println("[ DEBUG ] Byl nastaven výstupní soubor " + filename + " pro protokolování.");
         }
     }
 
     /**
-     * TODO
-     * @param message
+     * Provedení zápisu protokolované zprávy.
+     *
+     * @param message zpráva
+     * @param type typ zprávy
      */
-    static void out(String message) {
+    private void print(String message, EBakaLogType type) {
 
-        System.out.println(message);
+        StringBuilder messageBuilder = new StringBuilder();
+        messageBuilder.append(type.tag());
+        messageBuilder.append(" ");
+        messageBuilder.append(message);
+
+        // výpis na standardní výstupy
+        if (type.isError()) {
+            System.err.print(messageBuilder.toString());
+        } else {
+            System.out.print(messageBuilder.toString());
+        }
+
+        // použití log souboru
+        if (this.logfile != null) {
+            // časové razítko
+            SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            String timestamp = formatter.format(new Date());
+
+            StringBuilder logBuilder = new StringBuilder();
+            logBuilder.append(timestamp);
+            logBuilder.append(" ");
+
+            try {
+                PrintWriter log = new PrintWriter(new FileWriter(this.logfile, true), true);
+                log.print(logBuilder.toString());
+                log.close();
+            } catch (Exception e) {
+                System.err.println("[ CHYBA ] Došlo k závažné chybě při pokusu o zápis do protokolu.");
+
+                if (App.FLAG_VERBOSE) {
+                    System.err.println("[ CHYBA ] " + e.getLocalizedMessage());
+                }
+
+                if (App.FLAG_DEBUG) {
+                    e.printStackTrace(System.err);
+                }
+            }
+        }
+    }
+
+    private void println(String message, EBakaLogType type) {
+        print(message + "\n", type);
     }
 
     /**
-     * TODO
-     * @param message
+     * Zápis informační zprávy do protokolu.
+     *
+     * @param message zpráva
      */
-    static void err(String message) {
+    public static void log(String message) {
+        log(message, EBakaLogType.LOG_INFO);
+    }
 
-        System.err.println(message);
+    /**
+     * Zápis zprávy do protokolu.
+     *
+     * @param message zpráva
+     * @param type typ protokolované zprávy
+     */
+    public static void log(String message, EBakaLogType type) {
+        ReportManager RM = getInstance();
+        RM.println(message, type);
     }
 
 }
