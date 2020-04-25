@@ -74,6 +74,7 @@ public class ReportManager {
             StringBuilder logBuilder = new StringBuilder();
             logBuilder.append(timestamp);
             logBuilder.append(" ");
+            logBuilder.append(messageBuilder.toString());
 
             try {
                 PrintWriter log = new PrintWriter(new FileWriter(this.logfile, true), true);
