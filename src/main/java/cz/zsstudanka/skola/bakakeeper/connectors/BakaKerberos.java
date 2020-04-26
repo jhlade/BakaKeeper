@@ -198,7 +198,7 @@ public class BakaKerberos implements PrivilegedExceptionAction {
             // **** Need to add User name of a valid user here in the form of username@domain.suffix ****
             // "who the client wishes to be" - to asi zase bakalářem
             // přihlášení pod systémovým účtem
-            GSSName client = manager.createName(Settings.getInstance().getKrbUser(), GSSName.NT_USER_NAME);
+            GSSName client = manager.createName(Settings.getInstance().getKrb_user(), GSSName.NT_USER_NAME);
 
             // **** Need to input the SPN for the SQL Server you want to connect to.  This is just used to get the Service Ticket ****
             // **** This does NOT actually connect to SQL Server. ****

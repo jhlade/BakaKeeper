@@ -29,7 +29,7 @@ public class BakaKerberosCallback implements CallbackHandler {
                 }
 
                 NameCallback usernameCallback = (NameCallback) callbacks[i];
-                usernameCallback.setName(Settings.getInstance().getKrbUser());
+                usernameCallback.setName(Settings.getInstance().getKrb_user());
             } else if (callbacks[i] instanceof PasswordCallback) {
 
                 if (Settings.getInstance().beVerbose()) {

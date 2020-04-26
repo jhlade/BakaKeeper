@@ -5,7 +5,6 @@ import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 
 import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSManager;
-import org.ietf.jgss.GSSName;
 import org.ietf.jgss.Oid;
 
 import java.sql.*;
@@ -206,7 +205,7 @@ public class BakaSQL {
             try {
 
                 System.out.println("[ DEBUG ] Ověřování SQL: " + (Settings.getInstance().sql_NTLM() ? "NTLMv2" : "Kerberos V"));
-                System.out.println("[ DEBUG ] Uživatel SQL: " + Settings.getInstance().getKrbUser());
+                System.out.println("[ DEBUG ] Uživatel SQL: " + Settings.getInstance().getKrb_user());
 
                 DatabaseMetaData dbmd = con.getMetaData();
                 System.out.println("[ DEBUG ] dbmd:verze ovladače = " + dbmd.getDriverVersion());
