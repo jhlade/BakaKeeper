@@ -9,7 +9,7 @@ public enum EBakaLogType {
     LOG_OK("[ OK ]", false),
     LOG_INFO("[ INFO ]", false),
     LOG_ERR("[ CHYBA ]", true),
-    LOG_VERBOSE("[ DETAIL ]", false),
+    LOG_VERBOSE("[ INFO ]", false),
     LOG_ERR_VERBOSE("[ CHYBA ]", true),
     LOG_DEBUG("[ DEBUG ]", false),
     LOG_ERR_DEBUG("[ DEBUG ]", true),

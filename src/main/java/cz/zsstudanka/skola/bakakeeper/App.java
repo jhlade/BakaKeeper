@@ -4,6 +4,7 @@ import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaADAuthenticator;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaSQL;
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.routines.Export;
 import cz.zsstudanka.skola.bakakeeper.routines.Structure;
 import cz.zsstudanka.skola.bakakeeper.routines.Test;
@@ -42,6 +43,10 @@ public class App {
      */
     public static void main(String[] args) {
 
+        if (FLAG_DEVEL) {
+            ReportManager.log(EBakaLogType.LOG_DEVEL, "Je aktivní vývojářský režim. Nebude se zapisovat do ostrých dat.");
+        }
+
         // argumenty programu
         final Map<String, List<String>> params = new HashMap<>();
 
@@ -59,7 +64,7 @@ public class App {
             if (a.charAt(0) == '-') {
 
                 if (a.length() < 2) {
-                    System.err.println("Chyba v argumentu: " + a);
+                    ReportManager.log(EBakaLogType.LOG_ERR, "Chyba v argumentu: " + a);
                     return;
                 }
 
@@ -68,7 +73,7 @@ public class App {
             } else if (options != null) {
                 options.add(a);
             } else {
-                System.err.println("Neplatné argumenty programu.");
+                ReportManager.log(EBakaLogType.LOG_ERR, "Neplatné argumenty programu.");
                 return;
             }
         }
@@ -80,30 +85,29 @@ public class App {
 
             // společná nastavení - podrobný režim
             if (params.containsKey("verbose")) {
-
                 FLAG_VERBOSE = true;
                 Settings.getInstance().verbosity(FLAG_VERBOSE);
-
-                System.out.println("[ INFO ] Aktivován výstup podrobných informací.");
+                ReportManager.log(EBakaLogType.LOG_ERR_VERBOSE, "Aktivován výstup podrobných informací.");
             }
 
             // společná nastavení - ladící režim
             if (params.containsKey("debug")) {
 
+                // automatické přidání --verbose
                 FLAG_VERBOSE = true;
                 Settings.getInstance().verbosity(FLAG_VERBOSE);
 
                 FLAG_DEBUG = true;
                 Settings.getInstance().debug(FLAG_DEBUG);
 
-                System.out.println("[ DEBUG ] Aktivován výstup ladících informací.");
+                ReportManager.log(EBakaLogType.LOG_DEBUG, "Aktivován výstup ladících informací.");
             }
 
             if (params.containsKey("log")) {
                 if (params.get("log").size() == 1) {
                     ReportManager.getInstance().setLogfile(params.get("log").get(0));
                 } else {
-                    System.err.println("[ CHYBA ] Chybně zadaný argument -log. (Použití: -log protokol.log)");
+                    ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný argument -log. (Použití: -log protokol.log)");
                 }
             }
 
@@ -111,11 +115,9 @@ public class App {
             if (params.containsKey("passphrase")) {
                 if (params.get("passphrase").size() == 1) {
                     PASSPHRASE = params.get("passphrase").get(0);
-
                     Settings.getInstance().setPassphrase(PASSPHRASE);
-
                 } else {
-                    System.err.println("Chybně zadaný parametr -passphrase.");
+                    ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný parametr -passphrase.");
                     return;
                 }
             }
@@ -144,7 +146,7 @@ public class App {
                     if (params.get("f").size() == 1) {
                         actionInitialize(params.get("f").get(0));
                     } else {
-                        System.err.println("[ CHYBA ] Chybně zadaný argument -f. (Použití: --init -f settings.conf)");
+                        ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný argument -f. (Použití: --init -f settings.conf)");
                     }
 
                     return;
@@ -156,9 +158,9 @@ public class App {
                     return;
                 }
 
-                // inicialziace s výchozím souborem ./settings.conf
+                // inicializace s výchozím souborem ./settings.conf
                 if (FLAG_VERBOSE) {
-                    System.err.println("[ INFO ] Probíhá pokus o inicializaci s výchozím souborem settings.conf.");
+                    ReportManager.log(EBakaLogType.LOG_VERBOSE, "Probíhá pokus o inicializaci s výchozím souborem settings.conf.");
                 }
                 actionInitialize("./settings.conf");
                 return;
@@ -170,7 +172,7 @@ public class App {
                 return;
             }
 
-            // vývojářský režim
+            // vývojářský režim - propagace do nastavení
             Settings.getInstance().setDevelMode(FLAG_DEVEL);
             // // //
 
@@ -181,7 +183,7 @@ public class App {
                     if (params.get("o").size() == 1) {
                         Export.exportStudentCSVdata(params.get("o").get(0));
                     } else {
-                        System.err.println("[ CHYBA ] Chybně zadaný argument -o. (Použití: --export -o seznam.csv)");
+                        ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný argument -o. (Použití: --export -o seznam.csv)");
                     }
                 } else {
                     // výstup exportu do stdout
@@ -214,7 +216,7 @@ public class App {
                 if (params.get("id").size() == 1) {
                     actionIdentify(params.get("id").get(0));
                 } else {
-                    System.err.println("[ CHYBA ] Chybně zadaný argument -id. (Použití: -id novak.jan)");
+                    ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný argument -id. (Použití: -id novak.jan)");
                 }
             } // id
 
@@ -223,7 +225,7 @@ public class App {
                 if (params.get("reset").size() == 1) {
                     actionResetPassword(params.get("reset").get(0));
                 } else {
-                    System.err.println("[ CHYBA ] Chybně zadaný argument -reset. (Použití: -reset novak.jan)");
+                    ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný argument -reset. (Použití: -reset novak.jan)");
                 }
             }
 
@@ -285,9 +287,7 @@ public class App {
 
         // ověření platnosti
         if (!Settings.getInstance().isValid()) {
-            if (FLAG_VERBOSE) {
-                System.err.println("[ CHYBA ] Nebylo možné vytvořit platná nastavení.");
-            }
+            ReportManager.log(EBakaLogType.LOG_ERR, "Nebylo možné vytvořit platná nastavení.");
             return;
         }
 
@@ -300,20 +300,20 @@ public class App {
             // pokud se používá SSL, je třeba inicializovat úložiště klíčů
             if (Settings.getInstance().useSSL()) {
                 if (KeyStoreManager.initialize()) {
-                    System.out.println("[ OK ] Výchozí úložiště certifikátů bylo vytvořeno.");
+                    ReportManager.log(EBakaLogType.LOG_OK, "Výchozí úložiště certifikátů bylo vytvořeno.");
                 } else {
-                    System.err.println("[ CHYBA ] Nebylo možné vytvořit výchozí úložiště certifikátů.");
+                    ReportManager.log(EBakaLogType.LOG_ERR, "Nebylo možné vytvořit výchozí úložiště certifikátů.");
                 }
             }
 
             if (PASSPHRASE.length() > 0) {
-                System.out.println("[ OK ] Šifrovaný datový soubor s nastavením byl úspěšně vytvořen.");
+                ReportManager.log(EBakaLogType.LOG_OK, "Šifrovaný datový soubor s nastavením byl úspěšně vytvořen.");
             } else {
-                System.out.println("[ OK ] Datový soubor s nastavením byl úspěšně vytvořen.");
+                ReportManager.log(EBakaLogType.LOG_OK, "Datový soubor s nastavením byl úspěšně vytvořen.");
             }
 
         } else {
-            System.err.println("[ CHYBA ] Vytvoření konfigurace se nezdařilo.");
+            ReportManager.log(EBakaLogType.LOG_ERR, "Vytvoření konfigurace se nezdařilo.");
         }
 
     }

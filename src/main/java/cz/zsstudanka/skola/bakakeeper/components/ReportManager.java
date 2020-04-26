@@ -41,7 +41,7 @@ public class ReportManager {
         this.logfile = filename;
 
         if (App.FLAG_DEBUG) {
-            System.out.println("[ DEBUG ] Byl nastaven výstupní soubor " + filename + " pro protokolování.");
+            ReportManager.log(EBakaLogType.LOG_DEBUG, "Byl nastaven výstupní soubor " + filename + " pro protokolování.");
         }
     }
 
@@ -104,16 +104,16 @@ public class ReportManager {
      * @param message zpráva
      */
     public static void log(String message) {
-        log(message, EBakaLogType.LOG_INFO);
+        log(EBakaLogType.LOG_INFO, message);
     }
 
     /**
      * Zápis zprávy do protokolu.
      *
-     * @param message zpráva
      * @param type typ protokolované zprávy
+     * @param message zpráva
      */
-    public static void log(String message, EBakaLogType type) {
+    public static void log(EBakaLogType type, String message) {
         ReportManager RM = getInstance();
         RM.println(message, type);
     }
