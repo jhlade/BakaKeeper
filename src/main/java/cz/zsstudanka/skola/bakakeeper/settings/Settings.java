@@ -1,5 +1,8 @@
 package cz.zsstudanka.skola.bakakeeper.settings;
 
+import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
+
 import javax.crypto.*;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
@@ -21,13 +24,6 @@ public class Settings {
 
     /** singleton - instance nastavení */
     private static Settings instance = null;
-
-    /** česká pravidla řazení textu */
-    @Deprecated
-    public static final String CZ_COL = ("< a,A < á,Á < b,B < c,C < č,Č < d,Ď < e,E < é,É < ě,Ě "
-            + "< f,F < g,G < h,H < ch,Ch < i,I < í,Í < j,J < k,K < l,L < ľ,Ľ < m,M < n,N < ň,Ň "
-            + "< o,O < ó,Ó < p,P < q,Q < r,R < ř,Ř < s,S < š,Š < t,T < ť,Ť < u,U < ú,Ú < ů,Ů "
-            + "< v,V < w,W < x,X < y,Y < ý,Ý < z,Z < ž,Ž");
 
     /** vypisovat podrobné informace */
     private boolean beVerbose = false;
@@ -128,14 +124,14 @@ public class Settings {
         if (ddf.isFile()) {
 
             if (this.beVerbose) {
-                System.out.println("[ INFO ] Výchozí datový soubor byl nalezen.");
+                ReportManager.log(EBakaLogType.LOG_VERBOSE, "Výchozí datový soubor byl nalezen.");
             }
 
             load(this.DEFAULT_DATA_FILE);
             return;
         } else {
             if (this.beVerbose) {
-                System.out.println("[ INFO ] Výchozí datový soubor neexistuje.");
+                ReportManager.log(EBakaLogType.LOG_VERBOSE, "Výchozí datový soubor neexistuje.");
             }
         }
 
@@ -144,19 +140,19 @@ public class Settings {
         if (dtf.isFile()) {
 
             if (this.beVerbose) {
-                System.out.println("[ INFO ] Výchozí textový konfigurační soubor existuje.");
-                System.out.println("[ INFO ] Textový konfigurační soubor bude převeden na datový.");
+                ReportManager.log(EBakaLogType.LOG_VERBOSE, "Výchozí textový konfigurační soubor existuje.");
+                ReportManager.log(EBakaLogType.LOG_VERBOSE, "Textový konfigurační soubor bude převeden na datový.");
             }
 
             load(this.DEFAULT_CONF_FILE);
             return;
         } else {
             if (this.beVerbose) {
-                System.out.println("[ INFO ] Výchozí textový konfigurační soubor neexistuje.");
+                ReportManager.log(EBakaLogType.LOG_VERBOSE, "Výchozí textový konfigurační soubor neexistuje.");
             }
         }
 
-        System.err.println("[ CHYBA ] Nebyl nalezen žádný výchozí konfigurační soubor. Proveďte inicializaci spuštětním programu s parametrem --init.");
+        ReportManager.log(EBakaLogType.LOG_ERR, "Nebyl nalezen žádný výchozí konfigurační soubor. Proveďte inicializaci spuštětním programu s parametrem --init.");
     }
 
     /**
@@ -177,8 +173,8 @@ public class Settings {
 
                 try {
 
-                    if (beVerbose) {
-                        System.out.println("[ INFO ] Probíhá deserializace datového souboru.");
+                    if (this.beVerbose) {
+                        ReportManager.log(EBakaLogType.LOG_VERBOSE, "Probíhá deserializace datového souboru.");
                     }
 
                     InputStream dataInputStream;
@@ -194,28 +190,26 @@ public class Settings {
 
                     loadDataSettings(dataFromFile);
                 } catch (Exception e) {
-                    //e.printStackTrace();
-
-                    if (debugMode) {
-                        System.err.println("[ DEBUG ] " + e.getMessage());
+                    if (this.debugMode) {
+                        // pouze zpráva
+                        ReportManager.exceptionMessage(e);
                     }
 
                     if (this.useEncryption()) {
-                        System.err.println("[ CHYBA ] Došlo k chybě při práci s datovým souborem. Možná nesprávné heslo k šifrovanému nastavení?");
+                        ReportManager.log(EBakaLogType.LOG_ERR, "Došlo k chybě při práci s datovým souborem. Možná nesprávné heslo k šifrovanému nastavení?");
                     } else {
-                        System.err.println("[ CHYBA ] Došlo k chybě při práci s datovým souborem.");
+                        ReportManager.log(EBakaLogType.LOG_ERR, "Došlo k chybě při práci s datovým souborem.");
                     }
                 }
 
                 // textový konfigurační soubor
             } else if (filename.contains(".conf")) {
-
                 String config = this.readConfigFile(filename);
                 this.loadPlainSettings(config.toString());
             }
 
         } else {
-            System.err.println("[ CHYBA ] Konfigurační soubor nebyl nalezen.");
+            ReportManager.log(EBakaLogType.LOG_ERR, "Konfigurační soubor nebyl nalezen.");
             return;
         }
 
@@ -257,8 +251,11 @@ public class Settings {
                 outFile.close();
 
             } catch (Exception e) {
-                //e.printStackTrace();
-                System.err.println("[ CHYBA ] Došlo k chybě při serializaci nastavení do souboru " + filename + ".");
+                ReportManager.log(EBakaLogType.LOG_ERR, "Došlo k chybě při serializaci nastavení do souboru " + filename + ".");
+
+                if (this.beVerbose) {
+                    ReportManager.exceptionMessage(e);
+                }
             }
 
         } else if (filename.contains(".conf")) {
@@ -269,7 +266,15 @@ public class Settings {
                 outConfig.close();
 
             } catch (Exception e) {
-                System.err.println("[ CHYBA ] Došlo k chybě při zápisu nastavení do souboru " + filename + ".");
+                ReportManager.log(EBakaLogType.LOG_ERR, "Došlo k chybě při zápisu nastavení do souboru " + filename + ".");
+
+                if (this.beVerbose) {
+                    ReportManager.exceptionMessage(e);
+                }
+
+                if (this.debugMode) {
+                    ReportManager.printStackTrace(e);
+                }
             }
         }
 
@@ -302,7 +307,7 @@ public class Settings {
     private Map parsePlainSettings(String data) {
 
         if (beVerbose) {
-            System.out.println("[ INFO ] Začíná zpracování konfiguračních dat.");
+            ReportManager.log(EBakaLogType.LOG_VERBOSE, "Začíná zpracování konfiguračních dat.");
         }
 
         Map parsedData = new LinkedHashMap<String, String>();
@@ -320,7 +325,7 @@ public class Settings {
         }
 
         if (beVerbose) {
-            System.out.println("[ INFO ] Konfigurační data zpracována.");
+            ReportManager.log(EBakaLogType.LOG_OK, "Konfigurační data zpracována.");
         }
 
         return parsedData;
@@ -330,7 +335,6 @@ public class Settings {
      * Provede ověření vyplněných údajů a odpovídajícím způsobem nastaví příznak validity.
      */
     private void validate() {
-
         AtomicReference<Boolean> validity = new AtomicReference<>(true);
         InputStream configIS = getClass().getResourceAsStream("/settings.conf");
 
@@ -347,16 +351,20 @@ public class Settings {
             validity.updateAndGet(v -> v & keyValid);
 
             if (debugMode) {
-                System.out.println("[ DEBUG ] Porovnává se klíč " + key + " s načtenými daty... [ " + ((keyValid) ? "OK" : "CHYBA") + " ]");
+                ReportManager.log(EBakaLogType.LOG_DEBUG, "Porovnává se klíč " + key + " s načtenými daty... [ " + ((keyValid) ? "OK" : "CHYBA") + " ]");
             }
         });
         } catch (Exception e) {
-            if (beVerbose) {
+            if (this.beVerbose) {
                 if (useEncryption()) {
-                    System.err.println("[ CHYBA ] Chyba validace dat. Možná nesprávné heslo k šifrovanému nastavení?");
+                    ReportManager.log(EBakaLogType.LOG_ERR_VERBOSE, "Chyba validace dat. Možná nesprávné heslo k šifrovanému nastavení?");
                 } else {
-                    System.err.println("[ CHYBA ] Chyba validace dat.");
+                    ReportManager.log(EBakaLogType.LOG_ERR_VERBOSE, "Chyba validace dat.");
                 }
+            }
+
+            if (this.debugMode) {
+                ReportManager.printStackTrace(e);
             }
 
             this.setValidity(false);
@@ -391,7 +399,15 @@ public class Settings {
             inputStream = new FileInputStream(file);
             return readConfigStream(inputStream);
         } catch (Exception e) {
-            System.err.format("[ CHYBA ] Došlo k chybě při čtení souboru '%s'.", file.toPath());
+            ReportManager.log(EBakaLogType.LOG_ERR, String.format("Došlo k chybě při čtení souboru '%s'.", file.toPath()));
+
+            if (this.beVerbose) {
+                ReportManager.exceptionMessage(e);
+            }
+
+            if (this.debugMode) {
+                ReportManager.printStackTrace(e);
+            }
         }
 
         return null;
@@ -411,7 +427,7 @@ public class Settings {
             BufferedReader reader = new BufferedReader(new InputStreamReader(input));
 
             if (this.beVerbose) {
-                System.out.println("[ INFO ] Probíhá načítání konfigurace ze souboru.");
+                ReportManager.log(EBakaLogType.LOG_VERBOSE, "Probíhá načítání konfigurace ze souboru.");
             }
 
             String line;
@@ -419,9 +435,9 @@ public class Settings {
 
                 if (this.debugMode) {
                     if (line.contains("pass=")) {
-                        System.out.println("[ DEBUG ] Načítá se: pass=*****");
+                        ReportManager.log(EBakaLogType.LOG_DEBUG, "Načítá se: pass=*****");
                     } else {
-                        System.out.println("[ DEBUG ] Načítá se: " + line);
+                        ReportManager.log(EBakaLogType.LOG_DEBUG, "Načítá se: " + line);
                     }
                 }
 
@@ -431,14 +447,14 @@ public class Settings {
 
             reader.close();
         } catch (Exception e) {
-            System.err.println("[ CHYBA ] Došlo k závažné chybě při zpracování vstupních dat.");
+            ReportManager.log(EBakaLogType.LOG_ERR, "Došlo k závažné chybě při zpracování vstupních dat.");
 
-            if (beVerbose) {
-                System.err.println("[ CHYBA ] " + e.getMessage());
+            if (this.beVerbose) {
+                ReportManager.exceptionMessage(e);
             }
 
-            if (debugMode) {
-                e.printStackTrace(System.err);
+            if (this.debugMode) {
+                ReportManager.printStackTrace(e);
             }
         }
 
@@ -446,10 +462,9 @@ public class Settings {
     }
 
     /**
-     * Režim interaktivního zadávání dat.
+     * Režim interaktivního zadávání konfiguračních dat.
      */
     public void interactivePrompt() {
-
         // načtení referenčního souboru v daném pořadí
         InputStream configIS = getClass().getResourceAsStream("/settings.conf");
         Map refDataPattern = new LinkedHashMap<String, String>();
@@ -486,22 +501,26 @@ public class Settings {
                 data = defaultData;
             }
 
-
-
             // lokální úpravy
-            // SSL
+            // používat SSL pro komunikaci
             if (key.toString().equals("ssl")) {
-                if (data.toLowerCase().equals("ano") || data.toLowerCase().equals("yes") || data.toLowerCase().equals("1")) {
+                if (data.toLowerCase().equals("a")
+                        || data.toLowerCase().equals("ano")
+                        || data.toLowerCase().equals("y")
+                        || data.toLowerCase().equals("yes")
+                        || data.toLowerCase().equals("1")) {
                     data = "1";
                 } else {
                     data = "0";
                 }
             }
 
-            // změna na malá písmena
+            /*
+            // změna hesla na malá písmena
             if (!key.toString().contains("pass")) {
                 data = data.toLowerCase();
             }
+            */
 
             // zápis řádku
             inputData.append(key).append("=").append(data).append("\n");
@@ -564,7 +583,6 @@ public class Settings {
      * @return String LDAP server
      */
     public String getLDAP_host() {
-
         if (this.settings_data.get("ad_srv").toLowerCase().contains(this.settings_data.get("domain").toLowerCase())) {
             return (this.settings_data.get("ad_srv").toUpperCase().replace("." + this.getLocalDomain().toUpperCase(), "")).toLowerCase();
         } else {
@@ -573,8 +591,8 @@ public class Settings {
     }
 
     /**
-     * Lokální doména AD, například
-     * zsstu.local
+     * Lokální doména AD,
+     * například zsstu.local
      *
      * @return String LDAP doména
      */
@@ -592,7 +610,7 @@ public class Settings {
     }
 
     /**
-     * Základní řetězec organizační struktury, například
+     * Základní řetězec organizační struktury uživatelů, například
      * OU=Uzivatele,OU=Skola,DC=zsstu,DC=local
      *
      * @return String základní LDAP řetězec
@@ -621,28 +639,57 @@ public class Settings {
         return this.settings_data.get("ad_base_zamestnanci");
     }
 
+    /**
+     * Základní řetězec organizační struktury pro vyřazené žáky, například
+     * OU=StudiumUkonceno,OU=Zaci,OU=Uzivatele,OU=Skola,DC=zsstu,DC=local
+     *
+     * @return
+     */
     public String getLDAP_baseAlumni() {
         return this.settings_data.get("ad_base_absolventi");
     }
 
+    /**
+     * Základní řetězec organizační struktury pro karty globálních kontaktů, například
+     * OU=Kontakty,OU=Skola,DC=zsstu,DC=local
+     *
+     * @return
+     */
     public String getLDAP_baseContacts() {
         return this.settings_data.get("ad_base_kontakty");
     }
 
+    /**
+     * TODO
+     *
+     * @return
+     */
     public String getLDAP_baseDLContacts() {
         return "OU=DistribucniSeznamyZZ," + this.settings_data.get("ad_base_kontakty");
     }
 
+    /**
+     * Základní řetězec organizační struktury pro skupiny žáků, například
+     * OU=Zaci,OU=Skupiny,OU=Skola,DC=zsstu,DC=local
+     *
+     * @return
+     */
     public String getLDAP_baseStudentGroups() {
         return this.settings_data.get("ad_base_skupiny_zaci");
     }
 
+    /**
+     * Základní řetězec organizační struktury pro skupiny žáků, například
+     * OU=Skupiny,OU=Skola,DC=zsstu,DC=local
+     *
+     * @return
+     */
     public String getLDAP_baseGlobalGroups() {
         return this.settings_data.get("ad_base_skupiny_global");
     }
 
     /**
-     * E-mailová doména školy.
+     * Externí (e-mailová) doména školy.
      *
      * @return e-mailová doména školy
      */
@@ -695,7 +742,7 @@ public class Settings {
             cipher = Cipher.getInstance(transformation);
 
         } catch (Exception e) {
-            System.err.println("[ CHYBA ] Inicializace šifrovacího mechanismu se nezdařila.");
+            ReportManager.log(EBakaLogType.LOG_ERR, "Inicializace šifrovacího mechanismu se nezdařila.");
             this.PASSPHRASE = null;
         }
     }
@@ -770,7 +817,7 @@ public class Settings {
         smtpUsername.append("@");
         smtpUsername.append(this.settings_data.get("mail_domain"));
 
-        return smtpUsername.toString();
+        return smtpUsername.toString().toLowerCase();
     }
 
     /**
@@ -830,7 +877,7 @@ public class Settings {
      *
      * @return username@REALM.LOCAL
      */
-    public String getKrbUser() {
+    public String getKrb_user() {
         StringBuilder krbUser = new StringBuilder();
 
         krbUser.append(this.settings_data.get("user").toLowerCase());
