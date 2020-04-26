@@ -1,8 +1,5 @@
 package cz.zsstudanka.skola.bakakeeper.components;
 
-import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
-import cz.zsstudanka.skola.bakakeeper.settings.Settings;
-
 import javax.net.SocketFactory;
 import javax.net.ssl.*;
 import java.io.IOException;
@@ -26,21 +23,9 @@ public class BakaSSLSocketFactory extends SSLSocketFactory {
             sslctx.init(null, new TrustManager[]{ new BakaTrustManager() }, new SecureRandom());
             this.socketFactory = sslctx.getSocketFactory();
         } catch (NoSuchAlgorithmException e) {
-            if (Settings.getInstance().beVerbose()) {
-                ReportManager.log(EBakaLogType.LOG_ERR, "Nepodporovaný algoritmus.");
-            }
-
-            if (Settings.getInstance().debugMode()) {
-                ReportManager.printStackTrace(e);
-            }
+            ReportManager.handleException("Nepodporovaný algoritmus.", e);
         } catch (KeyManagementException e) {
-            if (Settings.getInstance().beVerbose()) {
-                ReportManager.log(EBakaLogType.LOG_ERR, "Chyba při zpracování klíče.");
-            }
-
-            if (Settings.getInstance().debugMode()) {
-                ReportManager.printStackTrace(e);
-            }
+            ReportManager.handleException("Chyba při zpracování klíče.", e);
         }
     }
 

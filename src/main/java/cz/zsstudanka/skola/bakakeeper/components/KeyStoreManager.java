@@ -1,6 +1,7 @@
 package cz.zsstudanka.skola.bakakeeper.components;
 
 import cz.zsstudanka.skola.bakakeeper.App;
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 
 import javax.net.SocketFactory;
@@ -36,7 +37,7 @@ public class KeyStoreManager {
                 Certificate[] certs = socket.getSession().getPeerCertificates();
 
                 if (Settings.getInstance().beVerbose()) {
-                    System.out.println("[ INFO ] Získáno " + certs.length + " certifikátů.");
+                    ReportManager.log(EBakaLogType.LOG_VERBOSE, "Získáno " + certs.length + " certifikátů.");
                 }
 
                 for (Certificate cert : certs) {
@@ -46,8 +47,7 @@ public class KeyStoreManager {
                 }
 
             } catch (Exception e) {
-                System.out.println("[ CHYBA ] -- " + e.getLocalizedMessage());
-                e.printStackTrace();
+                ReportManager.handleException("Nebylo možné navázast spojení se serverem.", e);
                 return false;
             }
 
@@ -55,8 +55,7 @@ public class KeyStoreManager {
             jksOutputStream.close();
 
         } catch (Exception e) {
-            System.out.println("[ CHYBA ] -- " + e.getLocalizedMessage());
-            e.printStackTrace();
+            ReportManager.handleException("Nebylo možné otevřít úložiště klíčů.", e);
             return false;
         }
 

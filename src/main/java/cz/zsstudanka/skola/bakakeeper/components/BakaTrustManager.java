@@ -35,14 +35,7 @@ public class BakaTrustManager implements X509TrustManager {
             tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
             tmf.init((KeyStore) null);
         } catch (NoSuchAlgorithmException | KeyStoreException e) {
-            if (Settings.getInstance().beVerbose()) {
-                System.err.println("[ CHYBA ] Nebylo možné použít výchozí úložiště klíčů.");
-            }
-
-            if (Settings.getInstance().debugMode()) {
-                System.err.println("[ CHYBA ] " + e.getLocalizedMessage());
-                e.printStackTrace(System.err);
-            }
+            ReportManager.handleException("Nebylo možné použít výchozí úložiště klíčů.", e);
         }
 
         // získání prvního správce jako výchozího
@@ -64,52 +57,17 @@ public class BakaTrustManager implements X509TrustManager {
                 this.bakaTM = (X509TrustManager) tmf.getTrustManagers()[0];
 
             } catch (NoSuchAlgorithmException e) {
-                if (Settings.getInstance().beVerbose()) {
-                    System.err.println("[ CHYBA ] Nepodporovaný algoritmus.");
-                }
-
-                if (Settings.getInstance().debugMode()) {
-                    System.err.println("[ CHYBA ] " + e.getLocalizedMessage());
-                    e.printStackTrace(System.err);
-                }
+                ReportManager.handleException("Nepodporovaný algoritmus.", e);
             }
 
         } catch (FileNotFoundException | KeyStoreException e) {
-            if (Settings.getInstance().beVerbose()) {
-                System.err.println("[ CHYBA ] Nebylo nalezeno úložiště certifikátů.");
-            }
-
-            if (Settings.getInstance().debugMode()) {
-                System.err.println("[ CHYBA ] " + e.getLocalizedMessage());
-                e.printStackTrace(System.err);
-            }
+            ReportManager.handleException("Nebylo nalezeno úložiště certifikátů.", e);
         } catch (CertificateException e) {
-            if (Settings.getInstance().beVerbose()) {
-                System.err.println("[ CHYBA ] Neplatný certifikát.");
-            }
-
-            if (Settings.getInstance().debugMode()) {
-                System.err.println("[ CHYBA ] " + e.getLocalizedMessage());
-                e.printStackTrace(System.err);
-            }
+            ReportManager.handleException("Neplatný certifikát.", e);
         } catch (NoSuchAlgorithmException e) {
-            if (Settings.getInstance().beVerbose()) {
-                System.err.println("[ CHYBA ] Nepodporovaný algoritmus.");
-            }
-
-            if (Settings.getInstance().debugMode()) {
-                System.err.println("[ CHYBA ] " + e.getLocalizedMessage());
-                e.printStackTrace(System.err);
-            }
+            ReportManager.handleException("Nepodporovaný algoritmus.", e);
         } catch (IOException e) {
-            if (Settings.getInstance().beVerbose()) {
-                System.err.println("[ CHYBA ] Nebylo možné zpracovat certifikát.");
-            }
-
-            if (Settings.getInstance().debugMode()) {
-                System.err.println("[ CHYBA ] " + e.getLocalizedMessage());
-                e.printStackTrace(System.err);
-            }
+            ReportManager.handleException("Nebylo možné zpracovat certifikát.", e);
         }
 
     }
@@ -123,7 +81,7 @@ public class BakaTrustManager implements X509TrustManager {
     @Override
     public void checkServerTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException {
 
-        // probíhá manuální inicializace - certifikát bude automaticky přijat
+        // probíhá manuální inicializace - certifikát se bude automaticky přijat
         if (App.FLAG_INIT) {
             return;
         }
