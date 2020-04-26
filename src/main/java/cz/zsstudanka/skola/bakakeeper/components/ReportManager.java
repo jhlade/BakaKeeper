@@ -2,6 +2,7 @@ package cz.zsstudanka.skola.bakakeeper.components;
 
 import cz.zsstudanka.skola.bakakeeper.App;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
+import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 
 import java.io.FileWriter;
 import java.io.PrintWriter;
@@ -122,7 +123,7 @@ public class ReportManager {
      * Výpis lokalizované zprávy zachycené výjimky do protokolu.
      *
      * @param type typ protokolované zprávy
-     * @param e zachycený výjimka
+     * @param e zachycená výjimka
      */
     public static void exceptionMessage(EBakaLogType type, Exception e) {
         log(type, "Došlo k výjimce: " + e.getLocalizedMessage());
@@ -132,7 +133,7 @@ public class ReportManager {
      * Zkratka prop výpis lokalizované zprávy zachycené výjimky do protokolu
      * ve výchozím typu události - chybové detailní zprávy.
      *
-     * @param e
+     * @param e zachycená výjimka
      */
     public static void exceptionMessage(Exception e) {
         exceptionMessage(EBakaLogType.LOG_ERR_VERBOSE, e);
@@ -166,6 +167,24 @@ public class ReportManager {
      */
     public static void printStackTrace(Exception e) {
         printStackTrace(EBakaLogType.LOG_ERR_DEBUG, e);
+    }
+
+    /**
+     * Univerzální metoda pro zpracování události výjimky.
+     *
+     * @param message chybová zpráva o stavu
+     * @param e zachycená výjimka
+     */
+    public static void handleException(String message, Exception e) {
+        log(EBakaLogType.LOG_ERR, message);
+
+        if (Settings.getInstance().beVerbose()) {
+            exceptionMessage(e);
+        }
+
+        if (Settings.getInstance().debugMode()) {
+            printStackTrace(e);
+        }
     }
 
 }
