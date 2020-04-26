@@ -118,4 +118,34 @@ public class ReportManager {
         RM.println(message, type);
     }
 
+    /**
+     * Výpis zásobníku ze zachycené výjimky do protokolu událostí.
+     *
+     * @param type typ protokolované zprávy
+     * @param e zachycená výjimka
+     */
+    public static void printStackTrace(EBakaLogType type, Exception e) {
+        StringBuilder stackTraceLines = new StringBuilder();
+
+        stackTraceLines.append(e.getLocalizedMessage());
+        stackTraceLines.append("\n");
+
+        for (StackTraceElement exceptionLine : e.getStackTrace()) {
+            stackTraceLines.append(exceptionLine.toString());
+            stackTraceLines.append("\n");
+        }
+
+        log(type, stackTraceLines.toString());
+    }
+
+    /**
+     * Zkratka protokolování výpisu zásobníku zachycené výjimky pro výchozí
+     * typ události - chybové ladící informace.
+     *
+     * @param e zachycená výjimka
+     */
+    public static void printStackTrace(Exception e) {
+        printStackTrace(EBakaLogType.LOG_ERR_DEBUG, e);
+    }
+
 }
