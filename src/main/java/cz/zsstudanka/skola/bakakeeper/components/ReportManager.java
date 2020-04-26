@@ -176,7 +176,20 @@ public class ReportManager {
      * @param e zachycená výjimka
      */
     public static void handleException(String message, Exception e) {
-        log(EBakaLogType.LOG_ERR, message);
+        handleException(message, e, false);
+    }
+
+    /**
+     * Univerzální metoda pro zpracování události výjimky.
+     *
+     * @param message chybová zpráva o stavu
+     * @param e zachycená výjimka
+     * @param verboseOnly protokolovat pouze v případě detailní a ladící úrovně
+     */
+    public static void handleException(String message, Exception e, Boolean verboseOnly) {
+        if (verboseOnly) {
+            log(EBakaLogType.LOG_ERR, message);
+        }
 
         if (Settings.getInstance().beVerbose()) {
             exceptionMessage(e);

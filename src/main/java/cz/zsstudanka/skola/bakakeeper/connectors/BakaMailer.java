@@ -1,5 +1,6 @@
 package cz.zsstudanka.skola.bakakeeper.connectors;
 
+import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.settings.Version;
 import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
@@ -156,15 +157,7 @@ public class BakaMailer {
             Transport.send(msg);
 
         } catch (Exception e) {
-
-            if (Settings.getInstance().beVerbose()) {
-                System.err.println("[ CHYBA ] Došlo k chybě při odesílání e-mailu.");
-            }
-
-            if (Settings.getInstance().debugMode()) {
-                System.err.println("[ CHYBA ] " + e.getLocalizedMessage());
-                e.printStackTrace(System.err);
-            }
+            ReportManager.handleException("Došlo k chybě při odesílání e-mailu.", e);
         }
     }
 
@@ -186,15 +179,7 @@ public class BakaMailer {
 
             test = true;
         } catch (Exception e) {
-
-            if (Settings.getInstance().beVerbose()) {
-                System.err.println("[ CHYBA ] " + e.getLocalizedMessage());
-            }
-
-            if (Settings.getInstance().debugMode()) {
-                e.printStackTrace(System.err);
-            }
-
+            ReportManager.handleException("Došlo k chybě během připojování k SMTP serveru.", e, true);
             test = false;
         }
 

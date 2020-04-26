@@ -1,5 +1,7 @@
 package cz.zsstudanka.skola.bakakeeper.connectors;
 
+import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 
 import javax.security.auth.callback.Callback;
@@ -19,13 +21,13 @@ public class BakaKerberosCallback implements CallbackHandler {
         for (int i = 0; i < callbacks.length; i++) {
 
             if (Settings.getInstance().debugMode()) {
-                System.out.println("[ DEBUG ] Kerberos: callback [" + i + "].");
+                ReportManager.log(EBakaLogType.LOG_DEBUG, "Kerberos: callback [" + i + "].");
             }
 
             if (callbacks[i] instanceof NameCallback) {
 
                 if (Settings.getInstance().beVerbose()) {
-                    System.out.println("[ INFO ] Kerberos: probíhá ověření uživatelského jména.");
+                    ReportManager.log("Kerberos: probíhá ověření uživatelského jména.");
                 }
 
                 NameCallback usernameCallback = (NameCallback) callbacks[i];
@@ -33,7 +35,7 @@ public class BakaKerberosCallback implements CallbackHandler {
             } else if (callbacks[i] instanceof PasswordCallback) {
 
                 if (Settings.getInstance().beVerbose()) {
-                    System.out.println("[ INFO ] Kerberos: probíhá ověření hesla.");
+                    ReportManager.log("Kerberos: probíhá ověření hesla.");
                 }
 
                 PasswordCallback passwordCallback = (PasswordCallback) callbacks[i];
@@ -42,5 +44,4 @@ public class BakaKerberosCallback implements CallbackHandler {
         }
 
     }
-
 }

@@ -1,5 +1,7 @@
 package cz.zsstudanka.skola.bakakeeper.connectors;
 
+import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 
 import java.io.*;
@@ -37,16 +39,7 @@ public class BakaKerberos implements PrivilegedExceptionAction {
             customKrb5Config = File.createTempFile("bakakrb5_", ".conf", null);
             customKrb5Config.deleteOnExit();
         } catch (Exception e) {
-
-            if (Settings.getInstance().beVerbose()) {
-                System.err.println("[ CHYBA ] Nezdařilo se vytvořit dočasný soubor pro zapsání konfigurace Kerberos. ");
-            }
-
-            if (Settings.getInstance().debugMode()) {
-                System.err.println("[ CHYBA ] " + e.getMessage());
-                e.printStackTrace(System.err);
-            }
-
+            ReportManager.handleException("Nezdařilo se vytvořit dočasný soubor pro zapsání konfigurace Kerberos.", e);
             customKrb5Config = null;
         }
 
@@ -72,15 +65,7 @@ public class BakaKerberos implements PrivilegedExceptionAction {
                 reader.close();
 
             } catch (Exception e) {
-                System.err.println("[ CHYBA ] Nebylo možné připravit konfiguraci pro Kerberos.");
-
-                if (Settings.getInstance().beVerbose()) {
-                    System.err.println("[ CHYBA ] -- " + e.getMessage());
-                }
-
-                if (Settings.getInstance().debugMode()) {
-                    e.printStackTrace(System.err);
-                }
+                ReportManager.handleException("Nebylo možné připravit konfiguraci pro Kerberos.", e);
             }
 
             // vytvoření vlastní konfigurace krb5.conf
@@ -89,15 +74,7 @@ public class BakaKerberos implements PrivilegedExceptionAction {
                 outKrb5Config.println(newKrb5Config.toString());
                 outKrb5Config.close();
             } catch (Exception e) {
-                System.err.println("[ CHYBA ] Nebylo možné vytvořit konfiguraci pro Kerberos.");
-
-                if (Settings.getInstance().beVerbose()) {
-                    System.err.println("[ CHYBA ] -- " + e.getMessage());
-                }
-
-                if (Settings.getInstance().debugMode()) {
-                    e.printStackTrace(System.err);
-                }
+                ReportManager.handleException("Nebylo možné vytvořit konfiguraci pro Kerberos.", e);
             }
         }
 
@@ -136,16 +113,14 @@ public class BakaKerberos implements PrivilegedExceptionAction {
         try {
             // attempt authentication
             if (Settings.getInstance().beVerbose()) {
-                System.err.println("[ INFO ] Probíhá pokus o přihlášení.");
+                ReportManager.log(EBakaLogType.LOG_VERBOSE, "Probíhá pokus o přihlášení prostřednictvím Kerberos.");
             }
 
-            // This means that LoginContext.login is indeed equal to kinit in that after each of them, we have a TGT.
-            // The service ticket will be obtained and used later - according to the action performed in Subject.doAs().
             // přihlášení
             lc.login();
 
             if (Settings.getInstance().beVerbose()) {
-                System.err.println("[ OK ] Přihlášení Kerberos proběhlo úspěšně.");
+                ReportManager.log(EBakaLogType.LOG_OK, "Přihlášení Kerberos proběhlo úspěšně.");
             }
 
             // vygenerování tokenu služby
@@ -153,7 +128,7 @@ public class BakaKerberos implements PrivilegedExceptionAction {
             byte[] serviceTicket = (byte[]) Subject.doAs(clientSubject, new BakaKerberos());
 
             if (Settings.getInstance().beVerbose()) {
-                System.err.println("[ OK ] Tiket služby MSSQLSvc byl vygenerován (přijato " + serviceTicket.length + " bajtů).");
+                ReportManager.log(EBakaLogType.LOG_OK, "Tiket služby MSSQLSvc byl vygenerován (přijato " + serviceTicket.length + " bajtů).");
             }
 
             // uložení tokenu do souboru?
@@ -163,21 +138,10 @@ public class BakaKerberos implements PrivilegedExceptionAction {
                 ticketStream.write(serviceTicket);
                 ticketStream.close();
             } catch (Exception e) {
-                // TODO
-                System.err.println("[ CHYBA ] Uložení tokenu se nezdařilo: " + e.getLocalizedMessage());
-                e.printStackTrace(System.err);
+                ReportManager.handleException("Uložení tokenu se nezdařilo.", e);
             }
-
         } catch (LoginException le) {
-            System.err.println("[ CHYBA ] Nebyl vygenerován tiket služby - Kerberos V přihlášení se nezdařilo:");
-
-            if (Settings.getInstance().beVerbose()) {
-                System.err.println("[ CHYBA ] -- " + le.getLocalizedMessage());
-            }
-
-            if (Settings.getInstance().debugMode()) {
-                le.printStackTrace(System.err);
-            }
+            ReportManager.handleException("Nebyl vygenerován tiket služby - Kerberos přihlášení se nezdařilo.", le);
         }
     }
 
@@ -190,18 +154,13 @@ public class BakaKerberos implements PrivilegedExceptionAction {
     public Object run() throws Exception {
 
         // callback - kopie tiketu služby
-
         try {
             Oid kerberos5Oid = new Oid("1.2.840.113554.1.2.2");
             GSSManager manager = GSSManager.getInstance();
 
-            // **** Need to add User name of a valid user here in the form of username@domain.suffix ****
-            // "who the client wishes to be" - to asi zase bakalářem
             // přihlášení pod systémovým účtem
             GSSName client = manager.createName(Settings.getInstance().getKrb_user(), GSSName.NT_USER_NAME);
 
-            // **** Need to input the SPN for the SQL Server you want to connect to.  This is just used to get the Service Ticket ****
-            // **** This does NOT actually connect to SQL Server. ****
             // SPN služby ve tvaru MSSQLSvc/SRV-ZS-XXX-APP0.ZSXXX.LOCAL:1433
             GSSName service = manager.createName("MSSQLSvc/" + Settings.getInstance().getSQL_hostFQDN() + ":1433", null);
 
@@ -219,12 +178,7 @@ public class BakaKerberos implements PrivilegedExceptionAction {
             return serviceTicket;
 
         } catch (Exception ex) {
-            System.err.println("[ CHYBA ] Privilegovaná operace se nezdařila: " + ex.getMessage());
-
-            if (Settings.getInstance().debugMode()) {
-                ex.printStackTrace(System.err);
-            }
-
+            ReportManager.handleException("Privilegovaná operace se nezdařila.", ex);
             throw new PrivilegedActionException(ex);
         }
     }

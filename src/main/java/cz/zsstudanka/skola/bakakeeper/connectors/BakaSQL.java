@@ -1,6 +1,8 @@
 package cz.zsstudanka.skola.bakakeeper.connectors;
 
 import com.microsoft.sqlserver.jdbc.SQLServerDataSource;
+import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 
 import org.ietf.jgss.GSSCredential;
@@ -38,9 +40,7 @@ public class BakaSQL {
         return BakaSQL.instance;
     }
 
-    // TODO
     public BakaSQL() {
-
     }
 
     /**
@@ -80,7 +80,6 @@ public class BakaSQL {
      */
     private void connectNTLM() {
         try {
-
             // JTDS ovladač
             Class.forName("net.sourceforge.jtds.jdbc.Driver");
 
@@ -98,18 +97,8 @@ public class BakaSQL {
             }
 
         } catch (Exception e) {
-
+            ReportManager.handleException("Nebylo možné vytvořit NTLM spojení se SQL serverem.", e);
             valid = false;
-
-            System.err.println("[ CHYBA ] Nebylo možné vytvořit spojení se SQL serverem.");
-
-            if (Settings.getInstance().beVerbose()) {
-                System.err.println("[ CHYBA ] " + e.getMessage());
-            }
-
-            if (Settings.getInstance().debugMode()) {
-                e.printStackTrace();
-            }
         }
     }
 
@@ -141,15 +130,7 @@ public class BakaSQL {
             BakaKerberos.generateTicket();
             //BakaKerberos.systemSettings();
         } catch (Exception e) {
-            System.err.println("[ CHYBA ] Nevytvořil se ticket služby MSSQLSvc.");
-
-            if (Settings.getInstance().beVerbose()) {
-                System.err.println(e.getMessage());
-            }
-
-            if (Settings.getInstance().debugMode()) {
-                e.printStackTrace(System.err);
-            }
+            ReportManager.handleException("Nevytvořil se tiket služby MSSQLSvc.", e);
         }
 
         // vytvoření spojení
@@ -180,16 +161,8 @@ public class BakaSQL {
             }
 
         } catch (Exception e) {
+            ReportManager.handleException("Nebylo možné vytvořit Kerberos spojení se SQL serverem.", e);
             valid = false;
-
-            if (Settings.getInstance().beVerbose()) {
-                System.err.println("[ CHYBA ] Nebylo možné vytvořit spojení se SQL serverem.");
-            }
-
-            if (Settings.getInstance().debugMode()) {
-                System.err.println("[ CHYBA ] " + e.getMessage());
-                e.printStackTrace();
-            }
         }
     }
 
@@ -198,25 +171,21 @@ public class BakaSQL {
      */
     private void debugInfo() {
         if (Settings.getInstance().beVerbose()) {
-            System.out.println("[ INFO ] SQL připojení bylo vytvořeno.");
+            ReportManager.log("SQL připojení bylo vytvořeno.");
         }
 
         if (Settings.getInstance().debugMode()) {
             try {
-
-                System.out.println("[ DEBUG ] Ověřování SQL: " + (Settings.getInstance().sql_NTLM() ? "NTLMv2" : "Kerberos V"));
-                System.out.println("[ DEBUG ] Uživatel SQL: " + Settings.getInstance().getKrb_user());
+                ReportManager.log(EBakaLogType.LOG_SQL, "Ověřování SQL: " + (Settings.getInstance().sql_NTLM() ? "NTLMv2" : "Kerberos V"));
+                ReportManager.log(EBakaLogType.LOG_SQL, "Uživatel SQL: " + Settings.getInstance().getKrb_user());
 
                 DatabaseMetaData dbmd = con.getMetaData();
-                System.out.println("[ DEBUG ] dbmd:verze ovladače = " + dbmd.getDriverVersion());
-                System.out.println("[ DEBUG ] dbmd:název ovladače = " + dbmd.getDriverName());
-                System.out.println("[ DEBUG ] db software = " + dbmd.getDatabaseProductName());
-                System.out.println("[ DEBUG ] db verze    = " + dbmd.getDatabaseProductVersion());
-
+                ReportManager.log(EBakaLogType.LOG_SQL, "dbmd:verze ovladače = " + dbmd.getDriverVersion());
+                ReportManager.log(EBakaLogType.LOG_SQL, "dbmd:název ovladače = " + dbmd.getDriverName());
+                ReportManager.log(EBakaLogType.LOG_SQL, "db software = " + dbmd.getDatabaseProductName());
+                ReportManager.log(EBakaLogType.LOG_SQL, "db verze    = " + dbmd.getDatabaseProductVersion());
             } catch (Exception e) {
-                System.err.println("[ CHYBA ] Nebylo možné získat ladící informace o SQL spojení.");
-                System.err.println("[ CHYBA ] " + e.getMessage());
-                e.printStackTrace();
+                ReportManager.handleException("Nebylo možné získat ladící informace o SQL spojení.", e);
             }
         }
     }

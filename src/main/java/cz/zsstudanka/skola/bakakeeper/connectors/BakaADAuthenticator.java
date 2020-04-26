@@ -1,7 +1,8 @@
 package cz.zsstudanka.skola.bakakeeper.connectors;
 
+import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
-import cz.zsstudanka.skola.bakakeeper.constants.EBakaUAC;
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
 
@@ -49,7 +50,6 @@ public class BakaADAuthenticator {
      */
     public static BakaADAuthenticator getInstance() {
         if (BakaADAuthenticator.instance == null) {
-
             BakaADAuthenticator.instance = new BakaADAuthenticator();
         }
 
@@ -107,7 +107,7 @@ public class BakaADAuthenticator {
             setAuthSucceeded(true);
 
             if (Settings.getInstance().beVerbose()) {
-                System.out.println("[ INFO ] Ověření proti Active Directory proběhlo úspěšně.");
+                ReportManager.log(EBakaLogType.LOG_VERBOSE, "Ověření proti Active Directory proběhlo úspěšně.");
             }
 
             // uložení lokálních informací
@@ -123,21 +123,10 @@ public class BakaADAuthenticator {
             });
 
             if (Settings.getInstance().debugMode()) {
-                System.out.println("[ DEBUG ] Přihlášení do Active Directory pod účtem " + authUserInfo().get(EBakaLDAPAttributes.NAME_DISPLAY.attribute()) + " (" + authUserInfo().get(EBakaLDAPAttributes.UPN.attribute()) + ").");
+                ReportManager.log(EBakaLogType.LOG_DEBUG, "Přihlášení do Active Directory pod účtem " + authUserInfo().get(EBakaLDAPAttributes.NAME_DISPLAY.attribute()) + " (" + authUserInfo().get(EBakaLDAPAttributes.UPN.attribute()) + ").");
             }
-
         } catch (Exception e) {
-
-            System.err.println("[ CHYBA ] Ověření proti Active Directory se nezdařilo.");
-
-            if (Settings.getInstance().beVerbose()) {
-                System.err.println("[ CHYBA ] " + e.getMessage());
-            }
-
-            if (Settings.getInstance().debugMode()) {
-                e.printStackTrace(System.err);
-            }
-
+            ReportManager.handleException("Ověření proti Active Directory se nezdařilo.", e);
             setAuthSucceeded(false);
         }
 
@@ -213,8 +202,6 @@ public class BakaADAuthenticator {
 
             // LDAP výsledky a dotaz
             String returnedAtts[] = retAttributes;
-
-            //String searchFilter = "(&(sAMAccountType=805306368)(objectClass=user)(sAMAccountName=" + sAMAaccountName + "))";
             String searchFilter = findAND.toString();
 
             // řízení
@@ -264,13 +251,10 @@ public class BakaADAuthenticator {
         } catch (NamingException e) {
 
             if (Settings.getInstance().debugMode()) {
-
-                System.err.println("[ CHYBA ] Došlo k závažné chybě při práci s kontextem Active Directory.");
-
-                System.err.println("[ CHYBA ] " + e.getMessage());
-                e.printStackTrace(System.err);
+                ReportManager.handleException("Došlo k závažné chybě při práci s kontextem Active Directory.", e);
             }
 
+            // prázdný výsledek - objekt nenalezen
             return null;
         }
 
@@ -468,15 +452,7 @@ public class BakaADAuthenticator {
                     attrs[a] = new BasicAttribute(attrKey, unicodePwd);
                     a++;
                 } catch (Exception e) {
-                    System.err.println("[ CHYBA ] Nebylo možné vytvořit heslo.");
-
-                    if (Settings.getInstance().beVerbose()) {
-                        System.err.println("[ CHYBA ] " + e.getLocalizedMessage());
-                    }
-
-                    if (Settings.getInstance().debugMode()) {
-                        e.printStackTrace(System.err);
-                    }
+                    ReportManager.handleException("Nebylo možné vytvořit uživatelské heslo.", e);
                 }
                 continue;
             }
@@ -507,7 +483,7 @@ public class BakaADAuthenticator {
         if (mail == null || mail.length() < 1) {
 
             if (Settings.getInstance().beVerbose()) {
-                System.err.println("[ CHYBA ] Nebyl nalezen platný e-mail pro zákonného zástupce " + displayName + ".");
+                ReportManager.log(EBakaLogType.LOG_ERR_VERBOSE, "Nebyl nalezen platný e-mail pro zákonného zástupce " + displayName + ".");
             }
 
             return;
@@ -541,16 +517,7 @@ public class BakaADAuthenticator {
         try {
             createRecord(displayName, OU, objClasses, attrs);
         } catch (Exception e) {
-
-            System.err.println("[ CHYBA ] Nezdařilo se vytvořit kontakt.");
-
-            if (Settings.getInstance().beVerbose()) {
-                System.err.println("[ CHYBA ] " + e.getMessage());
-            }
-
-            if (Settings.getInstance().debugMode()) {
-                e.printStackTrace(System.err);
-            }
+            ReportManager.handleException("Nezdařilo se vytvořit kontakt.", e);
         }
 
         // prvotní přidání do distribučního seznamu
@@ -685,15 +652,7 @@ public class BakaADAuthenticator {
             }
 
         } catch (Exception e) {
-
-            if (Settings.getInstance().beVerbose()) {
-                System.err.println("[ CHYBA ] Nebylo možné vytvořit požadovaný LDAP záznam (" + cnName + ").");
-            }
-
-            if (Settings.getInstance().debugMode()) {
-                System.err.println("[ CHYBA ] " + e.getMessage());
-                e.printStackTrace(System.err);
-            }
+            ReportManager.handleException("Nebylo možné vytvořit požadovaný LDAP záznam (" + cnName + ").", e);
         }
 
     }
@@ -712,7 +671,7 @@ public class BakaADAuthenticator {
             ctxGC = new InitialLdapContext(env, null);
             ctxGC.destroySubcontext(dn);
         } catch (Exception e) {
-            // TODO
+            ReportManager.handleException("Nebylo možné smazat záznam [" + dn + "].", e);
         }
 
     }
@@ -726,6 +685,10 @@ public class BakaADAuthenticator {
      * @param value nová hodnota
      */
     private boolean modifyAttribute(int modOp, String dn, EBakaLDAPAttributes attribute, String value) {
+
+        if (Settings.getInstance().debugMode()) {
+            ReportManager.log(EBakaLogType.LOG_LDAP, "Operace typu [" + modOp + "] nad objektem: [" + dn + "]. Atribut: [" + attribute.attribute().toString() + "], cílová hodnota: [" + value + "].");
+        }
 
         LdapContext bakaContext = null;
 
@@ -741,15 +704,7 @@ public class BakaADAuthenticator {
                     byte[] unicodePwd = password.getBytes("UTF-16LE");
                     mod[0] = new ModificationItem(modOp, new BasicAttribute(attribute.attribute(), unicodePwd));
                 } catch (Exception e) {
-                    System.err.println("[ CHYBA ] Nebylo možné vytvořit heslo.");
-
-                    if (Settings.getInstance().beVerbose()) {
-                        System.err.println("[ CHYBA ] " + e.getLocalizedMessage());
-                    }
-
-                    if (Settings.getInstance().debugMode()) {
-                        e.printStackTrace(System.err);
-                    }
+                    ReportManager.handleException("Nebylo možné nastavit heslo.", e);
                 }
             } else {
                 // vše ostatní
@@ -757,20 +712,8 @@ public class BakaADAuthenticator {
             }
 
             bakaContext.modifyAttributes(dn, mod);
-
         } catch (Exception e) {
-
-            if (Settings.getInstance().beVerbose()) {
-                System.out.println("[ CHYBA ] Nebylo možné modifikovat atribut objektu.");
-            }
-
-            if (Settings.getInstance().debugMode()) {
-                System.out.println("[ DEBUG ] Operace typu " + modOp + " nad objektem: " + dn + " selhala. Atribut: " + attribute.attribute().toString() + ", cílová hodnota: " + value + ".");
-
-                System.out.println("[ CHYBA ] " + e.getLocalizedMessage());
-                e.printStackTrace(System.err);
-            }
-
+            ReportManager.handleException("Nebylo možné modifikovat atribut objektu.", e);
             return false;
         }
 
@@ -848,11 +791,11 @@ public class BakaADAuthenticator {
         if (!createNewOUifNotExists && checkOU(ouName) == -1) {
 
             if (Settings.getInstance().beVerbose()) {
-                System.err.println("[ CHYBA ] Cílová organizační jednotka pro přesun neexistuje.");
+                ReportManager.log(EBakaLogType.LOG_ERR, "Cílová organizační jednotka pro přesun neexistuje.");
             }
 
             if (Settings.getInstance().debugMode()) {
-                System.err.println("[ CHYBA ] Nebylo možné přesunout objekt " + objectDN + " do umístění " + ouName + ".");
+                ReportManager.log(EBakaLogType.LOG_ERR_DEBUG, "Nebylo možné přesunout objekt [" + objectDN + "] do umístění [" + ouName + "].");
             }
 
             return;
@@ -880,15 +823,7 @@ public class BakaADAuthenticator {
             ctxOM = new InitialLdapContext(env, null);
             ctxOM.rename(objectDN, newObjectDN);
         } catch (Exception e) {
-            System.err.println("[ CHYBA ] Nebylo možné přesunout objekt.");
-
-            if (Settings.getInstance().beVerbose()) {
-                System.err.println("[ CHYBA ] " + e.getLocalizedMessage());
-            }
-
-            if (Settings.getInstance().beVerbose()) {
-                e.printStackTrace(System.err);
-            }
+            ReportManager.handleException("Nebylo možné přesunout objekt.", e);
         }
     }
 
@@ -985,6 +920,5 @@ public class BakaADAuthenticator {
     public void addContactToDL(String contactDN, String distributionListDN) {
         addAttribute(distributionListDN, EBakaLDAPAttributes.MEMBER, contactDN);
     }
-
 
 }
