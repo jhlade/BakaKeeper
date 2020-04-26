@@ -119,6 +119,26 @@ public class ReportManager {
     }
 
     /**
+     * Výpis lokalizované zprávy zachycené výjimky do protokolu.
+     *
+     * @param type typ protokolované zprávy
+     * @param e zachycený výjimka
+     */
+    public static void exceptionMessage(EBakaLogType type, Exception e) {
+        log(type, "Došlo k výjimce: " + e.getLocalizedMessage());
+    }
+
+    /**
+     * Zkratka prop výpis lokalizované zprávy zachycené výjimky do protokolu
+     * ve výchozím typu události - chybové detailní zprávy.
+     *
+     * @param e
+     */
+    public static void exceptionMessage(Exception e) {
+        exceptionMessage(EBakaLogType.LOG_ERR_VERBOSE, e);
+    }
+
+    /**
      * Výpis zásobníku ze zachycené výjimky do protokolu událostí.
      *
      * @param type typ protokolované zprávy
@@ -127,7 +147,7 @@ public class ReportManager {
     public static void printStackTrace(EBakaLogType type, Exception e) {
         StringBuilder stackTraceLines = new StringBuilder();
 
-        stackTraceLines.append(e.getLocalizedMessage());
+        stackTraceLines.append(e.getLocalizedMessage() + ":");
         stackTraceLines.append("\n");
 
         for (StackTraceElement exceptionLine : e.getStackTrace()) {
