@@ -1,5 +1,6 @@
 package cz.zsstudanka.skola.bakakeeper.components;
 
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 
 import javax.net.SocketFactory;
@@ -20,32 +21,25 @@ public class BakaSSLSocketFactory extends SSLSocketFactory {
     private SSLSocketFactory socketFactory;
 
     public BakaSSLSocketFactory() {
-
-        //System.setProperty("javax.net.ssl.trustStore", Settings.getInstance().DEFAULT_JKS_FILE);
-        //System.setProperty("javax.net.ssl.trustStoreType", "jks");
-        //System.setProperty("javax.net.ssl.trustStorePassword", App.PASSPHRASE);
-
         try {
             SSLContext sslctx = SSLContext.getInstance("SSL");
             sslctx.init(null, new TrustManager[]{ new BakaTrustManager() }, new SecureRandom());
             this.socketFactory = sslctx.getSocketFactory();
         } catch (NoSuchAlgorithmException e) {
             if (Settings.getInstance().beVerbose()) {
-                System.err.println("[ CHYBA ] Nepodporovaný algoritmus.");
+                ReportManager.log(EBakaLogType.LOG_ERR, "Nepodporovaný algoritmus.");
             }
 
             if (Settings.getInstance().debugMode()) {
-                System.err.println("[ CHYBA ] " + e.getLocalizedMessage());
-                e.printStackTrace(System.err);
+                ReportManager.printStackTrace(e);
             }
         } catch (KeyManagementException e) {
             if (Settings.getInstance().beVerbose()) {
-                System.err.println("[ CHYBA ] Chyba při zpracování klíče.");
+                ReportManager.log(EBakaLogType.LOG_ERR, "Chyba při zpracování klíče.");
             }
 
             if (Settings.getInstance().debugMode()) {
-                System.err.println("[ CHYBA ] " + e.getLocalizedMessage());
-                e.printStackTrace(System.err);
+                ReportManager.printStackTrace(e);
             }
         }
     }
@@ -88,5 +82,4 @@ public class BakaSSLSocketFactory extends SSLSocketFactory {
     public Socket createSocket(InetAddress ia, int i, InetAddress ia1, int i1) throws IOException {
         return socketFactory.createSocket(ia, i, ia1, i1);
     }
-
 }
