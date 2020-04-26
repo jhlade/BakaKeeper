@@ -1,6 +1,8 @@
 package cz.zsstudanka.skola.bakakeeper.model.collections;
 
+import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaSQL;
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaSQL;
 import cz.zsstudanka.skola.bakakeeper.model.interfaces.IRecords;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
@@ -196,16 +198,7 @@ public class SQLrecords implements IRecords {
             }
 
         } catch (Exception e) {
-
-            if (Settings.getInstance().beVerbose()) {
-                System.err.println("[ CHYBA ] Vykonávání SQL dotazu se nezdařilo.");
-            }
-
-            if (Settings.getInstance().debugMode()) {
-                System.err.println("[ CHYBA ] " + e.getLocalizedMessage());
-                e.printStackTrace(System.err);
-            }
-
+            ReportManager.handleException("Vykonávání SQL dotazu se nezdařilo.", e, true);
         }
     }
 
@@ -345,7 +338,7 @@ public class SQLrecords implements IRecords {
         if (this.writeData.size() > 0) {
 
             if (Settings.getInstance().beVerbose()) {
-                System.out.println("[ INFO ] Proběhne pokus o zpracování " + this.writeData.size() + " SQL transakcí.");
+                ReportManager.log(EBakaLogType.LOG_VERBOSE, "Proběhne pokus o zpracování " + this.writeData.size() + " SQL transakcí.");
             }
 
             /**
@@ -374,7 +367,7 @@ public class SQLrecords implements IRecords {
                     EBakaSQL tableName = tableIterator.next();
 
                     if (Settings.getInstance().debugMode()) {
-                        System.out.println("[ DEBUG ] Tabulka: " + tableName.field());
+                        ReportManager.log(EBakaLogType.LOG_SQL, "Tabulka: " + tableName.field());
                     }
 
                     // řádek
@@ -385,13 +378,13 @@ public class SQLrecords implements IRecords {
                         String primaryKeyValue = writeKey.get(tableName).get(primaryKeyField);
 
                         if (Settings.getInstance().debugMode()) {
-                            System.out.println("[ DEBUG ] Primární klíč: " + primaryKeyField.field() + " = [" + primaryKeyValue + "]");
+                            ReportManager.log(EBakaLogType.LOG_SQL, "Primární klíč: " + primaryKeyField.field() + " = [" + primaryKeyValue + "]");
                         }
 
                         // data - atomické transakce
                         Map<EBakaSQL, String> data = this.writeData.get(writeKey);
                         if (Settings.getInstance().debugMode()) {
-                            System.out.println("[ DEBUG ] Páry data k zápisu: " + data.size());
+                            ReportManager.log(EBakaLogType.LOG_SQL, "Páry data k zápisu: " + data.size());
                         }
 
                         Iterator<EBakaSQL> dataIterator = data.keySet().iterator();
@@ -401,8 +394,8 @@ public class SQLrecords implements IRecords {
                             String dataValue =  data.get(dataField);
 
                             if (Settings.getInstance().debugMode()) {
-                                System.out.println("[ DEBUG ] Proběhne pokus o SQL transakci s dotazem");
-                                System.out.println("[ DEBUG ] [ SQL ] UPDATE " + tableName.field() + " SET " + dataField.field()
+                                ReportManager.log(EBakaLogType.LOG_SQL, "Proběhne pokus o SQL transakci s dotazem");
+                                ReportManager.log(EBakaLogType.LOG_SQL,"UPDATE " + tableName.field() + " SET " + dataField.field()
                                                 + " = '" + dataValue + "' "
                                                 + "WHERE " + primaryKeyField.field() + " = '" + primaryKeyValue + "';");
                             }
@@ -426,12 +419,12 @@ public class SQLrecords implements IRecords {
                                     int executeResult = updatePS.executeUpdate();
 
                                     if (Settings.getInstance().debugMode()) {
-                                        System.out.println("[ DEBUG ] [ SQL ] Bylo ovlivněno " + executeResult + " řádků.");
+                                        ReportManager.log(EBakaLogType.LOG_SQL, "Bylo ovlivněno " + executeResult + " řádků.");
                                     }
 
                                     update &= (executeResult == 1);
                                 } else {
-                                    System.out.println("[ DEVEL ] [ SQL ] Zde proběhne zápis do ostrých dat.");
+                                    ReportManager.log(EBakaLogType.LOG_DEVEL, "[ SQL ] Zde proběhne zápis do ostrých dat.");
                                 }
 
                                 // commit
@@ -439,7 +432,7 @@ public class SQLrecords implements IRecords {
                                     BakaSQL.getInstance().getConnection().commit();
                                 }
                             } catch (Exception e) {
-                                // TODO slovní popis chyby
+                                ReportManager.handleException("Nezdařilo se provést SQL transakci! Proběhne pokus o rollback.", e);
 
                                 // rollback
                                 try {
@@ -447,7 +440,7 @@ public class SQLrecords implements IRecords {
                                         BakaSQL.getInstance().getConnection().rollback();
                                     }
                                 } catch (Exception eR) {
-                                    // TODO nepovedl se ani rollback
+                                    ReportManager.handleException("Nezdařilo se vykonat rollback!", eR);
                                 }
 
                             } finally {
@@ -461,7 +454,7 @@ public class SQLrecords implements IRecords {
                                     // znovuzapnutí autocommitu
                                     BakaSQL.getInstance().getConnection().setAutoCommit(true);
                                 } catch (Exception eF) {
-                                    // TODO -- slovní popis - asi spadlo celé spojení
+                                    ReportManager.handleException("Během pokusu o SQL transakci bylo ztraceno spojení se serverem.", eF);
                                 }
                             } // transakce
                         } //data
@@ -472,7 +465,7 @@ public class SQLrecords implements IRecords {
                     writeKeyIterator.remove();
                 } else {
                     if (Settings.getInstance().beVerbose()) {
-                        System.err.println("[ CHYBA ] Nebylo možné provést některou z transakcí.");
+                        ReportManager.log(EBakaLogType.LOG_ERR_VERBOSE, "Nebylo možné provést některou z transakcí.");
                     }
                 }
             } // pole dat ke zpětnému zápisu

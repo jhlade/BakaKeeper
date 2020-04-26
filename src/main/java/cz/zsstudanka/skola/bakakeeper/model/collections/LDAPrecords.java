@@ -1,7 +1,9 @@
 package cz.zsstudanka.skola.bakakeeper.model.collections;
 
+import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaADAuthenticator;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.model.interfaces.IRecords;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 
@@ -283,14 +285,14 @@ public class LDAPrecords implements IRecords {
                 for (Map.Entry<EBakaLDAPAttributes, String> data : dataSet.entrySet()) {
 
                     if (Settings.getInstance().debugMode()) {
-                        System.out.println("[ DEBUG ] [ LDAP ] REPLACE [" + data.getKey() + "] = [" + data.getValue().toString() + "] @ [" + dn + "]");
+                        ReportManager.log(EBakaLogType.LOG_LDAP, "REPLACE [" + data.getKey() + "] = [" + data.getValue().toString() + "] @ [" + dn + "]");
                     }
 
                     if (!Settings.getInstance().develMode()) {
                         attrMod &= BakaADAuthenticator.getInstance().replaceAttribute(dn, data.getKey(), data.getValue());
                     } else {
                         // attrMod vždy true
-                        System.out.println("[ DEVEL ] [ LDAP ] Zde proběhne zápis do ostrých dat.");
+                        ReportManager.log(EBakaLogType.LOG_DEVEL, "[ LDAP ] Zde proběhne zápis do ostrých dat.");
                     }
                 }
 
