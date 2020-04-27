@@ -1,9 +1,11 @@
 package cz.zsstudanka.skola.bakakeeper.routines;
 
 
+import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaADAuthenticator;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaSQL;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaUAC;
 import cz.zsstudanka.skola.bakakeeper.model.collections.LDAPrecords;
@@ -22,6 +24,28 @@ public class Test {
 
     public static void test_04() {
         System.out.println("====== [ TEST ] ======");
+
+        // logování a reportování
+        if (true) {
+            ReportManager.log("Všechno ok.");
+        } else {
+            ReportManager.log(EBakaLogType.LOG_ERR, "Všechno špatně.");
+        }
+
+        Integer dělenec = 5;
+        Integer dělitel = 0;
+
+        try {
+            Integer výsledek = dělenec / dělitel;
+        } catch (Exception e) {
+            ReportManager.printStackTrace(e);
+        }
+
+        // 2020-04-27
+        Sync testSync = new Sync();
+        testSync.devel();
+        testSync.actionInit(false);
+
         System.out.println("====== [ TEST ] ======");
     }
 
