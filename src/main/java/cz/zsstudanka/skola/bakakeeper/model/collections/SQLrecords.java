@@ -167,8 +167,8 @@ public class SQLrecords implements IRecords {
         genSelect.append(";");
 
         if (Settings.getInstance().debugMode()) {
-            System.out.println("[ DEBUG ] Provede se následující SQL dotaz:");
-            System.out.println("[ DEBUG ] [ SQL ] " + genSelect.toString());
+            ReportManager.log(EBakaLogType.LOG_SQL, "Provede se následující dotaz:");
+            ReportManager.log(EBakaLogType.LOG_SQL, genSelect.toString());
         }
 
         try {
@@ -186,7 +186,7 @@ public class SQLrecords implements IRecords {
 
                     if (Settings.getInstance().debugMode()) {
                         if (rs.getString(col.basename()) == null) {
-                            System.out.println("[ DEBUG ] Nulová data pro položku [" + col.field() + "] v záznamu [" + rowID + "]. Chybně vyplněné údaje v ecidenci?");
+                            ReportManager.log(EBakaLogType.LOG_SQL, "Nulová data pro položku [" + col.field() + "] v záznamu [" + rowID + "]. Chybně vyplněné údaje v evidenci?");
                         }
                     }
                 }
