@@ -152,6 +152,7 @@ public class ReportManager {
         stackTraceLines.append("\n");
 
         for (StackTraceElement exceptionLine : e.getStackTrace()) {
+            stackTraceLines.append("[ TRACE ] ");
             stackTraceLines.append(exceptionLine.toString());
             stackTraceLines.append("\n");
         }
