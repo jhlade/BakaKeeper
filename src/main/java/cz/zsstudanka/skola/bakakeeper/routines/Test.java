@@ -44,7 +44,7 @@ public class Test {
         // 2020-04-27
         Sync testSync = new Sync();
         testSync.devel();
-        testSync.actionInit(false);
+        testSync.actionInit(true);
 
         System.out.println("====== [ TEST ] ======");
     }
@@ -524,7 +524,7 @@ public class Test {
                                 // párování
                                 Map<EBakaLDAPAttributes, String> zápis = new HashMap<>();
                                 zápis.put(EBakaLDAPAttributes.EXT01, žák.getValue().get(EBakaSQL.F_STU_ID.basename()).toString());
-                                žáci.writeData(shodnýŽák.get(EBakaLDAPAttributes.DN.attribute()).toString(), zápis);
+                                žáci.addWriteData(shodnýŽák.get(EBakaLDAPAttributes.DN.attribute()).toString(), zápis);
                                 žáci.setFlag(shodnýŽák.get(EBakaLDAPAttributes.UPN.attribute()).toString(), true);
 
                                 // mail je tedy v pořádku
@@ -749,7 +749,7 @@ public class Test {
                     změny.put(EBakaLDAPAttributes.TITLE, "ABS " + formatter.format(new Date()));
                     změny.put(EBakaLDAPAttributes.UAC, String.format("%d", EBakaUAC.ACCOUNTDISABLE.value()|EBakaUAC.PASSWORD_EXPIRED.value()));
                     // todo skupiny
-                    žáci.writeData(žáci.get(upnArtefakt).get(EBakaLDAPAttributes.DN.attribute()).toString(), změny);
+                    žáci.addWriteData(žáci.get(upnArtefakt).get(EBakaLDAPAttributes.DN.attribute()).toString(), změny);
                     žáci.commit();
 
                     // nová ou

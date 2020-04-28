@@ -1,6 +1,7 @@
 package cz.zsstudanka.skola.bakakeeper.components;
 
 import cz.zsstudanka.skola.bakakeeper.App;
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaEvents;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 
@@ -8,9 +9,11 @@ import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
- * Protokolování postupu, sběr informací, vytváření sestav.
+ * Protokolování postupu, sběr informací, vytváření hlášení a sestav.
  *
  * @author Jan Hladěna
  */
@@ -22,7 +25,11 @@ public class ReportManager {
     /** výstupní soubor protokolu */
     private String logfile;
 
+    /** zaznamenané události pro budoucí hlášení */
+    private Map<EBakaEvents, Map<String, String>> events;
+
     public ReportManager() {
+        this.events = new HashMap<>();
     }
 
     public static ReportManager getInstance() {
@@ -199,6 +206,26 @@ public class ReportManager {
         if (Settings.getInstance().debugMode()) {
             printStackTrace(e);
         }
+    }
+
+    // TODO
+    public void report(Boolean attachLogfile) {
+
+        // prázný seznam událostí
+        if (this.events.size() < 1) {
+            return;
+        }
+
+    }
+
+    // TODO
+    public void report() {
+        report(false);
+    }
+
+    // TODO
+    public void addEvent() {
+
     }
 
 }
