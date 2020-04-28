@@ -234,7 +234,7 @@ public class LDAPrecords implements IRecords {
      * @param dn plné DN objektu
      * @param preparedData data k zápisu
      */
-    public void writeData(String dn, Map<EBakaLDAPAttributes, String> preparedData) {
+    public void addWriteData(String dn, Map<EBakaLDAPAttributes, String> preparedData) {
 
         if (this.dataToWrite.containsKey(dn)) {
             for (Map.Entry<EBakaLDAPAttributes, String> dataEntry : preparedData.entrySet()) {

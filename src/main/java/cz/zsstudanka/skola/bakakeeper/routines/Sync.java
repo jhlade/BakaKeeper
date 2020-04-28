@@ -40,6 +40,9 @@ public class Sync {
     /** LDAP data - kontaky na zákonné zástupce */
     private LDAPrecords contacts;
 
+    /** maximální limit počtu pokusů o výtvoření adresy */
+    private static final int LIMIT = 10;
+
     /**
      * Inicializace synchronizačních rutin - naplnění daty.
      */
@@ -125,21 +128,20 @@ public class Sync {
                 ReportManager.log(EBakaLogType.LOG_DEBUG, "Proběhne zpracování žáka ID = [" + studentID + "].");
             }
 
-            //if (žák.getValue().get(EBakaSQL.F_STU_MAIL.basename()).toString().toLowerCase().contains(Settings.getInstance().getMailDomain())) {
             if (!this.catalog.get(studentID)
                     .get(EBakaSQL.F_STU_MAIL.basename())
                     .toLowerCase()
                     .contains(Settings.getInstance().getMailDomain())
             ) {
 
-                if (Settings.getInstance().debugMode()) {
-                    ReportManager.log(EBakaLogType.LOG_DEBUG, "Žák [" + this.catalog.get(studentID)
+                if (Settings.getInstance().beVerbose()) {
+                    ReportManager.log("Žák [" + this.catalog.get(studentID)
                             .get(EBakaSQL.F_STU_CLASS.basename()) + ", č. " + this.catalog.get(studentID)
                             .get(EBakaSQL.F_STU_CLASS_ID.basename()) + "]: " + this.catalog.get(studentID)
                             .get(EBakaSQL.F_STU_SURNAME.basename()) + " "
                             + this.catalog.get(studentID)
-                            .get(EBakaSQL.F_STU_GIVENNAME.basename()) + " ID = [" + this.catalog.get(studentID)
-                            .get(EBakaSQL.F_STU_ID.basename()) + "] nemá vyplněnou školní e-mailovou adresu.");
+                            .get(EBakaSQL.F_STU_GIVENNAME.basename()) + ", ID = [" + this.catalog.get(studentID)
+                            .get(EBakaSQL.F_STU_ID.basename()) + "], nemá v evidenci vyplněnou platnou školní e-mailovou adresu.");
                 }
 
                 String proposed;
@@ -161,57 +163,56 @@ public class Sync {
                     // inkrementace pokusu
                     attempt++;
 
-                    if (Settings.getInstance().beVerbose()) {
-                        ReportManager.log("Navrhuje se: " + proposed);
+                    if (Settings.getInstance().debugMode()) {
+                        ReportManager.log(EBakaLogType.LOG_DEBUG, "Navrhuje se: " + proposed);
                     }
 
                     if (occupied.contains(proposed)) {
                         inUse = true;
-                        if (Settings.getInstance().beVerbose()) {
-                            ReportManager.log("Navrhovaná adresa je již osazena předchozím pokusem.");
+                        if (Settings.getInstance().debugMode()) {
+                            ReportManager.log(EBakaLogType.LOG_DEBUG, "Navrhovaná adresa je již obsazena předchozím pokusem.");
                         }
                         continue;
                     }
 
                     if (directoryFaculty.get(proposed) != null) {
                         inUse = true;
-                        if (Settings.getInstance().beVerbose()) {
-                            ReportManager.log("Navrhovaná adresa je osazena zaměstnancem.");
+                        if (Settings.getInstance().debugMode()) {
+                            ReportManager.log(EBakaLogType.LOG_DEBUG, "Navrhovaná adresa je obsazena zaměstnancem.");
                         }
                         continue;
                     }
 
                     if (alumni.get(proposed) != null) {
                         inUse = true;
-                        if (Settings.getInstance().beVerbose()) {
-                            ReportManager.log("Navrhovaná adresa je osazena vyřazeným žákem.");
+                        if (Settings.getInstance().debugMode()) {
+                            ReportManager.log(EBakaLogType.LOG_DEBUG, "Navrhovaná adresa je obsazena vyřazeným žákem.");
                         }
                         continue;
                     }
 
                     if (directory.get(proposed) != null) {
                         inUse = true;
-                        if (Settings.getInstance().beVerbose()) {
-                            ReportManager.log("Navrhovaná adresa je osazena aktivním žákem.");
+                        if (Settings.getInstance().debugMode()) {
+                            ReportManager.log(EBakaLogType.LOG_DEBUG, "Navrhovaná adresa je obsazena aktivním žákem.");
                         }
 
-                        // TODO ! - kontrola + párování
-                        // inUse = výsledek párování
-
-                        continue;
+                        // porovnání a provedení pokusu o párování záznamů
+                        // adresa je použita, pokud nebylo možné provést párování
+                        // párování = došlo k platnému zápisu do LDAP
+                        inUse = !attemptToPair(studentID, proposed, update);
                     }
 
                     // hotovo, zápis dat
                     if (!inUse) {
-
                         if (Settings.getInstance().beVerbose()) {
-                            ReportManager.log("Navrhovaná adresa je k dispozici a bude ji možné zapsat do evidence.");
+                            ReportManager.log("Navrhovaná adresa [" + proposed + "] je k dispozici a bude ji možné zapsat do evidence.");
                         }
 
+                        // provedení změn
                         if (update) {
-
                             if (Settings.getInstance().debugMode()) {
-                                ReportManager.log(EBakaLogType.LOG_DEBUG, "Do transakční fronty budou přidána data [" + proposed + "] pro ID = [" + studentID + "]");
+                                ReportManager.log(EBakaLogType.LOG_SQL, "Do transakční fronty budou přidána data [" + proposed + "] pro ID = [" + studentID + "]");
                             }
 
                             HashMap<EBakaSQL, String> data = new HashMap<>();
@@ -219,29 +220,199 @@ public class Sync {
                             catalog.addWriteData(studentID, data);
                         } else {
                             if (Settings.getInstance().debugMode()) {
-                                ReportManager.log(EBakaLogType.LOG_DEBUG, "Nebyl potvrzen zápis do ostrých dat, změny budou zahozeny.");
+                                ReportManager.log(EBakaLogType.LOG_SQL, "Nebyl potvrzen zápis do ostrých dat, změny budou zahozeny.");
                             }
                         }
                     }
 
-                } while (inUse || attempt > 10);
+                } while (inUse || attempt > LIMIT);
+
+                // TODO výsledek
 
             } // žák již má adresu v doméně školy
 
+
+        }
+
+        // provedení zápisu do ostrých dat
+        if (update) {
+            if (catalog.writesRemaining() > 0) {
+
+                if (catalog.commit()) {
+                    if (Settings.getInstance().beVerbose()) {
+                        ReportManager.log("Proběhl zápis dat do evidence.");
+                    }
+
+                } else {
+                    if (Settings.getInstance().beVerbose()) {
+                        ReportManager.log(EBakaLogType.LOG_ERR_VERBOSE, "Nebylo možné provést zápis dat do evidence.");
+                    }
+                }
+
+            }
+
+            if (directory.writesRemaining() > 0) {
+                if (directory.commit()) {
+
+                    if (Settings.getInstance().beVerbose()) {
+                        ReportManager.log("Proběhl zápis dat do adresáře AD.");
+                    }
+
+                } else {
+                    if (Settings.getInstance().beVerbose()) {
+                        ReportManager.log(EBakaLogType.LOG_ERR_VERBOSE, "Nebylo možné provést zápis dat do adresáře AD.");
+                    }
+                }
+            }
         }
 
     }
 
     /**
-     * TODO !
+     * Provedení pokusu o párování žáka podle SQL záznamu s existujícím LDAP účtem.
      *
-     * @param idSQL
-     * @param idLDAP
-     * @param update
-     * @return
+     * @param idSQL identifikátor žáka v SQL - musí vždy existovat
+     * @param idLDAP odpovídající UPN žáka v LDAP - musí vždy existovat
+     * @param update provést párování, pokud jsou podmínky splněny
+     * @return výsledek operace
      */
     private Boolean attemptToPair(String idSQL, String idLDAP, Boolean update) {
-        return null;
+
+        Boolean result = false;
+
+        if (Settings.getInstance().debugMode()) {
+            ReportManager.log(EBakaLogType.LOG_DEBUG, "Proběhne pokus o párování žáka ID [" + idSQL + "] proti záznamu UPN [" + idLDAP + "].");
+        }
+
+        // ověření (ne)existence atributu EXT01
+        if (!directory.get(idLDAP).containsKey(EBakaLDAPAttributes.EXT01.attribute())) {
+
+            if (!update) {
+                if (Settings.getInstance().beVerbose()) {
+                    ReportManager.log(EBakaLogType.LOG_WARN, "Při pokusu o párování záznamů nebyl nalezen rozšířený atribut " +
+                            "pro UPN [" + idLDAP + "], avšak jeho vytvoření nebylo vyžádáno.");
+                }
+
+                return false;
+            }
+
+            if (Settings.getInstance().debugMode()) {
+                ReportManager.log(EBakaLogType.LOG_DEBUG, "Při pokusu o párování záznamů nebyl nalezen rozšířený atribut " +
+                        "pro UPN [" + idLDAP + "] . Proběhne podrobná kontrola párovacích kritérií.");
+            }
+
+            // ověřovací kritéria
+            float criteriaCount = 0;
+            float criteriaMet   = 0;
+
+            Boolean testSurname = directory.get(idLDAP).get(EBakaLDAPAttributes.NAME_LAST.attribute()).equals(catalog.get(idSQL).get(EBakaSQL.F_STU_SURNAME.basename()));
+
+            criteriaCount += 1.0;
+            criteriaMet += (testSurname) ? 1.0 : 0;
+
+            if (Settings.getInstance().debugMode()) {
+                ReportManager.log(EBakaLogType.LOG_DEBUG, "->\tPříjmení:\t[ " + ((testSurname) ? "SHODA" : "ROZDÍL" ) + " ] ("+
+                        catalog.get(idSQL).get(EBakaSQL.F_STU_SURNAME.basename())
+                        +" / "+
+                        directory.get(idLDAP).get(EBakaLDAPAttributes.NAME_LAST.attribute())
+                        +")");
+            }
+
+            Boolean testName = directory.get(idLDAP).get(EBakaLDAPAttributes.NAME_FIRST.attribute()).equals(catalog.get(idSQL).get(EBakaSQL.F_STU_GIVENNAME.basename()));
+            criteriaCount += 1.0;
+            criteriaMet += (testName) ? 1.0 : 0;
+
+            if (Settings.getInstance().debugMode()) {
+                ReportManager.log(EBakaLogType.LOG_DEBUG, "->\tJméno:\t\t[ " + ((testName) ? "SHODA" : "ROZDÍL" ) + " ] ("+
+                        catalog.get(idSQL).get(EBakaSQL.F_STU_GIVENNAME.basename())
+                        +" / "+
+                        directory.get(idLDAP).get(EBakaLDAPAttributes.NAME_FIRST.attribute())
+                        +")");
+            }
+
+            Boolean testYear = BakaUtils.classYearFromDn(directory.get(idLDAP).get(EBakaLDAPAttributes.DN.attribute()).toString()).toString().equals(catalog.get(idSQL).get(EBakaSQL.F_STU_BK_CLASSYEAR.basename()));
+            criteriaCount += 1.0;
+            criteriaMet += (testYear) ? 1 : 0;
+
+            if (Settings.getInstance().debugMode()) {
+                ReportManager.log(EBakaLogType.LOG_DEBUG, "->\tRočník:\t\t[ " + ((testYear) ? "SHODA" : "ROZDÍL" ) + " ] ("+
+                        BakaUtils.classYearFromDn(directory.get(idLDAP).get(EBakaLDAPAttributes.DN.attribute()).toString()).toString()
+                        +" / "+
+                        catalog.get(idSQL).get(EBakaSQL.F_STU_BK_CLASSYEAR.basename())
+                        +")");
+            }
+
+            Boolean testLetter = BakaUtils.classLetterFromDn(directory.get(idLDAP).get(EBakaLDAPAttributes.DN.attribute()).toString()).equals(catalog.get(idSQL).get(EBakaSQL.F_STU_BK_CLASSLETTER.basename()));
+            criteriaCount += 1;
+            criteriaMet += (testLetter) ? 1 : 0;
+
+            if (Settings.getInstance().debugMode()) {
+                ReportManager.log(EBakaLogType.LOG_DEBUG, "->\tTřída:\t\t[ " + ((testLetter) ? "SHODA" : "ROZDÍL" ) + " ] ("+
+                        BakaUtils.classLetterFromDn(directory.get(idLDAP).get(EBakaLDAPAttributes.DN.attribute()).toString())
+                        +" / "+
+                        catalog.get(idSQL).get(EBakaSQL.F_STU_BK_CLASSLETTER.basename())
+                        +")");
+            }
+
+            float pairScore = (criteriaMet / criteriaCount);
+            // návrh 2020-04-19: 0.75 || (>=0.5 && ročník)
+            Boolean criteria = (pairScore >= 0.75 || (pairScore >= 0.5 && testYear));
+
+            if (Settings.getInstance().debugMode()) {
+                ReportManager.log(EBakaLogType.LOG_DEBUG, "=>\tSkóre " + String.format("%.2f", pairScore * 100) + " %, " +
+                        "celkové kritérium párování [ " + ((criteria) ? "SPLNĚNO" : "NESPLNĚNO") + " ].");
+            }
+
+            if (criteria) {
+                if (Settings.getInstance().debugMode()) {
+                    ReportManager.log(EBakaLogType.LOG_LDAP, "Do transakční fronty budou přidána data [" + idSQL + "] pro UPN = [" + idLDAP + "]");
+                }
+
+                Map<EBakaLDAPAttributes, String> data = new HashMap<>();
+                data.put(EBakaLDAPAttributes.EXT01, idSQL);
+                directory.addWriteData(directory.get(idLDAP).get(EBakaLDAPAttributes.DN.attribute()).toString(), data);
+
+                if (Settings.getInstance().beVerbose()) {
+                    ReportManager.log("Bude provedeno párování záznamů pro žáka [" +
+                                    this.catalog.get(idSQL).get(EBakaSQL.F_STU_CLASS.basename()) +
+                                    ", č. " + this.catalog.get(idSQL).get(EBakaSQL.F_STU_CLASS_ID.basename()) +
+                                    "]: " + this.catalog.get(idSQL).get(EBakaSQL.F_STU_SURNAME.basename()) +
+                                    " " +
+                                    this.catalog.get(idSQL).get(EBakaSQL.F_STU_GIVENNAME.basename()) +
+                                    ", ID = [" + idSQL + "].");
+                }
+
+                result = true;
+            } else {
+
+                if (Settings.getInstance().debugMode()) {
+                    ReportManager.log(EBakaLogType.LOG_DEBUG, "Párování pro UPN [" +
+                            idLDAP +
+                            "] nebude provedeno, nebyla splněna požadovaná kritéria.");
+                }
+
+                result = false;
+            }
+
+        } else {
+            // atribnut EXT01 existuje
+            // výsledek přímého porování
+            result = directory.get(idLDAP)
+                    .get(EBakaLDAPAttributes.EXT01.attribute())
+                    .equals(idSQL);
+
+            // výsledek porovnání
+            if (Settings.getInstance().debugMode()) {
+                if (result) {
+                    ReportManager.log(EBakaLogType.LOG_DEBUG, "Byla nalezena shoda.");
+                } else {
+                    ReportManager.log(EBakaLogType.LOG_DEBUG, "Záznamy reprezentují zcela různé žáky.");
+                }
+            }
+        }
+
+        // výsledek párování
+        return result;
     }
 
     /**
