@@ -1,7 +1,9 @@
 package cz.zsstudanka.skola.bakakeeper.routines;
 
+import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaADAuthenticator;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 
 import java.util.ArrayList;
@@ -123,7 +125,7 @@ public class Structure {
         for (String[] ou : ous) {
 
             if (Settings.getInstance().beVerbose()) {
-                System.out.print("[ TEST ] Kontrola integrity kontejneru objektů " + ou[1] + "... ");
+                ReportManager.logWait(EBakaLogType.LOG_TEST, "Kontrola integrity kontejneru objektů " + ou[1]);
             }
 
             int check_ou = BakaADAuthenticator.getInstance().checkOU(ou[0]);
@@ -131,7 +133,7 @@ public class Structure {
             if (check_ou >= 0) {
 
                 if (Settings.getInstance().beVerbose()) {
-                    System.out.println("\t\t[ OK"+ ((Settings.getInstance().debugMode()) ? ", celkem " + check_ou + " položek" : "") +" ]");
+                    ReportManager.log(EBakaLogType.LOG_OK, ((Settings.getInstance().debugMode()) ? "[ celkem " + check_ou + " položek ]" : ""));
                 }
 
                 results.add(true);
@@ -139,7 +141,7 @@ public class Structure {
             } else {
 
                 if (Settings.getInstance().beVerbose()) {
-                    System.out.println("\t\t[ CHYBA ]");
+                    ReportManager.logResult(EBakaLogType.LOG_ERR_VERBOSE);
                 }
 
                 results.add(false);
@@ -150,7 +152,7 @@ public class Structure {
                     results.remove(results.size() - 1);
 
                     if (Settings.getInstance().beVerbose()) {
-                        System.out.print("[ INFO ] Probíhá pokus o opravu...");
+                        ReportManager.logWait(EBakaLogType.LOG_INFO, "Probíhá pokus o opravu");
                     }
 
                     BakaADAuthenticator.getInstance().createOU(
@@ -164,20 +166,19 @@ public class Structure {
                     if (check_ou_rebuild >= 0) {
 
                         if (Settings.getInstance().beVerbose()) {
-                            System.out.println("\t\t[ OK"+ ((Settings.getInstance().debugMode()) ? ", celkem " + check_ou_rebuild + " položek" : "") +" ]");
+                            ReportManager.log(EBakaLogType.LOG_OK, ((Settings.getInstance().debugMode()) ? "[ celkem " + check_ou_rebuild + " položek ]" : ""));
                         }
 
                         results.add(true);
 
                     } else {
                         // oprava se nezdařila
-
                         if (Settings.getInstance().beVerbose()) {
-                            System.out.println("\t\t[ CHYBA ]");
+                            ReportManager.logResult(EBakaLogType.LOG_ERR_VERBOSE);
                         }
 
                         if (Settings.getInstance().beVerbose()) {
-                            System.err.println("[ CHYBA ] Nebylo možné vytvořit organizační jednotku pro objekty " + ou[1] + ".");
+                            ReportManager.log(EBakaLogType.LOG_ERR_DEBUG, "Nebylo možné vytvořit organizační jednotku pro objekty " + ou[1] + ".");
                         }
 
                         results.add(false);
@@ -203,7 +204,7 @@ public class Structure {
         for (String[] gr : groups) {
 
             if (Settings.getInstance().beVerbose()) {
-                System.out.print("[ TEST ] Kontrola definované skupiny " + gr[3] + "...");
+                ReportManager.logWait(EBakaLogType.LOG_TEST, "Kontrola definované skupiny " + gr[3]);
             }
 
             // získání objektu
@@ -213,7 +214,7 @@ public class Structure {
             if (info != null && info.size() > 0) {
 
                 if (Settings.getInstance().beVerbose()) {
-                    System.out.println("\t\t[ OK ]");
+                    ReportManager.logResult(EBakaLogType.LOG_OK);
                 }
 
                 results.add(true);
@@ -224,7 +225,7 @@ public class Structure {
             } else {
                 // objekt nebyl v OU nalezen
                 if (Settings.getInstance().beVerbose()) {
-                    System.out.println("\t\t[ CHYBA ]");
+                    ReportManager.logResult(EBakaLogType.LOG_ERR_VERBOSE);
                 }
 
                 results.add(false);
@@ -235,7 +236,7 @@ public class Structure {
                     results.remove(results.size() - 1);
 
                     if (Settings.getInstance().beVerbose()) {
-                        System.out.print("[ INFO ] Probíhá pokus o opravu...");
+                        ReportManager.logWait(EBakaLogType.LOG_INFO, "Probíhá pokus o opravu");
                     }
 
                     // parametry dle definic
@@ -261,7 +262,7 @@ public class Structure {
                     if (inforep != null && inforep.size() > 0) {
 
                         if (Settings.getInstance().beVerbose()) {
-                            System.out.println("[ OK ]");
+                            ReportManager.logResult(EBakaLogType.LOG_OK);
                         }
 
                         results.add(true);
@@ -269,7 +270,7 @@ public class Structure {
                     } else {
 
                         if (Settings.getInstance().beVerbose()) {
-                            System.out.println("[ CHYBA ]");
+                            ReportManager.logResult(EBakaLogType.LOG_ERR_VERBOSE);
                         }
 
                         results.add(false);
@@ -295,7 +296,7 @@ public class Structure {
     private static void checkADGroupStructure(String[] data, Boolean attemptRepair) {
 
         if (Settings.getInstance().beVerbose()) {
-            System.out.println("[ INFO ] Probíhá podrobná kontrola atributů definované skupiny CN=" + data[0] + ".");
+            ReportManager.log(EBakaLogType.LOG_INFO, "Probíhá podrobná kontrola atributů definované skupiny CN=" + data[0] + ".");
         }
 
         Map<Integer, Map<String, Object>> info = BakaADAuthenticator.getInstance().getGroupInfo(data[0], data[4]);
@@ -312,13 +313,13 @@ public class Structure {
 
         // debug
         if (Settings.getInstance().debugMode()) {
-            System.out.println("[ DEBUG ] Získaná data skupiny: " + info.get(0).toString());
+            ReportManager.log(EBakaLogType.LOG_DEBUG, "Získaná data skupiny: " + info.get(0).toString());
         }
 
         for (Map.Entry<EBakaLDAPAttributes, String[]> entry : values.entrySet()) {
 
             if (Settings.getInstance().beVerbose()) {
-                System.out.print("+-- [ TEST ] Kontrola " + entry.getValue()[0] + " ... ");
+                ReportManager.logWait(EBakaLogType.LOG_TEST, "Kontrola " + entry.getValue()[0]);
             }
 
             // klíč existuje a je shodný
@@ -328,18 +329,18 @@ public class Structure {
                     || (!info.get(0).containsKey(entry.getKey().attribute()) && entry.getValue()[1] == (null))
             ) {
                 if (Settings.getInstance().beVerbose()) {
-                    System.out.println("[ OK ]");
+                    ReportManager.logResult(EBakaLogType.LOG_OK);
                 }
             } else {
                 if (Settings.getInstance().beVerbose()) {
-                    System.out.println("[ CHYBA ]");
+                    ReportManager.logResult(EBakaLogType.LOG_ERR_VERBOSE);
                 }
 
                 if (Settings.getInstance().debugMode()) {
                     if (!info.get(0).containsKey(entry.getKey().attribute())) {
-                        System.out.println("    +-- [ DEBUG ] Požadovaný atribut skupiny neexistuje.");
+                        ReportManager.log(EBakaLogType.LOG_DEBUG, "Požadovaný atribut skupiny neexistuje.");
                     } else {
-                        System.out.println("    +-- [ DEBUG ] (" + entry.getKey().attribute() + ") Očekáváno: [" + entry.getValue()[1] + "], Získáno: [" + info.get(0).get(entry.getKey().attribute()) + "]");
+                        ReportManager.log(EBakaLogType.LOG_DEBUG, "(" + entry.getKey().attribute() + ") Očekáváno: [" + entry.getValue()[1] + "], Získáno: [" + info.get(0).get(entry.getKey().attribute()) + "]");
                     }
                 }
 
@@ -347,7 +348,7 @@ public class Structure {
                 if (attemptRepair) {
 
                     if (Settings.getInstance().beVerbose()) {
-                        System.out.print("--- [ INFO ] Probíhá pokus o opravu ... ");
+                        ReportManager.logWait(EBakaLogType.LOG_INFO, "Probíhá pokus o opravu");
                     }
 
                     // cokoliv mimo nadřazené skupiny
@@ -378,11 +379,11 @@ public class Structure {
 
                     if (info_rep.get(0).containsKey(entry.getKey().attribute()) && info_rep.get(0).get(entry.getKey().attribute()).toString().equalsIgnoreCase(entry.getValue()[1])) {
                         if (Settings.getInstance().beVerbose()) {
-                            System.out.println("[ OK ]");
+                            ReportManager.logResult(EBakaLogType.LOG_OK);
                         }
                     } else {
                         if (Settings.getInstance().beVerbose()) {
-                            System.out.println("[ CHYBA ]");
+                            ReportManager.logResult(EBakaLogType.LOG_ERR_VERBOSE);
                         }
                     }
 
