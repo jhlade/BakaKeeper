@@ -46,6 +46,9 @@ public class Test {
         testSync.devel();
         testSync.actionInit(true);
 
+        // odeslání výsledku
+        ReportManager.getInstance().report();
+
         System.out.println("====== [ TEST ] ======");
     }
 

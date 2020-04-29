@@ -1,6 +1,7 @@
 package cz.zsstudanka.skola.bakakeeper.components;
 
 import cz.zsstudanka.skola.bakakeeper.App;
+import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaEvents;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
@@ -8,9 +9,7 @@ import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Protokolování postupu, sběr informací, vytváření hlášení a sestav.
@@ -26,7 +25,7 @@ public class ReportManager {
     private String logfile;
 
     /** zaznamenané události pro budoucí hlášení */
-    private Map<EBakaEvents, Map<String, String>> events;
+    private Map<EBakaEvents, ArrayList<String>> events;
 
     public ReportManager() {
         this.events = new HashMap<>();
@@ -237,6 +236,44 @@ public class ReportManager {
             return;
         }
 
+        StringBuilder report = new StringBuilder();
+
+        Iterator<EBakaEvents> eventTypeIterator = this.events.keySet().iterator();
+        while (eventTypeIterator.hasNext()) {
+
+            EBakaEvents eventHeader = eventTypeIterator.next();
+            report.append(eventHeader.getDescription() + ":");
+            report.append("\n");
+
+            ArrayList<String> eventMessages = this.events.get(eventHeader);
+            for (String event : eventMessages) {
+                report.append(event);
+                report.append("\n");
+            }
+
+            report.append("\n");
+        }
+
+        /*
+        2020-04-29:
+        Do evidence byly zapsány nové e-mailové adresy:
+        [1.B] č. 4, Novák Adam - novak.adam@zs-studanka.cz
+
+        Bylo provedeno párování záznamů:
+        [DEV04] 1.B, č. 4, Novák Adam
+
+        Byli vytvořeni noví uživatelé:
+        [1.B] č.  4, Novák Adam - novak.adam - No.Ad.04
+        [1.B] č.  5, Sovák Padam - padam.sovak - So.Pa.05
+        [9.C] č. 29, Kociáš Vojtěch - kocias.vojtech - Ko.Vo.29
+
+        U následujících žáků nebyl nalezen platný kontakt na zákonné zástupce:
+        [1.B] č. 4, Novák Adam
+        * */
+
+        // TODO log
+        // odeslání zprávy
+        BakaMailer.getInstance().mail("Předmět ?", report.toString());
     }
 
     // TODO
@@ -245,8 +282,13 @@ public class ReportManager {
     }
 
     // TODO
-    public void addEvent() {
+    public void addEvent(EBakaEvents eventType, String eventMessage) {
 
+        if (!this.events.containsKey(eventType)) {
+            this.events.put(eventType, new ArrayList<String>());
+        }
+
+        this.events.get(eventType).add(eventMessage);
     }
 
 }

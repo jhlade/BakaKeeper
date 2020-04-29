@@ -1,6 +1,7 @@
 package cz.zsstudanka.skola.bakakeeper.routines;
 
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaEvents;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaSQL;
@@ -218,6 +219,16 @@ public class Sync {
                             HashMap<EBakaSQL, String> data = new HashMap<>();
                             data.put(EBakaSQL.F_STU_MAIL, proposed);
                             catalog.addWriteData(studentID, data);
+
+                            // TODO
+                            // [1.B] č. 4, Novák Adam - novak.adam@zs-studanka.cz
+                            ReportManager.getInstance().addEvent(EBakaEvents.CATALOG_INIT, "[" +
+                                    catalog.get(studentID).get(EBakaSQL.F_STU_CLASS.basename()) + "] č. " +
+                                    catalog.get(studentID).get(EBakaSQL.F_STU_CLASS_ID.basename()) + ", " +
+                                    catalog.get(studentID).get(EBakaSQL.F_STU_SURNAME.basename()) + " " +
+                                    catalog.get(studentID).get(EBakaSQL.F_STU_GIVENNAME.basename()) + " - " +
+                                    proposed
+                            );
                         } else {
                             if (Settings.getInstance().debugMode()) {
                                 ReportManager.log(EBakaLogType.LOG_SQL, "Nebyl potvrzen zápis do ostrých dat, změny budou zahozeny.");
@@ -227,11 +238,12 @@ public class Sync {
 
                 } while (inUse || attempt > LIMIT);
 
-                // TODO výsledek
+                // překročení limitu
+                if (attempt >= LIMIT) {
+                    ReportManager.log(EBakaLogType.LOG_ERR, "Došlo k závažné chybě - byl překročen maximální limit návrhů nové e-mailové adresy.");
+                }
 
             } // žák již má adresu v doméně školy
-
-
         }
 
         // provedení zápisu do ostrých dat
