@@ -127,6 +127,27 @@ public class ReportManager {
     }
 
     /**
+     * Zápis zprávy s čekáním do protokolu - nebude provedeno ukočení řádku.
+     *
+     * @param type typ protokolované zprávy
+     * @param message zpráva
+     */
+    public static void logWait(EBakaLogType type, String message) {
+        ReportManager RM = getInstance();
+        RM.print(message + "...", type);
+    }
+
+    /**
+     * Výsledek čekající operace.
+     *
+     * @param type typ protokolované zprávy
+     */
+    public static void logResult(EBakaLogType type) {
+        ReportManager RM = getInstance();
+        RM.println("", type);
+    }
+
+    /**
      * Výpis lokalizované zprávy zachycené výjimky do protokolu.
      *
      * @param type typ protokolované zprávy
