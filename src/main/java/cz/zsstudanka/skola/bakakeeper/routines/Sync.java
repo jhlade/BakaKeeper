@@ -238,6 +238,7 @@ public class Sync {
         if (update) {
             if (catalog.writesRemaining() > 0) {
 
+                // provedení zápisu změn do evidence
                 if (catalog.commit()) {
                     if (Settings.getInstance().beVerbose()) {
                         ReportManager.log("Proběhl zápis dat do evidence.");
@@ -251,6 +252,7 @@ public class Sync {
 
             }
 
+            // provedení zápisu změn do AD
             if (directory.writesRemaining() > 0) {
                 if (directory.commit()) {
 

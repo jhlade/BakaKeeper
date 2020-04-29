@@ -337,8 +337,8 @@ public class SQLrecords implements IRecords {
 
         if (this.writeData.size() > 0) {
 
-            if (Settings.getInstance().beVerbose()) {
-                ReportManager.log(EBakaLogType.LOG_VERBOSE, "Proběhne pokus o zpracování " + this.writeData.size() + " SQL transakcí.");
+            if (Settings.getInstance().debugMode()) {
+                ReportManager.log(EBakaLogType.LOG_SQL, "Proběhne pokus o zpracování " + this.writeData.size() + " SQL transakcí.");
             }
 
             /**
