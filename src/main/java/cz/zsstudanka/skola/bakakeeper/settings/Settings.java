@@ -660,6 +660,15 @@ public class Settings {
     }
 
     /**
+     * TODO distribuční skupiny
+     *
+     * @return
+     */
+    public String getLDAP_baseDL() {
+        return this.settings_data.get("ad_base_skupiny_dl");
+    }
+
+    /**
      * TODO
      *
      * @return
