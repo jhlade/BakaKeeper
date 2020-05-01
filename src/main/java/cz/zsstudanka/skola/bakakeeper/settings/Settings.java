@@ -672,6 +672,7 @@ public class Settings {
      * TODO
      *
      * @return
+     * @deprecated
      */
     public String getLDAP_baseDLContacts() {
         return "OU=DistribucniSeznamyZZ," + this.settings_data.get("ad_base_kontakty");

@@ -19,6 +19,7 @@ import java.util.Map;
  *
  * Skola
  * + Skupiny
+ *   + Distribucni (vytvořeno dodatečně na ZŠ Pardubice - Studánka)
  *   + Uzivatele
  *   + Zaci
  * + Uzivatele
@@ -32,14 +33,13 @@ import java.util.Map;
  *       + Trida-D
  *       + Trida-E
  *     + StudiumUkonceno (vytvořeno dodatečně na ZŠ Pardubice - Studánka)
- *       + 2018
+ *       + 2018 (vytvářeno automaticky)
  *       ...
  *       + 2020
  *   + Zamestnanci
  *     + Ucitele
  *     + Vedeni
  * + Kontakty (vytvořeno dodatečně na ZŠ Pardubice - Studánka)
- *   + DistribucniSeznamyZZ (vytvořeno dodatečně na ZŠ Pardubice - Studánka)
  *
  *
  *
@@ -80,8 +80,7 @@ public class Structure {
         ous.add(new String[]{Settings.getInstance().getLDAP_baseStudentGroups(), "Skupiny žáků (O365)"});
         ous.add(new String[]{Settings.getInstance().getLDAP_baseGlobalGroups(), "Globální skupiny uživatelů"});
         ous.add(new String[]{Settings.getInstance().getLDAP_baseContacts(), "Kontakty (O365)"});
-        ous.add(new String[]{Settings.getInstance().getLDAP_baseDLContacts(), "Distribuční seznamy kontaktů (O365)"});
-
+        ous.add(new String[]{Settings.getInstance().getLDAP_baseDL(), "Distribuční seznamy (O365)"});
 
         // vygenerování definic/pořadí skupin za běhu
         // Tvar:
@@ -95,21 +94,25 @@ public class Structure {
         // 7 groupType (security, distribution),
         // 8 description
         ArrayList<String[]> groups = new ArrayList<>();
-        // hierarchie žáků a distribuční seznamy kontaktů
+        // hierarchie žáků a distribuční seznamy
         groups.add(new String[]{"Zaci-Vsichni", "CN=" + "Skupina-Zaci" + "," + Settings.getInstance().getLDAP_baseGlobalGroups(), "zaci@" + Settings.getInstance().getMailDomain(), "Všichni žáci školy", Settings.getInstance().getLDAP_baseStudentGroups(), LIT_TRUE, LIT_TRUE, EBakaLDAPAttributes.GT_SECURITY.value(), "Všichni žáci školy"});
-        groups.add(new String[]{"Rodice-Vsichni", null, "rodice-cela-skola@" + Settings.getInstance().getMailDomain(), "Všichni rodiče", Settings.getInstance().getLDAP_baseDLContacts(), LIT_TRUE, LIT_TRUE, EBakaLDAPAttributes.GT_DISTRIBUTION.value(), "Všichni rodiče všech žáků"});
+        groups.add(new String[]{"Rodice-Vsichni", null, "rodice-cela-skola@" + Settings.getInstance().getMailDomain(), "Všichni rodiče", Settings.getInstance().getLDAP_baseDL(), LIT_TRUE, LIT_TRUE, EBakaLDAPAttributes.GT_DISTRIBUTION.value(), "Všichni rodiče všech žáků"});
+        groups.add(new String[]{"Ucitele-Tridni", null, "ucitele-tridni@" + Settings.getInstance().getMailDomain(), "Všichni třídní učitelé", Settings.getInstance().getLDAP_baseDL(), LIT_TRUE, LIT_TRUE, EBakaLDAPAttributes.GT_DISTRIBUTION.value(), "Všichni třídní učitelé"});
         // stupně
         for (int s = 1; s <= 2; s++) {
-            groups.add(new String[]{"Zaci-Stupen-" + s, "CN=" + "Zaci-Vsichni" + "," + Settings.getInstance().getLDAP_baseStudentGroups(), "zaci-stupen-" + s + "@" + Settings.getInstance().getMailDomain(), "Žáci - " + s + ". stupeň", Settings.getInstance().getLDAP_baseStudentGroups(), LIT_TRUE, LIT_TRUE, EBakaLDAPAttributes.GT_SECURITY.value(), "Žáci - " + s + ". stupně"});
-            groups.add(new String[]{"Rodice-Stupen-" + s, "CN=" + "Rodice-Vsichni" + "," + Settings.getInstance().getLDAP_baseDLContacts(), "rodice-stupen-" + s + "@" + Settings.getInstance().getMailDomain(), "Rodiče žáků " + s + ". stupně", Settings.getInstance().getLDAP_baseDLContacts(), LIT_TRUE, LIT_TRUE, EBakaLDAPAttributes.GT_DISTRIBUTION.value(), "Rodiče žáků - " + s + ". stupně"});
+            groups.add(new String[]{"Zaci-Stupen-" + s, "CN=" + "Zaci-Vsichni" + "," + Settings.getInstance().getLDAP_baseStudentGroups(), "zaci-stupen-" + s + "@" + Settings.getInstance().getMailDomain(), "Žáci - " + s + ". stupeň", Settings.getInstance().getLDAP_baseStudentGroups(), LIT_TRUE, LIT_TRUE, EBakaLDAPAttributes.GT_SECURITY.value(), "Žáci - " + s + ". stupeň"});
+            groups.add(new String[]{"Rodice-Stupen-" + s, "CN=" + "Rodice-Vsichni" + "," + Settings.getInstance().getLDAP_baseDL(), "rodice-stupen-" + s + "@" + Settings.getInstance().getMailDomain(), "Rodiče žáků " + s + ". stupně", Settings.getInstance().getLDAP_baseDL(), LIT_TRUE, LIT_TRUE, EBakaLDAPAttributes.GT_DISTRIBUTION.value(), "Rodiče žáků - " + s + ". stupeň"});
+            groups.add(new String[]{"Ucitele-Tridni-Stupen-" + s, "CN=" + "Ucitele-Tridni" + "," + Settings.getInstance().getLDAP_baseDL(), "tridni-stupen-" + s + "@" + Settings.getInstance().getMailDomain(), "Třídní učitelé " + s + ". stupně", Settings.getInstance().getLDAP_baseDL(), LIT_TRUE, LIT_TRUE, EBakaLDAPAttributes.GT_DISTRIBUTION.value(), "Třídní učitelé - " + s + ". stupeň"});
         }
         // ročníky
         for (int r = 1; r <= 9; r++) {
-            groups.add(new String[]{"Rodice-Rocnik-" + r, "CN=" + ((r <= 5) ? "Rodice-Stupen-1" : "Rodice-Stupen-2") + "," + Settings.getInstance().getLDAP_baseDLContacts(), "rodice-rocnik-" + r + "@" + Settings.getInstance().getMailDomain(), "Rodiče žáků " + r + ". ročníku", Settings.getInstance().getLDAP_baseDLContacts(), LIT_TRUE, LIT_TRUE, EBakaLDAPAttributes.GT_DISTRIBUTION.value(), "Rodiče žáků " + r + ". ročníku"});
+            groups.add(new String[]{"Rodice-Rocnik-" + r, "CN=" + ((r <= 5) ? "Rodice-Stupen-1" : "Rodice-Stupen-2") + "," + Settings.getInstance().getLDAP_baseDL(), "rodice-rocnik-" + r + "@" + Settings.getInstance().getMailDomain(), "Rodiče žáků " + r + ". ročníku", Settings.getInstance().getLDAP_baseDL(), LIT_TRUE, LIT_TRUE, EBakaLDAPAttributes.GT_DISTRIBUTION.value(), "Rodiče žáků " + r + ". ročníku"});
+            groups.add(new String[]{"Ucitele-Tridni-Rocnik-" + r, "CN=" + ((r <= 5) ? "Ucitele-Tridni-1" : "Ucitele-Tridni-2") + "," + Settings.getInstance().getLDAP_baseDL(), "tridni-rocnik-" + r + "@" + Settings.getInstance().getMailDomain(), "Třídní učitelé " + r + ". ročníku", Settings.getInstance().getLDAP_baseDL(), LIT_TRUE, LIT_TRUE, EBakaLDAPAttributes.GT_DISTRIBUTION.value(), "Třídní učitelé " + r + ". ročníku"});
             groups.add(new String[]{"Zaci-Rocnik-" + r, "CN=" + ((r <= 5) ? "Zaci-Stupen-1" : "Zaci-Stupen-2") + "," + Settings.getInstance().getLDAP_baseStudentGroups(), "zaci-rocnik-" + r + "@" + Settings.getInstance().getMailDomain(), "Žáci - " + r + ". ročník", Settings.getInstance().getLDAP_baseStudentGroups(), LIT_FALSE, LIT_TRUE, EBakaLDAPAttributes.GT_SECURITY.value(), "Žáci - " + r + ". ročníku"});
             // jednotlivé třídy
             for (char t = 'A'; t <= 'E'; t++) {
-                groups.add(new String[]{"Rodice-Trida-" + r + t, "CN=" + "Rodice-Rocnik-" + r + "," + Settings.getInstance().getLDAP_baseDLContacts(), ("rodice-trida-" + r + t + "@" + Settings.getInstance().getMailDomain()).toLowerCase(), "Rodiče " + r + "." + t, Settings.getInstance().getLDAP_baseDLContacts(), LIT_TRUE, LIT_TRUE, EBakaLDAPAttributes.GT_DISTRIBUTION.value(), "Rodiče žáků třídy " + r + "." + t});
+                groups.add(new String[]{"Rodice-Trida-" + r + t, "CN=" + "Rodice-Rocnik-" + r + "," + Settings.getInstance().getLDAP_baseDL(), ("rodice-trida-" + r + t + "@" + Settings.getInstance().getMailDomain()).toLowerCase(), "Rodiče " + r + "." + t, Settings.getInstance().getLDAP_baseDL(), LIT_TRUE, LIT_TRUE, EBakaLDAPAttributes.GT_DISTRIBUTION.value(), "Rodiče žáků třídy " + r + "." + t});
+                groups.add(new String[]{"Ucitele-Tridni-" + r + t, "CN=" + "Ucitele-Tridni-Rocnik-" + r + "," + Settings.getInstance().getLDAP_baseDL(), ("tridni-" + r + t + "@" + Settings.getInstance().getMailDomain()).toLowerCase(), "Třídní učitel " + r + "." + t, Settings.getInstance().getLDAP_baseDL(), LIT_TRUE, LIT_TRUE, EBakaLDAPAttributes.GT_DISTRIBUTION.value(), "Třídní učitel " + r + "." + t});
                 groups.add(new String[]{"Zaci-Trida-" + r + t, "CN=" + "Zaci-Rocnik-" + r + "," + Settings.getInstance().getLDAP_baseStudentGroups(), ("zaci-" + r + t + "@" + Settings.getInstance().getMailDomain()).toLowerCase(), "Žáci " + r + "." + t, Settings.getInstance().getLDAP_baseStudentGroups(), LIT_FALSE, LIT_TRUE, EBakaLDAPAttributes.GT_SECURITY.value(), "Žáci třídy " + r + "." + t});
             }
         }
