@@ -52,6 +52,11 @@ public class Test {
         System.out.println("====== [ TEST ] ======");
     }
 
+    // 2020-05-02 korekce rutiny opravy struktury + restrukturalizace DL
+    public static void test_05() {
+        Structure.checkAndRepairADStructure(true);
+    }
+
     /**
      *  Dílčí úkol 3 - reset hesel všech žáků + sestavy
      *  zahájeno 2020-04-23 01:19
