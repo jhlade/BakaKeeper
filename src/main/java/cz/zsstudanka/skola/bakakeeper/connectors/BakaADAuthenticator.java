@@ -6,13 +6,13 @@ import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
 
-import java.util.*;
 import javax.naming.Context;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.*;
 import javax.naming.ldap.InitialLdapContext;
 import javax.naming.ldap.LdapContext;
+import java.util.*;
 
 /**
  * Konektor pro Active Directory.
@@ -565,7 +565,7 @@ public class BakaADAuthenticator {
      *
      * @param cn common name skupiny
      * @param targetOU cílová organizační jednotka
-     * @param memberOf pole přímých nadřazených skupin (může být prázdné nebo null)
+     * @param memberOf pole dn přímých nadřazených skupin (může být prázdné nebo null)
      * @param data mapa dalších požadovaných atributů
      */
     public void createGroup(String cn, String targetOU, String[] memberOf, HashMap<String, String> data) {
@@ -595,9 +595,12 @@ public class BakaADAuthenticator {
         String groupDN = "cn=" + cn + "," + targetOU;
 
         for (int mof = 0; mof < memberOf.length; mof++) {
-            // cílová destinace, musí ležet ve stejné OU
-            String destinationGroupDN = "cn=" + memberOf[mof] + "," + targetOU;
-            addObjectToGroup(groupDN, destinationGroupDN);
+            // cílová destinace
+            String destinationGroupDN = memberOf[mof];
+
+            if (destinationGroupDN != null) {
+                addObjectToGroup(groupDN, destinationGroupDN);
+            }
         }
 
     }
