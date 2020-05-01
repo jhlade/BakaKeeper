@@ -42,7 +42,6 @@ import java.util.Map;
  * + Kontakty (vytvořeno dodatečně na ZŠ Pardubice - Studánka)
  *
  *
- *
  * @author Jan Hladěna
  */
 public class Structure {
@@ -122,7 +121,6 @@ public class Structure {
         // 0) načtení konfigurace a vytvoření připojení k AD
         Settings.getInstance().load();
         BakaADAuthenticator.getInstance();
-
 
         // 1) kontrola hierarchie organizačních jednotek
         for (String[] ou : ous) {
@@ -224,7 +222,6 @@ public class Structure {
 
                 // subrutina kontroly skupiny
                 checkADGroupStructure(gr, repair);
-
             } else {
                 // objekt nebyl v OU nalezen
                 if (Settings.getInstance().beVerbose()) {
@@ -269,7 +266,6 @@ public class Structure {
                         }
 
                         results.add(true);
-
                     } else {
 
                         if (Settings.getInstance().beVerbose()) {
@@ -284,7 +280,6 @@ public class Structure {
                     // neprobíhá oprava - chyba
                     ReportManager.log(EBakaLogType.LOG_ERR, "Definovaná skupina " + gr[3] + " nebyla ve struktuře nalezena.");
                 }
-
 
             } // ošetření neexistence objektu
 
@@ -308,7 +303,6 @@ public class Structure {
         }
 
         Map<Integer, Map<String, Object>> info = BakaADAuthenticator.getInstance().getGroupInfo(data[0], data[4]);
-
 
         Map<EBakaLDAPAttributes, String[]> values = new HashMap<>();
         values.put(EBakaLDAPAttributes.MAIL, new String[] {"e-mailové adresy", data[2]});
@@ -398,8 +392,7 @@ public class Structure {
                 }
             }
 
-        }
-
+        } // smyčka
     }
 
 }
