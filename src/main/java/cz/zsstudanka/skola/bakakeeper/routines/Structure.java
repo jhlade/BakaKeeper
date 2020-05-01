@@ -85,7 +85,7 @@ public class Structure {
         // vygenerování definic/pořadí skupin za běhu
         // Tvar:
         // 0 cn,
-        // 1 nadřazená skupina (prázdná - nutné, null - neprobíhá ověřování),
+        // 1 (plné dn) nadřazená skupina (prázdná - nutné, null - neprobíhá ověřování),
         // 2 mail,
         // 3 displayName,
         // 4 OU,
@@ -107,7 +107,7 @@ public class Structure {
         // ročníky
         for (int r = 1; r <= 9; r++) {
             groups.add(new String[]{"Rodice-Rocnik-" + r, "CN=" + ((r <= 5) ? "Rodice-Stupen-1" : "Rodice-Stupen-2") + "," + Settings.getInstance().getLDAP_baseDL(), "rodice-rocnik-" + r + "@" + Settings.getInstance().getMailDomain(), "Rodiče žáků " + r + ". ročníku", Settings.getInstance().getLDAP_baseDL(), LIT_TRUE, LIT_TRUE, EBakaLDAPAttributes.GT_DISTRIBUTION.value(), "Rodiče žáků " + r + ". ročníku"});
-            groups.add(new String[]{"Ucitele-Tridni-Rocnik-" + r, "CN=" + ((r <= 5) ? "Ucitele-Tridni-1" : "Ucitele-Tridni-2") + "," + Settings.getInstance().getLDAP_baseDL(), "tridni-rocnik-" + r + "@" + Settings.getInstance().getMailDomain(), "Třídní učitelé " + r + ". ročníku", Settings.getInstance().getLDAP_baseDL(), LIT_TRUE, LIT_TRUE, EBakaLDAPAttributes.GT_DISTRIBUTION.value(), "Třídní učitelé " + r + ". ročníku"});
+            groups.add(new String[]{"Ucitele-Tridni-Rocnik-" + r, "CN=" + ((r <= 5) ? "Ucitele-Tridni-Stupen-1" : "Ucitele-Tridni-Stupen-2") + "," + Settings.getInstance().getLDAP_baseDL(), "tridni-rocnik-" + r + "@" + Settings.getInstance().getMailDomain(), "Třídní učitelé " + r + ". ročníku", Settings.getInstance().getLDAP_baseDL(), LIT_TRUE, LIT_TRUE, EBakaLDAPAttributes.GT_DISTRIBUTION.value(), "Třídní učitelé " + r + ". ročníku"});
             groups.add(new String[]{"Zaci-Rocnik-" + r, "CN=" + ((r <= 5) ? "Zaci-Stupen-1" : "Zaci-Stupen-2") + "," + Settings.getInstance().getLDAP_baseStudentGroups(), "zaci-rocnik-" + r + "@" + Settings.getInstance().getMailDomain(), "Žáci - " + r + ". ročník", Settings.getInstance().getLDAP_baseStudentGroups(), LIT_FALSE, LIT_TRUE, EBakaLDAPAttributes.GT_SECURITY.value(), "Žáci - " + r + ". ročníku"});
             // jednotlivé třídy
             for (char t = 'A'; t <= 'E'; t++) {
@@ -193,7 +193,7 @@ public class Structure {
 
         } // OU smyčka 1)
 
-        // 2 kontrola hierarchie skupin a distribučních seznamů
+        // 2) kontrola hierarchie skupin a distribučních seznamů
         // Tvar:
         // 0 cn,
         // 1 nadřazená skupina (prázdná - nutné, null - neprobíhá ověřování),
@@ -279,9 +279,14 @@ public class Structure {
                         results.add(false);
                     }
 
-                } // oprava - vytvoření nové skupiny
+                    // oprava - vytvoření nové skupiny
+                } else {
+                    // neprobíhá oprava - chyba
+                    ReportManager.log(EBakaLogType.LOG_ERR, "Definovaná skupina " + gr[3] + " nebyla ve struktuře nalezena.");
+                }
 
-            }
+
+            } // ošetření neexistence objektu
 
         } // GR smyčka 2)
 
