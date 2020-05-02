@@ -284,8 +284,8 @@ public class SQLrecords implements IRecords {
      * @param flag příznak
      * @return podmnožina s daným příznakem
      */
-    public LinkedHashMap<String, Map<String, String>> getSubsetWithFlag(Boolean flag) {
-        LinkedHashMap<String, Map<String, String>> subset = new LinkedHashMap<>();
+    public LinkedHashMap<String, DataSQL> getSubsetWithFlag(Boolean flag) {
+        LinkedHashMap<String, DataSQL> subset = new LinkedHashMap<>();
 
         // nový interní iterátor
         Iterator<String> subsetIterator = this.data.keySet().iterator();
