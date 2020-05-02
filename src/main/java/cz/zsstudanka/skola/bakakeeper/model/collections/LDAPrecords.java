@@ -4,6 +4,7 @@ import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaADAuthenticator;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
+import cz.zsstudanka.skola.bakakeeper.model.entities.DataLDAP;
 import cz.zsstudanka.skola.bakakeeper.model.interfaces.IRecords;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 
@@ -42,7 +43,7 @@ public class LDAPrecords implements IRecords {
     private Iterator iterator;
 
     /** hrubá data; klíč = UPN pro uživatele, mail pro kontakty, obsah = interní data podle požadavků */
-    private HashMap<String, Map<String, Object>> data;
+    private HashMap<String, DataLDAP> data;
 
     /** hrubá data k zápisu; klíč = DN, obsah = data k zápisu */
     private HashMap<String, Map<EBakaLDAPAttributes, String>> dataToWrite = new LinkedHashMap<>();
@@ -58,7 +59,7 @@ public class LDAPrecords implements IRecords {
         this.recordType = type;
 
         // inicializace
-        this.data = new LinkedHashMap<String, Map<String, Object>>();
+        this.data = new LinkedHashMap<String, DataLDAP>();
 
         // dotaz na LDAP - hledání dle typu objektu
         HashMap<String, String> ldapQ = new HashMap<String, String>();
@@ -112,7 +113,7 @@ public class LDAPrecords implements IRecords {
         }
 
         // naplnění daty
-        Map<Integer, Map> info = BakaADAuthenticator.getInstance().getObjectInfo(
+        Map<Integer, DataLDAP> info = BakaADAuthenticator.getInstance().getObjectInfo(
                 base,
                 ldapQ,
                 retAttributes
@@ -144,7 +145,7 @@ public class LDAPrecords implements IRecords {
      * @param key UPN - klíč
      * @param data záznam
      */
-    public void addRecord(String key, Map data) {
+    public void addRecord(String key, DataLDAP data) {
         this.data.put(key, data);
     }
 
@@ -165,7 +166,7 @@ public class LDAPrecords implements IRecords {
      * @param key UPN - klíč
      * @return záznam
      */
-    public Map<String, Object> get(String key) {
+    public DataLDAP get(String key) {
 
         if (this.data.containsKey(key)) {
             return this.data.get(key);
@@ -206,8 +207,8 @@ public class LDAPrecords implements IRecords {
      * @param flag příznak
      * @return podmnožina s daným příznakem
      */
-    public LinkedHashMap<String, Map<String, Object>> getSubsetWithFlag(Boolean flag) {
-        LinkedHashMap<String, Map<String, Object>> subset = new LinkedHashMap<>();
+    public LinkedHashMap<String, DataLDAP> getSubsetWithFlag(Boolean flag) {
+        LinkedHashMap<String, DataLDAP> subset = new LinkedHashMap<>();
 
         Iterator<String> subsetIterator = this.data.keySet().iterator();
         while (subsetIterator.hasNext()) {
@@ -257,7 +258,7 @@ public class LDAPrecords implements IRecords {
      */
     public void liveUpdate(String key, Map<EBakaLDAPAttributes, Object> newData) {
 
-        HashMap<String, Object> refinedData = new HashMap<>();
+        DataLDAP refinedData = new DataLDAP();
 
         Iterator<EBakaLDAPAttributes> newDataIterator = newData.keySet().iterator();
         while (newDataIterator.hasNext()) {

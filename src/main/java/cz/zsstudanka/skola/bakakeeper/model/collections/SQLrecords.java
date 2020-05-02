@@ -4,6 +4,7 @@ import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaSQL;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaSQL;
+import cz.zsstudanka.skola.bakakeeper.model.entities.DataSQL;
 import cz.zsstudanka.skola.bakakeeper.model.interfaces.IRecords;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 
@@ -50,7 +51,7 @@ public class SQLrecords implements IRecords {
     private String select;
 
     /** hrubá data; klíč INTERN_KOD, data = mapa podle SQL */
-    private LinkedHashMap<String, Map<String, String>> data = new LinkedHashMap<>();
+    private LinkedHashMap<String, DataSQL> data = new LinkedHashMap<>();
 
     /**
      * Data připravená k atomickému transakčnímu zápisu pomocí UPDATE;
@@ -181,7 +182,7 @@ public class SQLrecords implements IRecords {
             while (rs.next()) {
                 // primární klíč je první položka v poli
                 String rowID = rs.getString(this.dataStructure[0].basename());
-                Map<String, String> rowData = new HashMap<String, String>();
+                DataSQL rowData = new DataSQL();//new HashMap<String, String>();
 
                 for (EBakaSQL col : this.dataStructure) {
                     rowData.put(col.basename(), (rs.getString(col.basename()) == null) ? "(NULL)" : rs.getString(col.basename()).trim());
@@ -219,7 +220,7 @@ public class SQLrecords implements IRecords {
      * @param id interní kód
      * @return data
      */
-    public Map<String, String> get(String id) {
+    public DataSQL get(String id) {
         if (this.data.containsKey(id)) {
             return this.data.get(id);
         }
@@ -233,7 +234,7 @@ public class SQLrecords implements IRecords {
      * @param id interní kód záznamu
      * @param data získaná data
      */
-    public void addRecord(String id, Map<String, String> data) {
+    public void addRecord(String id, DataSQL data) {
         this.data.put(id, data);
     }
 
@@ -485,7 +486,7 @@ public class SQLrecords implements IRecords {
 
             print.append("Seznam obsahuje celkem " + this.data.size() + " položek.\n");
 
-            for (Map.Entry<String, Map<String, String>> recEntry : data.entrySet()) {
+            for (Map.Entry<String, DataSQL> recEntry : data.entrySet()) {
                 print.append(recEntry.getKey());
                 print.append(" : ");
 
