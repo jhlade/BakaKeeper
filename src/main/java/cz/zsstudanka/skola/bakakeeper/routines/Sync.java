@@ -7,14 +7,14 @@ import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaSQL;
 import cz.zsstudanka.skola.bakakeeper.model.collections.LDAPrecords;
 import cz.zsstudanka.skola.bakakeeper.model.collections.SQLrecords;
+import cz.zsstudanka.skola.bakakeeper.model.entities.DataLDAP;
+import cz.zsstudanka.skola.bakakeeper.model.entities.DataSQL;
 import cz.zsstudanka.skola.bakakeeper.model.entities.Student;
+import cz.zsstudanka.skola.bakakeeper.model.entities.UserFactory;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Synchronizační rutiny.
@@ -49,7 +49,7 @@ public class Sync {
      */
     public Sync() {
         this.catalog = new SQLrecords(null, null);
-        this.faculty = null; // TODO
+        this.faculty = null; // TODO načtení třídních učitelů
         this.directory = new LDAPrecords(Settings.getInstance().getLDAP_baseStudents(), EBakaLDAPAttributes.OC_USER);
         this.alumni = new LDAPrecords(Settings.getInstance().getLDAP_baseAlumni(), EBakaLDAPAttributes.OC_USER);
         this.directoryFaculty = new LDAPrecords(Settings.getInstance().getLDAP_baseFaculty(), EBakaLDAPAttributes.OC_USER);
@@ -57,58 +57,86 @@ public class Sync {
     }
 
     /**
-     * Pro vývojové účely.
+     * Pouze pro vývojové účely.
      * @deprecated
      */
     public void devel() {
         String ročník = "1";
         String třída = "E";
 
-        Map<String, String> rowData;
+        //Map<String, String> rowData;
+        DataSQL rowData;
 
         // 1.E
         // 1, Školáček Malý, DEV01
-        rowData = new HashMap<String, String>();
+        rowData = new DataSQL();//HashMap<String, String>();
         rowData.put(EBakaSQL.F_STU_CLASS_ID.basename(), "1");
-        rowData.put(EBakaSQL.F_STU_MAIL.basename(), "NULL");
+        //rowData.put(EBakaSQL.F_STU_MAIL.basename(), "NULL");
         rowData.put(EBakaSQL.F_STU_CLASS.basename(), ročník + "." + třída);
         rowData.put(EBakaSQL.F_STU_BK_CLASSLETTER.basename(), třída);
         rowData.put(EBakaSQL.F_STU_BK_CLASSYEAR.basename(), ročník);
         rowData.put(EBakaSQL.F_STU_GIVENNAME.basename(), "Malý");
         rowData.put(EBakaSQL.F_STU_SURNAME.basename(), "Školáček");
         rowData.put(EBakaSQL.F_STU_ID.basename(), "DEV01");
+        rowData.put(EBakaSQL.F_STU_MAIL.basename(), "skolacek.maly@zs-studanka.cz");
+        rowData.put("baka_flag", "0");
         this.catalog.addRecord("DEV01", rowData);
 
         // 2, Aaadam Testový, DEV02
-        rowData = new HashMap<String, String>();
+        rowData = new DataSQL();//HashMap<String, String>();
         rowData.put(EBakaSQL.F_STU_CLASS_ID.basename(), "2");
-        rowData.put(EBakaSQL.F_STU_MAIL.basename(), "NULL");
+        //rowData.put(EBakaSQL.F_STU_MAIL.basename(), "NULL");
         rowData.put(EBakaSQL.F_STU_CLASS.basename(), ročník + "." + třída);
         rowData.put(EBakaSQL.F_STU_BK_CLASSLETTER.basename(), třída);
         rowData.put(EBakaSQL.F_STU_BK_CLASSYEAR.basename(), ročník);
         rowData.put(EBakaSQL.F_STU_GIVENNAME.basename(), "Aaadam");
         rowData.put(EBakaSQL.F_STU_SURNAME.basename(), "Testový");
         rowData.put(EBakaSQL.F_STU_ID.basename(), "DEV02");
+        rowData.put(EBakaSQL.F_STU_MAIL.basename(), "testovy.aaadam@zs-studanka.cz");
+        rowData.put("baka_flag", "0");
         this.catalog.addRecord("DEV02", rowData);
 
+        /*
+        // 11, Aaadam Nový, DEV04 - bude vytvořen a smazán
+        rowData = new DataSQL();//HashMap<String, String>();
+        rowData.put(EBakaSQL.F_STU_CLASS_ID.basename(), "11");
+        //rowData.put(EBakaSQL.F_STU_MAIL.basename(), "NULL");
+        rowData.put(EBakaSQL.F_STU_CLASS.basename(), ročník + "." + třída);
+        rowData.put(EBakaSQL.F_STU_BK_CLASSLETTER.basename(), třída);
+        rowData.put(EBakaSQL.F_STU_BK_CLASSYEAR.basename(), ročník);
+        rowData.put(EBakaSQL.F_STU_GIVENNAME.basename(), "Aaadam");
+        rowData.put(EBakaSQL.F_STU_SURNAME.basename(), "Nový");
+        rowData.put(EBakaSQL.F_STU_ID.basename(), "DEV04");
+        rowData.put(EBakaSQL.F_STU_MAIL.basename(), "novy.aaadam@zs-studanka.cz");
+        rowData.put("baka_flag", "0");
+        this.catalog.addRecord("DEV04", rowData);
+        */
+
         // 27, Aaadam Expirovaný, DEV03
-        rowData = new HashMap<String, String>();
+        rowData = new DataSQL();//HashMap<String, String>();
         rowData.put(EBakaSQL.F_STU_CLASS_ID.basename(), "27");
-        rowData.put(EBakaSQL.F_STU_MAIL.basename(), "NULL");
+        //rowData.put(EBakaSQL.F_STU_MAIL.basename(), "NULL");
         rowData.put(EBakaSQL.F_STU_CLASS.basename(), ročník + "." + třída);
         rowData.put(EBakaSQL.F_STU_BK_CLASSLETTER.basename(), třída);
         rowData.put(EBakaSQL.F_STU_BK_CLASSYEAR.basename(), ročník);
         rowData.put(EBakaSQL.F_STU_GIVENNAME.basename(), "Aaadam");
         rowData.put(EBakaSQL.F_STU_SURNAME.basename(), "Expirovaný");
         rowData.put(EBakaSQL.F_STU_ID.basename(), "DEV03");
+        rowData.put(EBakaSQL.F_STU_MAIL.basename(), "expirovany.aaadam@zs-studanka.cz");
+        rowData.put("baka_flag", "0");
         this.catalog.addRecord("DEV03", rowData);
     }
 
     /**
-     * Kontrola a zavedení nových žáků.
-     * Nový žák = žák v evidenci bez platné školní e-mailové adresy (UPN).
+     * Kontrola a zavedení nových žáků - inicializace záznamu v Bakalářích.
      *
-     * @param update zapsat novou e-mailovou adresu do evidence
+     * Nový žák = žák v evidenci bez platné školní e-mailové adresy (UPN). Pokud platná školní adresa
+     * v poli dbo.zaci.E_MAIL neexistuje, bude po ověření její dostupnosti vytvořena a zapsána do evidence.
+     * Existuje-li nespárovaný LDAP účet pro vytvořenou adresu, bude proveden pokus o spárování obou záznamů
+     * na základě porovnání dostupných informací. Je-li splněno kritérium pro párování, interní kód žáka
+     * z pole dbo.zaci.INTERN_KOD bude zapsán do LDAP atributu extensionAttribute1 porovnávaného záznamu.
+     *
+     * @param update zapsat novou e-mailovou adresu do evidence a provést párování
      */
     public void actionInit(boolean update) {
 
@@ -244,7 +272,7 @@ public class Sync {
                 }
 
             } // žák již má adresu v doméně školy
-        }
+        } // smyčka
 
         // provedení zápisu do ostrých dat
         if (update) {
@@ -278,12 +306,14 @@ public class Sync {
                     }
                 }
             }
-        }
+        } // provedení zápisu
 
     }
 
     /**
      * Provedení pokusu o párování žáka podle SQL záznamu s existujícím LDAP účtem.
+     * Kritériem pro úspěšné párování je shodné jméno, příjmení a ročník žáka. Pokud je ho dosaženo,
+     * LDAP záznamu bude upraven atribut extensionAttribute1 na hodnototu interního kódu žáka ze SQL.
      *
      * @param idSQL identifikátor žáka v SQL - musí vždy existovat
      * @param idLDAP odpovídající UPN žáka v LDAP - musí vždy existovat
@@ -430,10 +460,120 @@ public class Sync {
     }
 
     /**
-     * Kontrola záznamů proti adresáři a ošetření záznamů, které
-     * nemají vzájemné protějšky.
+     * Kontrola záznamů proti adresáři a ošetření záznamů, které nemají vzájemné protějšky.
+     *
+     * Pokud v LDAP existuje záznam neuvedený v evidenci, bude přesunut mezi vyřazené žáky a zablokován.
+     * Pokud v evidencii existuje záznam bez účtu, bude mu vytvořen nový účet s výchozím heslem.
      */
     public void actionCheck() {
+        // naplění struktur - reset iterátorů
+        this.catalog.resetIterator();
+        this.directory.resetIterator();
+
+        if (Settings.getInstance().beVerbose()) {
+            ReportManager.log("Začíná kontrola synchronizace evidence a adresáře.");
+        }
+
+        // hlavní smyčka přes evidenci
+        while (this.catalog.iterator().hasNext()) {
+
+            String studentID = this.catalog.iterator().next();
+
+            if (Settings.getInstance().beVerbose()) {
+                ReportManager.logWait(EBakaLogType.LOG_TEST, "Kontroluje se žák " +
+                                this.catalog.get(studentID).get(EBakaSQL.F_STU_SURNAME.basename()) +
+                                " " +
+                                this.catalog.get(studentID).get(EBakaSQL.F_STU_GIVENNAME.basename()) +
+                                " (" + this.catalog.get(studentID).get(EBakaSQL.F_STU_CLASS.basename()) + ")"
+                        );
+            }
+
+            // chyba - neexistující adresa v doméně školy, nutná prvotní inicializace
+            if (!this.catalog.get(studentID).get(EBakaSQL.F_STU_MAIL.basename()).contains(Settings.getInstance().getMailDomain())) {
+
+                if (Settings.getInstance().beVerbose()) {
+                    ReportManager.logResult(EBakaLogType.LOG_ERR);
+                }
+
+                ReportManager.log(EBakaLogType.LOG_ERR, "Žák " +
+                        this.catalog.get(studentID).get(EBakaSQL.F_STU_SURNAME.basename()) +
+                        " " +
+                        this.catalog.get(studentID).get(EBakaSQL.F_STU_GIVENNAME.basename()) +
+                        " (" + this.catalog.get(studentID).get(EBakaSQL.F_STU_CLASS.basename()) + ")" +
+                        " nemá v evidenci vyplněnou platnou školní adresu."
+                );
+
+                if (Settings.getInstance().debugMode()) {
+                    ReportManager.log(EBakaLogType.LOG_DEBUG, "Získaný údaj byl [" + this.catalog.get(studentID).get(EBakaSQL.F_STU_MAIL.basename()) + "].");
+                }
+
+                continue;
+            }
+
+            // označení záznamů
+            if (this.directory.get(this.catalog.get(studentID).get(EBakaSQL.F_STU_MAIL.basename())) != null) {
+                this.catalog.setFlag(studentID, true);
+                this.directory.setFlag(this.catalog.get(studentID).get(EBakaSQL.F_STU_MAIL.basename()), true);
+
+                if (Settings.getInstance().beVerbose()) {
+                    ReportManager.logResult(EBakaLogType.LOG_OK);
+                }
+            } else {
+                if (Settings.getInstance().beVerbose()) {
+                    ReportManager.logResult(EBakaLogType.LOG_ERR);
+                }
+
+                if (Settings.getInstance().debugMode()) {
+                    ReportManager.log(EBakaLogType.LOG_DEBUG, "V adresáři neexistuje účet s UPN [" + this.catalog.get(studentID).get(EBakaSQL.F_STU_MAIL.basename()) + "].");
+                }
+            }
+        } // smyčka přes evidenci
+
+        // kontrola lichých částí
+        LinkedHashMap<String, DataSQL> catalogUnpaired = this.catalog.getSubsetWithFlag(false);
+        LinkedHashMap<String, DataLDAP> directoryUnpaired = this.directory.getSubsetWithFlag(false);
+
+        // evidence
+        if (catalogUnpaired.size() > 0) {
+            ReportManager.log("V evidenci byly nalezeny záznamy bez existujících uživatelských účtů (celkem " + catalogUnpaired.size() + ").");
+
+            // TODO vytvoření nových účtů
+            Iterator<String> catalogUnpairedIterator = catalogUnpaired.keySet().iterator();
+            while (catalogUnpairedIterator.hasNext()) {
+
+                String unpairedID = catalogUnpairedIterator.next();
+                Student account = UserFactory.newStudent(catalogUnpaired.get(unpairedID));
+
+                System.out.println(account.toString());
+            }
+
+        } else {
+            if (Settings.getInstance().beVerbose()) {
+                ReportManager.log(EBakaLogType.LOG_OK, "Všechny záznamy v evidenci mají platné účty.");
+            }
+        }
+
+        // adresář
+        if (directoryUnpaired.size() > 0) {
+            ReportManager.log("V adresáři byly nalezeny neplatné záznamy (celkem " + directoryUnpaired.size() + ").");
+
+
+            // TODO přesun LDAP záznamů do vyřazených účtů YYYY
+            Iterator<String> directoryUnpairedIterator = directoryUnpaired.keySet().iterator();
+            while (directoryUnpairedIterator.hasNext()) {
+
+                String unpairedUPN = directoryUnpairedIterator.next();
+                Student retired = UserFactory.getStudentByPair(null, directoryUnpaired.get(unpairedUPN));
+
+                System.out.println(retired.toString());
+                retired.retireAccount();
+            }
+
+        } else {
+            if (Settings.getInstance().beVerbose()) {
+                ReportManager.log(EBakaLogType.LOG_OK, "Všechny platné účty mají odpovídající záznam v evidenci.");
+            }
+        }
 
     }
 
@@ -441,7 +581,6 @@ public class Sync {
      * Provedení synchronizace evidence a dresáře.
      * - Zavedení nových žáků TODO RM vytvoří report pro třídního
      * - Zablokování vyřazených žáků
-     * -
      */
     public void actionSync() {
 
