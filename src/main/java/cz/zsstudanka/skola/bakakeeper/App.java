@@ -1,5 +1,7 @@
 package cz.zsstudanka.skola.bakakeeper;
 
+import cz.zsstudanka.skola.bakakeeper.components.HelpManager;
+import cz.zsstudanka.skola.bakakeeper.components.KeyStoreManager;
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaADAuthenticator;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
@@ -8,12 +10,13 @@ import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.routines.Export;
 import cz.zsstudanka.skola.bakakeeper.routines.Structure;
 import cz.zsstudanka.skola.bakakeeper.routines.Test;
-import cz.zsstudanka.skola.bakakeeper.components.HelpManager;
-import cz.zsstudanka.skola.bakakeeper.components.KeyStoreManager;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.settings.Version;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Nástroj pro synchronizaci záznamů z Bakalářů a informacemi v Active Directory.
@@ -166,7 +169,7 @@ public class App {
                 return;
             } // init
 
-            // // //
+            /* načtení již existujícího nastavení */
             Settings.getInstance().load();
             if (!Settings.getInstance().isValid()) {
                 return;
@@ -174,7 +177,8 @@ public class App {
 
             // vývojářský režim - propagace do nastavení
             Settings.getInstance().setDevelMode(FLAG_DEVEL);
-            // // //
+
+            /* jednotlivé rutiny */
 
             // CSV export tabulky žáků
             if (params.containsKey("export")) {
