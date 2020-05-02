@@ -1,7 +1,6 @@
 package cz.zsstudanka.skola.bakakeeper.model.interfaces;
 
 import java.util.Iterator;
-import java.util.Map;
 
 /**
  * Interface obecných kolekcí.
@@ -9,14 +8,6 @@ import java.util.Map;
  * @author Jan Hladěna
  */
 public interface IRecords {
-
-    /**
-     * Získání datového instančního iterátoru.
-     *
-     * @return datový instanční iterátor kolekce
-     * @deprecated
-     */
-    Iterator<Map.Entry<String, Map>> dataIterator();
 
     /**
      * Získání instančního iterátoru.

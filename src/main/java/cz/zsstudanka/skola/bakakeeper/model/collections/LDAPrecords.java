@@ -7,7 +7,10 @@ import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.model.interfaces.IRecords;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Kolekce generických záznamů LDAP.
@@ -247,6 +250,7 @@ public class LDAPrecords implements IRecords {
 
     /**
      * Úprava živých dat.
+     * TODO
      *
      * @param key ientifikátor
      * @param newData data k okamžitému zápisu do mezipaměti
@@ -327,17 +331,6 @@ public class LDAPrecords implements IRecords {
         }
 
         return records.toString();
-    }
-
-    @Override
-    @Deprecated
-    public Iterator<Map.Entry<String, Map>> dataIterator() {
-
-        if (this.dataIterator == null) {
-            this.dataIterator = this.data.entrySet().iterator();
-        }
-
-        return this.iterator;
     }
 
     @Override

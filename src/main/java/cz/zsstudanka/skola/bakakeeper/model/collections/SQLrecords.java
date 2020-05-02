@@ -9,7 +9,10 @@ import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class SQLrecords implements IRecords {
 
@@ -516,17 +519,6 @@ public class SQLrecords implements IRecords {
         }
 
         return this.iterator;
-    }
-
-    @Override
-    @Deprecated
-    public Iterator<Map.Entry<String, Map>> dataIterator() {
-
-        if (this.dataIterator == null) {
-            this.dataIterator = this.data.entrySet().iterator();
-        }
-
-        return this.dataIterator;
     }
 
     @Override
