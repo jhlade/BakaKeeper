@@ -2,12 +2,12 @@ package cz.zsstudanka.skola.bakakeeper.model.entities;
 
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaADAuthenticator;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaSQL;
 import cz.zsstudanka.skola.bakakeeper.model.interfaces.IRecordLDAP;
 import cz.zsstudanka.skola.bakakeeper.model.interfaces.IRecordSQL;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
 
-import java.io.UnsupportedEncodingException;
 import java.util.Map;
 
 /**
@@ -20,41 +20,20 @@ import java.util.Map;
  */
 public class Student implements IRecordLDAP, IRecordSQL {
 
-    /** INTERN_KOD */
-    private String internalID;
+    private Map<String, String> dataSQL;
+    private Map<EBakaLDAPAttributes, String> dataLDAP;
 
-    // C_TR_VYK
-    private Integer classRegNumber;
-
-    /** JMENO */
-    private String givenName;
-    /** PRIJMENI */
-    private String surname;
-
-    // E_MAIL
-
-    private Map<String, Object> rawAttributes;
-
-    // metoda reset/prepare? Pr.Jm.##C_TR_VYK
+    // TODO metoda reset/prepare? Pr.Jm.##C_TR_VYK
 
     /**
-     * Primární konstruktor aktivního žáka.
+     * Konstruktor z páru hrubých SQL a LDAP dat.
      *
-     * @param upn UserPrincipalName = primární e-mail v Bakalářích
+     * @param dataSQL hrubá data z evidence
+     * @param dataLDAP hrubá data z adresáře
      */
-    public Student(String upn) {
-        // načíst SQL (závazná data)
-        // načíst LDAP
-        // check&repair (SQL->LDAP)
-    }
-
-    /**
-     * Dočasný konstruktor z procházení.
-     *
-     * @param rawAttributes
-     */
-    public Student(Map<String, Object> rawAttributes) {
-        this.rawAttributes = rawAttributes;
+    protected Student(Map<String, String> dataSQL, Map<EBakaLDAPAttributes, String> dataLDAP) {
+        this.dataSQL = dataSQL;
+        this.dataLDAP = dataLDAP;
     }
 
     /**
@@ -66,11 +45,13 @@ public class Student implements IRecordLDAP, IRecordSQL {
     public Boolean resetPassword() {
 
         // nové heslo = Pr.Jm.##
-        String newPassword = BakaUtils.removeAccents(this.surname.substring(0, 2))
+        String newPassword = BakaUtils.removeAccents(this.dataSQL.get(EBakaSQL.F_GUA_SURNAME.basename())
+                .substring(0, 2))
                 + "."
-                + BakaUtils.removeAccents(this.givenName.substring(0, 2))
+                + BakaUtils.removeAccents(this.dataSQL.get(EBakaSQL.F_GUA_GIVENNAME.basename())
+                .substring(0, 2))
                 + "."
-                + String.format("%2d", this.classRegNumber);
+                + String.format("%2d", Integer.parseInt(this.dataSQL.get(EBakaSQL.F_STU_CLASS_ID.basename())));
 
         return setPassword(newPassword, true);
     }
@@ -85,16 +66,15 @@ public class Student implements IRecordLDAP, IRecordSQL {
     public Boolean setPassword(String newPassword, Boolean forceChange) {
 
         if (forceChange) {
-            BakaADAuthenticator.getInstance().replaceAttribute(this.getDN(),
+            return BakaADAuthenticator.getInstance().replaceAttribute(this.getDN(),
                     EBakaLDAPAttributes.PW_LASTSET,
                     EBakaLDAPAttributes.PW_REQCHANGE.value());
         } else {
-            BakaADAuthenticator.getInstance().replaceAttribute(this.getDN(),
+            return BakaADAuthenticator.getInstance().replaceAttribute(this.getDN(),
                     EBakaLDAPAttributes.PW_LASTSET,
                     EBakaLDAPAttributes.PW_LASTSET.value());
         }
 
-        return true;
     }
 
     /**
@@ -109,41 +89,36 @@ public class Student implements IRecordLDAP, IRecordSQL {
     public Boolean moveToClass(Integer year, String letter) {
 
         String newClassOU = "OU=Trida-" + letter.toUpperCase() + ",OU=Rocnik-" + year + "," + Settings.getInstance().getLDAP_baseStudents();
-        String newClassSG = "Zaci-Trida-" + year + letter.toUpperCase();
+        String newClassSGdn = "CN=Zaci-Trida-" + year + letter.toUpperCase() + "," + Settings.getInstance().getLDAP_baseStudentGroups();
         String newTitle = year + "." + letter.toUpperCase();
 
-        // TODO přesun do OU
+        // přesun do OU
+        BakaADAuthenticator.getInstance().moveObject(this.getDN(), newClassOU, false);
 
-        // TODO změna skupiny
+        // změna bezpečnostní skupiny žáka
+        // odebrání ze všech skupin
+        BakaADAuthenticator.getInstance().removeObjectFromAllGroups(this.getDN());
+        // přidání do základní skupiny žáků
+        String baseGroup = "CN=Skupina-Zaci," + Settings.getInstance().getLDAP_baseGlobalGroups();
+        BakaADAuthenticator.getInstance().addObjectToGroup(this.getDN(), baseGroup);
+        // přidání do nové skupiny třídy
+        BakaADAuthenticator.getInstance().addObjectToGroup(this.getDN(), newClassSGdn);
 
         // změna pracovního zařazení
         BakaADAuthenticator.getInstance().replaceAttribute(this.getDN(), EBakaLDAPAttributes.TITLE, newTitle);
 
-        // TODO
+        // TODO - ověření výsledku
         return true;
     }
 
-    /**
-     * Přesune účet do OU=StudiumUkonceno,OU={YYYY},
-     * odebere ze všech skupin, zablokuje ho a nastaví odpovídající atribut "title"
-     * na "Abs. {YYYY}".
-     *
-     * @return úspěch operace
-     */
-    public Boolean retireAccount() {
-        return true;
-    }
-
-    // TODO
     @Override
     public String getDN() {
-        return null;
+        return this.dataLDAP.get(EBakaLDAPAttributes.DN.attribute());
     }
 
-    // TODO
     @Override
     public String getExtensionAttribute(Integer attrNum) {
-        return null;
+        return this.dataLDAP.get(EBakaLDAPAttributes.EXT01.attribute());
     }
 
     // TODO
@@ -154,6 +129,6 @@ public class Student implements IRecordLDAP, IRecordSQL {
 
     @Override
     public String getInternalID() {
-        return null;
+        return this.dataSQL.get(EBakaSQL.F_STU_ID.basename());
     }
 }
