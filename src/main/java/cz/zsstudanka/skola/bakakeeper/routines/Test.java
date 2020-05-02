@@ -10,6 +10,7 @@ import cz.zsstudanka.skola.bakakeeper.constants.EBakaSQL;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaUAC;
 import cz.zsstudanka.skola.bakakeeper.model.collections.LDAPrecords;
 import cz.zsstudanka.skola.bakakeeper.model.collections.SQLrecords;
+import cz.zsstudanka.skola.bakakeeper.model.entities.DataLDAP;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.settings.Version;
 import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
@@ -44,7 +45,8 @@ public class Test {
         // 2020-04-27
         Sync testSync = new Sync();
         testSync.devel();
-        testSync.actionInit(true);
+        //testSync.actionInit(true);
+        testSync.actionCheck();
 
         // odeslání výsledku
         ReportManager.getInstance().report();
@@ -328,21 +330,6 @@ public class Test {
 
         ArrayList<String> použité = new ArrayList<>();
 
-        /*
-        System.out.println(žáci.get("dolezal.jan@zs-studanka.cz"));
-        System.out.println(žáci.get("dolezal.jan1@zs-studanka.cz"));
-        */
-        /*
-        System.out.println(žáci);
-        while (žáci.keyIterator().hasNext()) {
-            System.out.println(žáci.get(žáci.keyIterator().next()));
-        }*/
-
-        /*
-        if (true) {
-            return;
-        }*/
-
         System.out.println("Zaměstnanci:\t" + zaměstnanci.count());
         System.out.println("Absolventi:\t" + absolventi.count());
         System.out.println("Aktivní žáci:\t" + žáci.count());
@@ -361,10 +348,14 @@ public class Test {
         //   5aa) pokud se nebude shodovat, vytvořit nový e-mail zkusit to znovu
         //   5ab) pokud se bude shodovat, přiřadit e-mail k žákovi
         // 5b) pokud nebude existovat, přiřadit mail k žákovi a provést do EXT01 zápis INTERN_KOD
-        while (evidence.dataIterator().hasNext()) { // TODO přepis na keyIterator
+
+        Boolean tmp = false;
+        while (tmp) { //evidence.dataIterator().hasNext()) { // TODO přepis na keyIterator
+        //while (evidence.dataIterator().hasNext()) { // TODO přepis na keyIterator
 
             // objekt?
-            Map.Entry<String, Map> žák = evidence.dataIterator().next();
+            //Map.Entry<String, Map> žák = evidence.dataIterator().next();
+            Map.Entry<String, Map> žák = null;//evidence.dataIterator().next();
 
             System.out.println("========================================");
             System.out.println("Žák:\t\t" + žák.getValue().get("PRIJMENI").toString() + " " + žák.getValue().get("JMENO").toString());
@@ -640,7 +631,7 @@ public class Test {
                 System.out.println("====> Proběhne vytvoření nového žáka:");
 
 
-                Map<String, String> nováData = new HashMap<>();
+                DataLDAP nováData = new DataLDAP();
                 String novýRočník = nezpracovanýZáznam.get(EBakaSQL.F_STU_BK_CLASSYEAR.basename()).toString();
                 String nováTřída = nezpracovanýZáznam.get(EBakaSQL.F_STU_BK_CLASSLETTER.basename()).toString().toUpperCase();
 
@@ -850,150 +841,6 @@ public class Test {
         */
 
         System.out.println("====== [ /TEST ] =====");
-    }
-
-    public static void testOLD_2020_04_06() {
-        //checkAndRepairStructure(true);
-
-        //GeneralRecords gr = new GeneralRecords(Settings.getInstance().getLDAP_baseKontakty());
-
-        /*
-        for (int r = 1; r <= 9; r++) {
-            for (char t = 'A'; t <= 'E'; t++) {
-                GeneralRecords gr = new GeneralRecords("OU=Trida-"+t+",OU=Rocnik-"+r+"," + Settings.getInstance().getLDAP_baseZaci());
-            }
-        }
-        */
-
-
-        /*
-        System.out.println("Výroba kontaktů 1.C:");
-        Trida tr1a = new Trida(1, 'C');
-        tr1a.populate();
-
-        while (tr1a.getZaci().iterator().hasNext()) {
-
-            Zak tmpZak = tr1a.getZaci().next();
-            ZakonnyZastupce tmpZZ = tmpZak.getZakonnyZastupce();
-
-            if (!tmpZZ.getZZ_kod().equals(ZakonnyZastupce.ZZ_NULL_KOD)) {
-                BakaADAuthenticator.getInstance().createContact(
-                        Settings.getInstance().getLDAP_baseKontakty(),
-                        tmpZZ.getPrijmeni(),
-                        tmpZZ.getJmeno(),
-                        tmpZZ.getDisplayName(),
-                        tmpZZ.getEmail(),
-                        tmpZZ.getTelefon(),
-                        new String[]{"Rodice-Trida-" + tr1a.getCisloRocniku() + tr1a.getPismeno()}
-                );
-            }
-        }*/
-
-
-
-
-        /*
-        BakaADAuthenticator.getInstance().createContact(
-                Settings.getInstance().getLDAP_baseKontakty(),
-                "Novák",
-                "Matouš",
-                "Matouš Novák",
-                "matous.novak@zs-studanka.cz",
-                "605123456",
-                null);
-        */
-
-        /*
-        ZakonnyZastupce testZZ = new ZakonnyZastupce(
-                "XYZ",
-                "Alena",
-                "Testová",
-                "604234567",
-                "alena.testova@joutsen.cz",
-                null
-        );*/
-
-        //System.out.println("Existuje: " + testZZ.existsAsContact());
-
-        //BakaADAuthenticator.getInstance().test_updateGroups();
-
-        /*
-        for (int r = 1; r <= 9; r++) {
-            for (char t = 'A'; t <= 'E'; t++) {
-                StringBuilder newName = new StringBuilder();
-                newName.append(r).append(t);
-                // OK!
-                //BakaADAuthenticator.getInstance().test_createNewGroup("OU=DistribucniSeznamyZZ," + Settings.getInstance().getLDAP_baseKontakty(), newName.toString());
-            }
-        }*/
-
-
-        /*
-        Map<String, Object> info = BakaADAuthenticator.getInstance().getContactInfo("katerina.petrusova@zs-studanka.cz");
-
-        if (info != null) {
-
-            System.out.println("Kontakt: " + info.get(EBakaLDAPAttributes.DISPLAY_NAME.attribute()));
-            System.out.println("Mail: " + info.get(EBakaLDAPAttributes.MAIL.attribute()));
-
-            if (info.get(EBakaLDAPAttributes.MEMBER_OF.attribute()) != null) {
-
-                if (info.get(EBakaLDAPAttributes.MEMBER_OF.attribute()) instanceof ArrayList) {
-
-                    for (int m = 0; m  < ((ArrayList) info.get(EBakaLDAPAttributes.MEMBER_OF.attribute())).size(); m++) {
-                        System.out.println("member-of: " + ((ArrayList) info.get(EBakaLDAPAttributes.MEMBER_OF.attribute())).get(m) );
-                    }
-
-                } else {
-                    System.out.println("member-of: " + (info.get(EBakaLDAPAttributes.MEMBER_OF.attribute())).toString());
-                }
-
-            }
-
-
-        }*/
-
-
-        /*
-        System.out.println("Aktuální školní rok je " + Settings.getInstance().getSkolniRok());
-        System.out.println("Loňský školní rok byl " + Settings.getInstance().getMinulyRok());
-
-        Zamestnanci zam = Zamestnanci.getInstance();
-        Absolventi abs = Absolventi.getInstance();
-
-        IUzivatelAD zam_1 = zam.findCollisions("jan.hladena@zs-studanka.cz");
-        IUzivatelAD zam_2 = zam.findCollisions("hladena");
-        IUzivatelAD abs_1 = abs.findCollisions("jan.hladena@zs-studanka.cz");
-
-        System.out.println("Hledám kolizi podle mailu  Z1: " + ((zam_1 != null) ? "nalezena" : "nenalezena"));
-        System.out.println("Hledám kolizi podle loginu Z1: " + ((zam_2 != null) ? "nalezena" : "nenalezena"));
-        System.out.println("Hledám kolizi podle loginu A1: " + ((abs_1 != null) ? "nalezena" : "nenalezena"));
-
-        */
-
-        /*
-        for (int z = 0; z < zam.count(); z++) {
-            Zamestnanec itZ = zam.next();
-
-            System.out.println(itZ.toString() + "\n");
-        }*/
-
-        /*
-        Absolventi pokus = Absolventi.getInstance();
-        System.out.println(Absolventi.getInstance().toString());
-        */
-
-        /*
-        String[] ucitele = {"mandji", "hojkan", "hladena", "zak.miroslav", "bakalari", "travka", "fantmo"};
-
-        for (int i = 0; i < ucitele.length; i++) {
-
-            Zamestnanec uzivatel = new Zamestnanec(ucitele[i]);
-            System.out.println("Jméno: " + uzivatel.getDisplayName());
-            System.out.println("E-mail: " + uzivatel.getADEmail());
-            System.out.println();
-        }
-        */
     }
 
 }
