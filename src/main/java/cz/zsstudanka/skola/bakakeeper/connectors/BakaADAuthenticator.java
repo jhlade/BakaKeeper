@@ -3,6 +3,7 @@ package cz.zsstudanka.skola.bakakeeper.connectors;
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
+import cz.zsstudanka.skola.bakakeeper.model.entities.DataLDAP;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
 
@@ -426,7 +427,7 @@ public class BakaADAuthenticator {
      * @param targetOU cílová organizační jednotka
      * @param data parametry uživatele
      */
-    public void createNewUser(String cn, String targetOU, Map<String, String> data) {
+    public void createNewUser(String cn, String targetOU, DataLDAP data) {
 
         // třída objektu - uživatel Active Directory
         String[] objectClasses = {
