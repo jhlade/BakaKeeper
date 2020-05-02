@@ -915,6 +915,25 @@ public class BakaADAuthenticator {
     }
 
     /**
+     * Odebrání objektu ze všech dosavadních skupin.
+     *
+     * @param objectDN
+     */
+    public void removeObjectFromAllGroups(String objectDN) {
+        ArrayList<String> groups = listMembership(objectDN);
+
+        // žádné skupiny
+        if (groups == null || groups.size() == 0) {
+            return;
+        }
+
+        // postupně odebrat všechny skupiny
+        for (String grDN : groups) {
+            removeObjectFromGroup(objectDN, grDN);
+        }
+    }
+
+    /**
      * Přidání kontaktu do distribučního seznamu.
      *
      * @param contactDN plné DN kontaktu
