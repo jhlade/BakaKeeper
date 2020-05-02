@@ -10,7 +10,10 @@ import javax.crypto.spec.SecretKeySpec;
 import java.io.*;
 import java.security.spec.KeySpec;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -643,7 +646,7 @@ public class Settings {
      * Základní řetězec organizační struktury pro vyřazené žáky, například
      * OU=StudiumUkonceno,OU=Zaci,OU=Uzivatele,OU=Skola,DC=zsstu,DC=local
      *
-     * @return
+     * @return String základní LDAP řetězec pro vyřazené žáky
      */
     public String getLDAP_baseAlumni() {
         return this.settings_data.get("ad_base_absolventi");
@@ -653,29 +656,20 @@ public class Settings {
      * Základní řetězec organizační struktury pro karty globálních kontaktů, například
      * OU=Kontakty,OU=Skola,DC=zsstu,DC=local
      *
-     * @return
+     * @return String základní LDAP řetězec pro kontakty
      */
     public String getLDAP_baseContacts() {
         return this.settings_data.get("ad_base_kontakty");
     }
 
     /**
-     * TODO distribuční skupiny
+     * Cestra k OU s distribučními skupinami, například
+     * OU=Distribucni,OU=Skupiny,OU=Skola,DC=zsstu,DC=local
      *
-     * @return
+     * @return String základní LDAP řetězec pro distribuční skupiny
      */
     public String getLDAP_baseDL() {
         return this.settings_data.get("ad_base_skupiny_dl");
-    }
-
-    /**
-     * TODO
-     *
-     * @return
-     * @deprecated
-     */
-    public String getLDAP_baseDLContacts() {
-        return "OU=DistribucniSeznamyZZ," + this.settings_data.get("ad_base_kontakty");
     }
 
     /**

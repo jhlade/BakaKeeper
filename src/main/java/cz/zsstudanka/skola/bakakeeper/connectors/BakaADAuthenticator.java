@@ -378,7 +378,7 @@ public class BakaADAuthenticator {
         // skupiny a seznamy
         if (
                 OU.contains(Settings.getInstance().getLDAP_baseStudentGroups())
-                || OU.contains(Settings.getInstance().getLDAP_baseDLContacts())
+                || OU.contains(Settings.getInstance().getLDAP_baseDL())
         ) {
             ldapQ.put(EBakaLDAPAttributes.OC_GROUP.attribute(), EBakaLDAPAttributes.OC_GROUP.value());
         }
@@ -527,7 +527,7 @@ public class BakaADAuthenticator {
             String contactDN = "cn=" + displayName + "," + OU;
 
             for (int dl = 0; dl < dLists.length; dl++) {
-                String dlDN = "cn=" + dLists[dl] + "," + Settings.getInstance().getLDAP_baseDLContacts();
+                String dlDN = "cn=" + dLists[dl] + "," + Settings.getInstance().getLDAP_baseDL();
                 addContactToDL(contactDN, dlDN);
             }
 
