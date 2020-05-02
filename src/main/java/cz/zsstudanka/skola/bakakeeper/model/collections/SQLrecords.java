@@ -160,7 +160,6 @@ public class SQLrecords implements IRecords {
     }
 
     private void populate() {
-
         // připojení k databázi
         BakaSQL.getInstance().connect();
 
@@ -288,14 +287,13 @@ public class SQLrecords implements IRecords {
         LinkedHashMap<String, Map<String, String>> subset = new LinkedHashMap<>();
 
         // nový interní iterátor
-        Iterator<Map.Entry<String, Map<String, String>>> internalIterator = this.data.entrySet().iterator();
+        Iterator<String> subsetIterator = this.data.keySet().iterator();
+        while (subsetIterator.hasNext()) {
 
-        while (internalIterator.hasNext()) {
-            Map.Entry<String, Map<String, String>> record = internalIterator.next();
+            String subID = subsetIterator.next();
 
-            // naplnění podmnožiny záznamy s daným příznakem
-            if (record.getValue().get(FLAG_ID).equals((flag) ? FLAG_1 : FLAG_0)) {
-                subset.put(record.getKey(), record.getValue());
+            if (get(subID).get(FLAG_ID).equals((flag) ? FLAG_1 : FLAG_0)) {
+                subset.put(subID, get(subID));
             }
         }
 
