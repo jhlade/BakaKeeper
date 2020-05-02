@@ -3,7 +3,7 @@ package cz.zsstudanka.bakakeeper.utils;
 import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Testy pro manipulační jednotku BakaUtils.
@@ -87,6 +87,13 @@ public class BakaUtilsTest {
         assertEquals("Pr.Sa.27", BakaUtils.createInitialPassword("Příkopová", "Šárka Sofie", 27));
         assertEquals("Pi.Vo.11", BakaUtils.createInitialPassword("Pivoňka", "Vojtěch", 11));
         assertEquals("Vi.Le.03", BakaUtils.createInitialPassword("Da Vinci", "Leonardo", 3));
+    }
+
+    @Test
+    public void createSAMloginFromUPNbase() {
+        assertEquals("novak.adam", BakaUtils.createSAMloginFromUPNbase("Novák", "Adam", "novak.adam" + DOMAIN));
+        assertEquals("novak.adam1", BakaUtils.createSAMloginFromUPNbase("Novák", "Adam", "novak.adam1" + DOMAIN));
+        assertEquals("novak.adam37", BakaUtils.createSAMloginFromUPNbase("Novák", "Adam", "novak.adam37" + DOMAIN));
     }
 
 }

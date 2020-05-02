@@ -184,6 +184,28 @@ public class BakaUtils {
     }
 
     /**
+     * Vytvoření pre-Windows 2000 přihlašovacího jména (do 20 znaků) na základě
+     * příjmení, jména a již existujícího UPN.
+     *
+     * @param surname příjmení
+     * @param givenName jméno
+     * @param currentUPN současně přidělené UPN
+     * @return pre-Windows 2000 login (sAMAccountName)
+     */
+    public static String createSAMloginFromUPNbase(String surname, String givenName, String currentUPN) {
+
+        Integer attempt = 0;
+
+        // odhadnutí čísla pokusu na základě UPN
+        String extractedNumber = currentUPN.replaceAll("\\D+","");
+        if (extractedNumber.length() >= 1) {
+            attempt = Integer.parseInt(extractedNumber);
+        }
+
+        return createSAMloginFromName(surname, givenName, attempt);
+    }
+
+    /**
      * Vytvoří počáteční heslo žáka na základě jeho příjmení, jména a čísla v třídním výkazu
      * ve formátu Pr.Jm.##
      *
