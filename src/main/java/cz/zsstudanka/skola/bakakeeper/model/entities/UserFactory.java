@@ -1,7 +1,5 @@
 package cz.zsstudanka.skola.bakakeeper.model.entities;
 
-import cz.zsstudanka.skola.bakakeeper.model.collections.SQLrecords;
-
 /**
  * Statická továrna na uživatelské účty.
  *
@@ -9,37 +7,28 @@ import cz.zsstudanka.skola.bakakeeper.model.collections.SQLrecords;
  */
 public class UserFactory {
 
-    public static Student getStudentByUPN(String upn) {
-        // TODO
-        return null;
-    }
-
-    public static Student getStudentByID(String studentID) {
-
-        SQLrecords catalog = new SQLrecords(null, null);
-
-        // TODO
-        return null;
-    }
-
-    public static Student getStudentByPair(String studentID, String upn) {
-        return null;
+    /**
+     * Získání instance žáka podle předaných interních dat.
+     *
+     * @param dataSQL data z evidence
+     * @param dataLDAP data z AD
+     * @return instance žáka
+     */
+    public static Student getStudentByPair(DataSQL dataSQL, DataLDAP dataLDAP) {
+        return new Student(dataSQL, dataLDAP);
     }
 
     /**
      * Vytvoření nového žáka v LDAP podle jeho interního kódu v Bakalářích.
      *
-     * @param studentID identifikátor INTERN_KOD v Bakalářích
+     * @param studentData data žáka z evidence
      * @return instance nového žáka
      */
-    public static Student newStudent(String studentID) {
+    public static Student newStudent(DataSQL studentData) {
+        Student create = new Student(studentData, null);
+        create.init();
 
-        // získání dat
-        // vytvoření účtu
-        // vytvoření instance studenta
-
-        // TODO
-        return null;
+        return create;
     }
 
 }
