@@ -107,7 +107,7 @@ public class BakaUtils {
      * @param givenName jméno
      * @param domain doména
      * @param attempt číslo pokusu
-     * @return
+     * @return UPN v zadaném pokusu
      */
     public static String createUPNfromName(String surname, String givenName, String domain, Integer attempt) {
 
@@ -148,7 +148,7 @@ public class BakaUtils {
      */
     public static String createSAMloginFromName(String surname, String givenName, Integer attempt) {
 
-        // maximální limit délky řetězce hodnoty atributu sAMAccountNate v AD
+        // maximální limit délky řetězce hodnoty atributu sAMAccountNate v AD - 20 znaků
         final int MAX_LIMIT = 20;
 
         String[] snParts = surname.replace("-", " ")

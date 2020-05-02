@@ -4,7 +4,6 @@ import com.microsoft.sqlserver.jdbc.SQLServerDataSource;
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
-
 import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.Oid;
@@ -68,8 +67,7 @@ public class BakaSQL {
 
             return rs;
         } catch (Exception e) {
-            e.printStackTrace(System.err);
-            // TODO
+            ReportManager.handleException("Nebylo možné provést SQL dotaz.", e);
         }
 
         return null;
