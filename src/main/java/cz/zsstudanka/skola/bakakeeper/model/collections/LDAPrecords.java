@@ -113,7 +113,7 @@ public class LDAPrecords implements IRecords {
         }
 
         // naplnění daty
-        Map<Integer, DataLDAP> info = BakaADAuthenticator.getInstance().getObjectInfo(
+        Map<Integer, Map<String, String>> info = BakaADAuthenticator.getInstance().getObjectInfo(
                 base,
                 ldapQ,
                 retAttributes
@@ -147,6 +147,10 @@ public class LDAPrecords implements IRecords {
      */
     public void addRecord(String key, DataLDAP data) {
         this.data.put(key, data);
+    }
+
+    public void addRecord(String key, Map<String, String> data) {
+        this.data.put(key, new DataLDAP(data));
     }
 
     /**
