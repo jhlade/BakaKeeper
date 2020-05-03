@@ -163,7 +163,9 @@ public class Student implements IRecordLDAP, IRecordSQL {
                 this.dataSQL.get(EBakaSQL.F_STU_BK_CLASSYEAR.basename())
                 + "," + Settings.getInstance().getLDAP_baseStudents();
 
-        String dn = "CN=" + cn + "," + targetOU;
+        // TODO - ověření unikátního DN + smyčka na generování nového DN
+        String dnUniq = "";
+        String dn = "CN=" + cn + dnUniq + "," + targetOU;
 
         DataLDAP newData = new DataLDAP();
         newData.put(EBakaLDAPAttributes.CN.attribute(), cn);
