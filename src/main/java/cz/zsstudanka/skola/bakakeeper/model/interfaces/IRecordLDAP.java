@@ -1,5 +1,7 @@
 package cz.zsstudanka.skola.bakakeeper.model.interfaces;
 
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
+
 /**
  * Interface záznamu v LDAP.
  *
@@ -13,6 +15,23 @@ public interface IRecordLDAP {
      * @return plné dn objektu
      */
     String getDN();
+
+    /**
+     * Získání hodnoty LDAP jednoduchého atributu.
+     *
+     * @param attr atribut
+     * @return hodnota atributu
+     */
+    String getLDAPdata(EBakaLDAPAttributes attr);
+
+    /**
+     * Okamžité nastavení jednoduchého LDAP atributu na zadanou hodnotu.
+     *
+     * @param attr cílový atribut
+     * @param value nová hodnota
+     * @return úspěch operace
+     */
+    Boolean setLDAPdata(EBakaLDAPAttributes attr, String value);
 
     /**
      * Získání současné hodnoty rozšířeného atributu č. attrNum.

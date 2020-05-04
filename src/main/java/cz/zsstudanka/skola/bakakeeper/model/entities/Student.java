@@ -231,12 +231,29 @@ public class Student implements IRecordLDAP, IRecordSQL {
     /**
      * Provedení kontroly a synchronizace dat z evidence do adresáře.
      *
-     * TODO
+     * TODO SQL -> LDAP
      * @param repair provést po kontrole opravy
      * @return výsledek synchronizace
      */
     public Boolean sync(Boolean repair) {
-        return null;
+
+        if (this.partial) {
+
+            if (Settings.getInstance().debugMode()) {
+                ReportManager.log(EBakaLogType.LOG_ERR_DEBUG, "Parciální účet žáka není možné kontrolovat.");
+            }
+
+            return null;
+        }
+
+        // id - párování
+
+        // příjmení
+        // jméno
+        // ročník
+        // třída
+
+        return true;
     }
 
     /**
@@ -344,6 +361,26 @@ public class Student implements IRecordLDAP, IRecordSQL {
     }
 
     @Override
+    public String getLDAPdata(EBakaLDAPAttributes attr) {
+
+        if (this.dataLDAP != null) {
+            return this.dataLDAP.get(attr.attribute()).toString();
+        }
+
+        return null;
+    }
+
+    @Override
+    public Boolean setLDAPdata(EBakaLDAPAttributes attr, String value) {
+
+        if (this.dataLDAP != null) {
+            return BakaADAuthenticator.getInstance().replaceAttribute(getDN(), attr, value);
+        }
+
+        return false;
+    }
+
+    @Override
     public String getExtensionAttribute(Integer attrNum) {
 
         // TODO
@@ -378,6 +415,16 @@ public class Student implements IRecordLDAP, IRecordSQL {
     @Override
     public String getInternalID() {
         return this.dataSQL.get(EBakaSQL.F_STU_ID.basename());
+    }
+
+    @Override
+    public String getSQLdata(EBakaSQL field) {
+
+        if (this.dataSQL != null) {
+            return this.dataSQL.get(field.basename());
+        }
+
+        return null;
     }
 
     @Override
