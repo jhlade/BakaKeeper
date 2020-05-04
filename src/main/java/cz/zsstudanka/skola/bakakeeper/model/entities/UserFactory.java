@@ -26,7 +26,7 @@ public class UserFactory {
      */
     public static Student newStudent(DataSQL studentData) {
         Student create = new Student(studentData, null);
-        create.init();
+        create.initializeAccount();
 
         return create;
     }
