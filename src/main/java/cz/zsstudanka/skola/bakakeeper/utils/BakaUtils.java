@@ -359,4 +359,30 @@ public class BakaUtils {
         return parseDN(dn)[2];
     }
 
+    /**
+     * Vytvoření následujícího číselného označení LDAP objektu
+     * na dvě místa.
+     *
+     * @param dn vstupní DN objektu
+     * @return DN následujícího objektu
+     */
+    public static String nextDN(String dn) {
+
+        // současné CN
+        String cn = parseCN(dn);
+
+        // extrakce současného označení
+        Integer currentNumber = 0;
+        String currentDigit = cn.replaceAll("\\D+","");
+        if (currentDigit.length() > 0) {
+            currentNumber = Integer.parseInt(currentDigit);
+        }
+
+        // přidání dalšího čísla v řadě
+        String nextCN = cn.replace(currentDigit, "") + ((currentNumber == 0) ? " " : "") + String.format("%02d", (currentNumber + 1));
+
+        // následující DN
+        return "CN=" + nextCN + "," + parseBase(dn);
+    }
+
 }

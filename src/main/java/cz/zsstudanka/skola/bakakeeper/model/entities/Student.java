@@ -24,6 +24,8 @@ import java.util.Date;
  */
 public class Student implements IRecordLDAP, IRecordSQL {
 
+    private static final int MAX_LIMIT = 10;
+
     private DataSQL dataSQL;
     private DataLDAP dataLDAP;
 
@@ -164,41 +166,31 @@ public class Student implements IRecordLDAP, IRecordSQL {
                 + "," + Settings.getInstance().getLDAP_baseStudents();
 
         // ověření unikátního DN + smyčka na generování nového DN
-        final int MAX_LIMIT = 10;
         int dnAttempt = 0;
         Boolean dnOccupied;
-        String cn;
-        String dn;
+
+        // počáteční název
+        String cn = this.dataSQL.get(EBakaSQL.F_STU_SURNAME.basename()) + " " + this.dataSQL.get(EBakaSQL.F_STU_GIVENNAME.basename());
+        String dn = "CN=" + cn + "," + targetOU;
 
         do {
             dnAttempt++;
 
-            String dnUniq;
-
-            if (dnAttempt == 1) {
-                dnUniq = "";
-            } else {
-                dnUniq = " " + String.format("%02d", dnAttempt - 1);
-            }
-
-            // "CN=Novák Adam 1"
-            cn = this.dataSQL.get(EBakaSQL.F_STU_SURNAME.basename())
-                    + " "
-                    + this.dataSQL.get(EBakaSQL.F_STU_GIVENNAME.basename())
-                    + dnUniq;
-            dn = "CN=" + cn + "," + targetOU;
-
             if (Settings.getInstance().debugMode()) {
-                ReportManager.log(EBakaLogType.LOG_LDAP, "Pokus č. " + dnAttempt + ": navrhuje se DN [" + dn + "].");
+                ReportManager.log(EBakaLogType.LOG_LDAP, "Pokus č. " + dnAttempt + ": navrhuje se nové DN [" + dn + "].");
             }
 
             dnOccupied = BakaADAuthenticator.getInstance().checkDN(dn);
 
             if (dnOccupied) {
                 if (Settings.getInstance().debugMode()) {
-                    ReportManager.log(EBakaLogType.LOG_LDAP, "Název je obsazen.");
+                    ReportManager.log(EBakaLogType.LOG_LDAP, "Název je obsazen. Bude vygenerován nový.");
                 }
+
+                dn = BakaUtils.nextDN(dn);
             }
+
+            cn = BakaUtils.parseCN(dn);
 
         } while (dnOccupied && dnAttempt <= MAX_LIMIT);
 
@@ -296,7 +288,7 @@ public class Student implements IRecordLDAP, IRecordSQL {
 
         // 3) přesunutí účtu do absolventské OU
         String newAlumniOU = "OU=" + formatter.format(new Date()) + "," + Settings.getInstance().getLDAP_baseAlumni();
-        result &= BakaADAuthenticator.getInstance().moveObject(this.getDN(), newAlumniOU, true);
+        result &= BakaADAuthenticator.getInstance().moveObject(this.getDN(), newAlumniOU, true, true);
 
         return result;
     }

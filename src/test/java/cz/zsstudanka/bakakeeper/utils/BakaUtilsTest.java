@@ -96,4 +96,11 @@ public class BakaUtilsTest {
         assertEquals("novak.adam37", BakaUtils.createSAMloginFromUPNbase("Novák", "Adam", "novak.adam37" + DOMAIN));
     }
 
+    @Test
+    public void nextDN() {
+        assertEquals("CN=Novák Adam 01,OU=Skupina,DC=skola,DC=local", BakaUtils.nextDN("CN=Novák Adam,OU=Skupina,DC=skola,DC=local"));
+        assertEquals("CN=Novák Adam 06,OU=Skupina,DC=skola,DC=local", BakaUtils.nextDN("CN=Novák Adam 05,OU=Skupina,DC=skola,DC=local"));
+        assertEquals("CN=Novák Adam 27,OU=Skupina,DC=skola,DC=local", BakaUtils.nextDN("CN=Novák Adam 26,OU=Skupina,DC=skola,DC=local"));
+    }
+
 }

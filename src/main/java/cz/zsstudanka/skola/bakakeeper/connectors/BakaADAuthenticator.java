@@ -22,6 +22,9 @@ import java.util.*;
  */
 public class BakaADAuthenticator {
 
+    /** maximální limit pro přejmenování objektu během přesunu */
+    private static int MOVE_LIMIT = 99;
+
     /** singleton připojení k AD */
     private static BakaADAuthenticator instance = null;
 
@@ -808,22 +811,49 @@ public class BakaADAuthenticator {
     }
 
     /**
-     * Přesune požadovaný objekt do dané organizační jednotky.
-     * Pokud je nastaveno <code>createNewOUifNotExists</code> a cílová OU neexituje,
-     * bude vytvořena. Výsledkem je ověření existence cílového objektu.
+     * Přesun objektu do požadované OU.
      *
-     * @param objectDN dn objektu
-     * @param ouName plná cesta cílové OU
-     * @param createNewOUifNotExists vytvořit OU, pokud neexistuje
+     * @param objectDN plné DN objektu
+     * @param ouName cílová OU
+     * @return úspěch operace
+     */
+    public Boolean moveObject(String objectDN, String ouName) {
+        return moveObject(objectDN, ouName, false, false);
+    }
+
+    /**
+     * Přesun objektu do požadované OU. Pokud cílová OU neexistuje a je
+     * nastaveno <code>createNewOUifNotExists</code>, bude vytvořena.
+     *
+     * @param objectDN plné DN objektu
+     * @param ouName cílová OU
+     * @param createNewOUifNotExists vytvořit novou OU, pokud neexistuje
      * @return úspěch operace
      */
     public Boolean moveObject(String objectDN, String ouName, Boolean createNewOUifNotExists) {
+        return moveObject(objectDN, ouName, createNewOUifNotExists, false);
+    }
+
+    /**
+     * Přesun objektu do požadované organizační jednotky.
+     * Pokud je nastaveno <code>createNewOUifNotExists</code> a cílová OU neexituje,
+     * bude vytvořena.
+     * Pokud je nastaveno <code>renameObject</code>, objekt bude bude v případě neúspěchu
+     * přejmenován.
+     *
+     * @param objectDN plné DN objektu
+     * @param ouName plná cesta cílové OU
+     * @param createNewOUifNotExists vytvořit cílovou OU, pokud neexistuje
+     * @param renameObject přejmenovat přesunovaný objekt, pokud v cíli již jiný objekt s požadovaným názvem existuje
+     * @return úspěch operace
+     */
+    public Boolean moveObject(String objectDN, String ouName, Boolean createNewOUifNotExists, Boolean renameObject) {
 
         // kontrola existence cílové ou
         if (!createNewOUifNotExists && checkOU(ouName) == -1) {
 
             if (Settings.getInstance().beVerbose()) {
-                ReportManager.log(EBakaLogType.LOG_ERR, "Cílová organizační jednotka pro přesun neexistuje.");
+                ReportManager.log(EBakaLogType.LOG_ERR, "Cílová organizační jednotka pro přesun objektu neexistuje.");
             }
 
             if (Settings.getInstance().debugMode()) {
@@ -838,9 +868,9 @@ public class BakaADAuthenticator {
         String newObjectDN = "CN=" + objCN + "," + ouName;
 
         // prvotní kontrola existence cílového objektu
-        if (checkDN(newObjectDN)) {
+        if (checkDN(newObjectDN) && !renameObject) {
             if (Settings.getInstance().beVerbose()) {
-                ReportManager.log(EBakaLogType.LOG_ERR, "Cílový název objektu již existuje.");
+                ReportManager.log(EBakaLogType.LOG_ERR, "Cílový název objektu již existuje, přesun nebude proveden.");
             }
 
             if (Settings.getInstance().debugMode()) {
@@ -848,6 +878,32 @@ public class BakaADAuthenticator {
             }
 
             return false;
+        }
+
+        int moveAttempt = 0;
+        Boolean dnOccupied;
+
+        do {
+            dnOccupied = checkDN(newObjectDN);
+            moveAttempt ++;
+
+            if (dnOccupied) {
+
+                if (Settings.getInstance().beVerbose()) {
+                    ReportManager.log("Název přesunovaného objektu v cíli již exituje, bude vygenerován nový.");
+                }
+
+                newObjectDN = BakaUtils.nextDN(newObjectDN);
+
+                if (Settings.getInstance().debugMode()) {
+                    ReportManager.log(EBakaLogType.LOG_LDAP, "Byl vygenerován nový název [" + newObjectDN + "].");
+                }
+            }
+
+        } while (dnOccupied && moveAttempt <= MOVE_LIMIT);
+
+        if (moveAttempt >= MOVE_LIMIT) {
+            ReportManager.log(EBakaLogType.LOG_ERR, "Byl překročen maximální limit pro přejmenování LDAP objektu.");
         }
 
         // vytvoření nové organziační jednotky
