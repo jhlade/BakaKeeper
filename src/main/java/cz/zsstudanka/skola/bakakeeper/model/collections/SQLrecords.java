@@ -522,6 +522,6 @@ public class SQLrecords implements IRecords {
 
     @Override
     public void resetIterator() {
-        this.dataIterator = null;
+        this.iterator = null;
     }
 }
