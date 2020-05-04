@@ -113,12 +113,14 @@ public class Student implements IRecordLDAP, IRecordSQL {
             return false;
         }
 
+        Boolean result = true;
+
         String newClassOU = "OU=Trida-" + letter.toUpperCase() + ",OU=Rocnik-" + year + "," + Settings.getInstance().getLDAP_baseStudents();
         String newClassSGdn = "CN=Zaci-Trida-" + year + letter.toUpperCase() + "," + Settings.getInstance().getLDAP_baseStudentGroups();
         String newTitle = year + "." + letter.toUpperCase();
 
         // přesun do OU
-        BakaADAuthenticator.getInstance().moveObject(this.getDN(), newClassOU, false);
+        result &= BakaADAuthenticator.getInstance().moveObject(this.getDN(), newClassOU, false);
 
         // změna bezpečnostní skupiny žáka
         // odebrání ze všech skupin
@@ -130,10 +132,9 @@ public class Student implements IRecordLDAP, IRecordSQL {
         BakaADAuthenticator.getInstance().addObjectToGroup(this.getDN(), newClassSGdn);
 
         // změna pracovního zařazení
-        BakaADAuthenticator.getInstance().replaceAttribute(this.getDN(), EBakaLDAPAttributes.TITLE, newTitle);
+        result &= BakaADAuthenticator.getInstance().replaceAttribute(this.getDN(), EBakaLDAPAttributes.TITLE, newTitle);
 
-        // TODO - ověření výsledku
-        return true;
+        return result;
     }
 
     /**
@@ -295,7 +296,7 @@ public class Student implements IRecordLDAP, IRecordSQL {
 
         // 3) přesunutí účtu do absolventské OU
         String newAlumniOU = "OU=" + formatter.format(new Date()) + "," + Settings.getInstance().getLDAP_baseAlumni();
-        BakaADAuthenticator.getInstance().moveObject(this.getDN(), newAlumniOU, true);
+        result &= BakaADAuthenticator.getInstance().moveObject(this.getDN(), newAlumniOU, true);
 
         return result;
     }

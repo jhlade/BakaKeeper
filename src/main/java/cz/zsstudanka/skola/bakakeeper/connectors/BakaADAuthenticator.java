@@ -810,13 +810,14 @@ public class BakaADAuthenticator {
     /**
      * Přesune požadovaný objekt do dané organizační jednotky.
      * Pokud je nastaveno <code>createNewOUifNotExists</code> a cílová OU neexituje,
-     * bude vytvořena.
+     * bude vytvořena. Výsledkem je ověření existence cílového objektu.
      *
      * @param objectDN dn objektu
      * @param ouName plná cesta cílové OU
      * @param createNewOUifNotExists vytvořit OU, pokud neexistuje
+     * @return úspěch operace
      */
-    public void moveObject(String objectDN, String ouName, Boolean createNewOUifNotExists) {
+    public Boolean moveObject(String objectDN, String ouName, Boolean createNewOUifNotExists) {
 
         // kontrola existence cílové ou
         if (!createNewOUifNotExists && checkOU(ouName) == -1) {
@@ -829,7 +830,24 @@ public class BakaADAuthenticator {
                 ReportManager.log(EBakaLogType.LOG_ERR_DEBUG, "Nebylo možné přesunout objekt [" + objectDN + "] do umístění [" + ouName + "].");
             }
 
-            return;
+            return false;
+        }
+
+        // nový název objektu
+        String objCN = BakaUtils.parseCN(objectDN);
+        String newObjectDN = "CN=" + objCN + "," + ouName;
+
+        // prvotní kontrola existence cílového objektu
+        if (checkDN(newObjectDN)) {
+            if (Settings.getInstance().beVerbose()) {
+                ReportManager.log(EBakaLogType.LOG_ERR, "Cílový název objektu již existuje.");
+            }
+
+            if (Settings.getInstance().debugMode()) {
+                ReportManager.log(EBakaLogType.LOG_ERR_DEBUG, "Nebylo možné přesunout objekt [" + objectDN + "] do umístění [" + ouName + "].");
+            }
+
+            return false;
         }
 
         // vytvoření nové organziační jednotky
@@ -842,10 +860,6 @@ public class BakaADAuthenticator {
             this.createOU(cn, base);
         }
 
-        // změna názvu
-        String objCN = BakaUtils.parseCN(objectDN);
-        String newObjectDN = "CN=" + objCN + "," + ouName;
-
         // kontext
         LdapContext ctxOM = null;
 
@@ -856,6 +870,9 @@ public class BakaADAuthenticator {
         } catch (Exception e) {
             ReportManager.handleException("Nebylo možné přesunout objekt.", e);
         }
+
+        // kontrola existence objektu po přesunutí
+        return checkDN(newObjectDN);
     }
 
     /**
