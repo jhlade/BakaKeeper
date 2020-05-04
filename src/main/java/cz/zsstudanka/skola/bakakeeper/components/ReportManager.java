@@ -79,8 +79,13 @@ public class ReportManager {
             String timestamp = formatter.format(new Date());
 
             StringBuilder logBuilder = new StringBuilder();
-            logBuilder.append(timestamp);
-            logBuilder.append(" ");
+
+            // výjimka umístění razítka
+            if (message.length() > 1) {
+                logBuilder.append(timestamp);
+                logBuilder.append(" ");
+            }
+
             logBuilder.append(messageBuilder.toString());
 
             try {
@@ -228,7 +233,11 @@ public class ReportManager {
         }
     }
 
-    // TODO
+    /**
+     * TODO
+     *
+     * @param attachLogfile
+     */
     public void report(Boolean attachLogfile) {
 
         // prázný seznam událostí
@@ -267,13 +276,17 @@ public class ReportManager {
         [1.B] č.  5, Sovák Padam - padam.sovak - So.Pa.05
         [9.C] č. 29, Kociáš Vojtěch - kocias.vojtech - Ko.Vo.29
 
-        U následujících žáků nebyl nalezen platný kontakt na zákonné zástupce:
+        U následujících žáků nebyl v evidenci nalezen platný kontakt na zákonné zástupce:
         [1.B] č. 4, Novák Adam
         * */
 
         // TODO log
+
         // odeslání zprávy
-        BakaMailer.getInstance().mail("Předmět ?", report.toString());
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Date date = new Date();
+
+        BakaMailer.getInstance().mail("Hlášení z " + formatter.format(date), report.toString());
     }
 
     // TODO
