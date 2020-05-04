@@ -295,6 +295,17 @@ public class BakaUtils {
     }
 
     /**
+     * Textový řetězec označení třídy ve formátu X.Y na základě DN, které musí
+     * obsahovat odpovídající OU.
+     *
+     * @param dn plné DN žáka
+     * @return řetězec označení třídy
+     */
+    public static String classStringFromDN(String dn) {
+        return classYearFromDn(dn).toString() + "." + classLetterFromDn(dn);
+    }
+
+    /**
      * Zpracování DN do částí základního jména, názvu nejbližší organizační jendotky
      * a celé bázové cesty.
      *

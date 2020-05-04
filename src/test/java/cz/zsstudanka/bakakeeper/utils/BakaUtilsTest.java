@@ -103,4 +103,8 @@ public class BakaUtilsTest {
         assertEquals("CN=Novák Adam 27,OU=Skupina,DC=skola,DC=local", BakaUtils.nextDN("CN=Novák Adam 26,OU=Skupina,DC=skola,DC=local"));
     }
 
+    @Test
+    public void classStringFromDN() {
+        assertEquals("1.A", BakaUtils.classStringFromDN("CN=Malý Vojta,OU=Trida-A,OU=Rocnik-1,OU=Zaci,OU=Skola,DC=skola,DC=local"));
+    }
 }
