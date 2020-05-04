@@ -52,6 +52,15 @@ public class Student implements IRecordLDAP, IRecordSQL {
     }
 
     /**
+     * Ověření plnohodnotného záznamu.
+     *
+     * @return záznam není parciální
+     */
+    public Boolean isValid() {
+        return !this.partial;
+    }
+
+    /**
      * Resetování žákovského hesla do původního tvaru
      * Pr.Jm.##
      *
@@ -137,6 +146,17 @@ public class Student implements IRecordLDAP, IRecordSQL {
         result &= BakaADAuthenticator.getInstance().replaceAttribute(this.getDN(), EBakaLDAPAttributes.TITLE, newTitle);
 
         return result;
+    }
+
+    /**
+     * Zjednodušená metoda pro práci s řetězcovým označením cílové třídy.
+     *
+     * @param classYear ročník
+     * @param classLetter písmeno třídy
+     * @return výsledek operace
+     */
+    public Boolean moveToClass(String classYear, String classLetter) {
+        return moveToClass(Integer.parseInt(classLetter), classLetter);
     }
 
     /**
@@ -231,7 +251,6 @@ public class Student implements IRecordLDAP, IRecordSQL {
     /**
      * Provedení kontroly a synchronizace dat z evidence do adresáře.
      *
-     * TODO SQL -> LDAP
      * @param repair provést po kontrole opravy
      * @return výsledek synchronizace
      */
@@ -246,14 +265,112 @@ public class Student implements IRecordLDAP, IRecordSQL {
             return null;
         }
 
-        // id - párování
+        Boolean result = true;
+
+        if (Settings.getInstance().beVerbose()) {
+            ReportManager.log(EBakaLogType.LOG_INFO, "Probíhá kontrola údajů žáka ("+ getSQLdata(EBakaSQL.F_STU_CLASS) +") "+ getSQLdata(EBakaSQL.F_STU_SURNAME) + " " + getSQLdata(EBakaSQL.F_STU_GIVENNAME) + ".");
+        }
 
         // příjmení
-        // jméno
-        // ročník
-        // třída
+        if (Settings.getInstance().beVerbose()) {
+            ReportManager.logWait(EBakaLogType.LOG_TEST, "Příjmení žáka");
+        }
+        if (getLDAPdata(EBakaLDAPAttributes.NAME_LAST).equals(getSQLdata(EBakaSQL.F_STU_SURNAME))) {
 
-        return true;
+            if (Settings.getInstance().beVerbose()) {
+                ReportManager.logResult(EBakaLogType.LOG_OK);
+            }
+
+        } else {
+
+            if (Settings.getInstance().beVerbose()) {
+                ReportManager.logResult(EBakaLogType.LOG_ERR_VERBOSE);
+            }
+
+            if (Settings.getInstance().debugMode()) {
+                ReportManager.log(EBakaLogType.LOG_ERR_DEBUG, "Očekáváno [" + getSQLdata(EBakaSQL.F_STU_SURNAME) + "], získaná hodnota [" + getLDAPdata(EBakaLDAPAttributes.NAME_LAST) + "].");
+            }
+
+            if (repair) {
+
+                if (Settings.getInstance().beVerbose()) {
+                    ReportManager.log(EBakaLogType.LOG_INFO, "Proběhne pokus o opravu příjmení.");
+                }
+
+                result &= setLDAPdata(EBakaLDAPAttributes.NAME_LAST, getSQLdata(EBakaSQL.F_STU_SURNAME));
+                result &= setLDAPdata(EBakaLDAPAttributes.NAME_DISPLAY, getSQLdata(EBakaSQL.F_STU_SURNAME) + " " + getSQLdata(EBakaSQL.F_STU_GIVENNAME));
+            } else {
+                result = false;
+            }
+        }
+
+        // jméno
+        if (Settings.getInstance().beVerbose()) {
+            ReportManager.logWait(EBakaLogType.LOG_TEST, "Jméno žáka");
+        }
+        if (getLDAPdata(EBakaLDAPAttributes.NAME_FIRST).equals(getSQLdata(EBakaSQL.F_STU_GIVENNAME))) {
+
+            if (Settings.getInstance().beVerbose()) {
+                ReportManager.logResult(EBakaLogType.LOG_OK);
+            }
+
+        } else {
+
+            if (Settings.getInstance().beVerbose()) {
+                ReportManager.logResult(EBakaLogType.LOG_ERR_VERBOSE);
+            }
+
+            if (Settings.getInstance().debugMode()) {
+                ReportManager.log(EBakaLogType.LOG_ERR_DEBUG, "Očekáváno [" + getSQLdata(EBakaSQL.F_STU_GIVENNAME) + "], získaná hodnota [" + getLDAPdata(EBakaLDAPAttributes.NAME_FIRST) + "].");
+            }
+
+            if (repair) {
+
+                if (Settings.getInstance().beVerbose()) {
+                    ReportManager.log(EBakaLogType.LOG_INFO, "Proběhne pokus o opravu jména.");
+                }
+
+                result &= setLDAPdata(EBakaLDAPAttributes.NAME_FIRST, getSQLdata(EBakaSQL.F_STU_GIVENNAME));
+                result &= setLDAPdata(EBakaLDAPAttributes.NAME_DISPLAY, getSQLdata(EBakaSQL.F_STU_SURNAME) + " " + getSQLdata(EBakaSQL.F_STU_GIVENNAME));
+            } else {
+                result = false;
+            }
+        }
+
+        // ročník + třída
+        if (Settings.getInstance().beVerbose()) {
+            ReportManager.logWait(EBakaLogType.LOG_TEST, "Třída žáka");
+        }
+        if (BakaUtils.classStringFromDN(getDN()).equals(getSQLdata(EBakaSQL.F_STU_CLASS))) {
+
+            if (Settings.getInstance().beVerbose()) {
+                ReportManager.logResult(EBakaLogType.LOG_OK);
+            }
+
+        } else {
+
+            if (Settings.getInstance().beVerbose()) {
+                ReportManager.logResult(EBakaLogType.LOG_ERR_VERBOSE);
+            }
+
+            if (Settings.getInstance().debugMode()) {
+                ReportManager.log(EBakaLogType.LOG_ERR_DEBUG, "Očekáváno [" + getSQLdata(EBakaSQL.F_STU_CLASS) + "], získaná hodnota [" + BakaUtils.classStringFromDN(getDN()) + "].");
+            }
+
+            if (repair) {
+
+                if (Settings.getInstance().beVerbose()) {
+                    ReportManager.log(EBakaLogType.LOG_INFO, "Proběhne pokus o opravu zařazení do třídy.");
+                }
+
+                result &= moveToClass(getSQLdata(EBakaSQL.F_STU_BK_CLASSYEAR), getSQLdata(EBakaSQL.F_STU_BK_CLASSLETTER));
+            } else {
+                result = false;
+            }
+
+        }
+
+        return result;
     }
 
     /**
@@ -263,6 +380,20 @@ public class Student implements IRecordLDAP, IRecordSQL {
      */
     public Boolean check() {
         return sync(false);
+    }
+
+    /**
+     * TODO podrobný audit
+     * - párování
+     * - skupiny
+     * - UAC
+     * - přihlášení
+     * - mail + proxy
+     * - vždy odeslat report
+     * @return
+     */
+    public Boolean audit() {
+        return null;
     }
 
     /**

@@ -21,6 +21,7 @@ import java.util.Map;
  * + Skupiny
  *   + Distribucni (vytvořeno dodatečně na ZŠ Pardubice - Studánka)
  *   + Uzivatele
+ *     + CN=Skupina-Zaci
  *   + Zaci
  * + Uzivatele
  *   + Zaci

@@ -651,6 +651,32 @@ public class Sync {
     public void checkData(boolean repair) {
         reset();
 
+        while (this.catalog.iterator().hasNext()) {
+
+            String studentID = this.catalog.iterator().next();
+
+            // získání páru
+            Student student = RecordFactory.getStudentByPair(
+                    this.catalog.get(studentID),
+                    this.directory.get(this.catalog.get(studentID).get(EBakaSQL.F_STU_MAIL.basename()))
+            );
+
+            if (student.isValid()) {
+                Boolean test = student.check(); // TODO
+
+                if (!test) {
+                    ReportManager.log(EBakaLogType.LOG_ERR, "Některé údaje žáka (" +
+                            this.catalog.get(studentID).get(EBakaSQL.F_STU_CLASS.basename()) +
+                            ") " +
+                            this.catalog.get(studentID).get(EBakaSQL.F_STU_SURNAME.basename()) +
+                            " " +
+                            this.catalog.get(studentID).get(EBakaSQL.F_STU_GIVENNAME.basename()) +
+                            " se liší od záznamu v evidenci."
+                            );
+                }
+            }
+
+        }
     }
 
     /**

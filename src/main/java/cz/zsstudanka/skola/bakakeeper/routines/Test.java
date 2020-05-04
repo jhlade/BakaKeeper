@@ -27,6 +27,7 @@ public class Test {
         System.out.println("====== [ TEST ] ======");
 
         // logování a reportování
+        /*
         if (true) {
             ReportManager.log("Všechno ok.");
         } else {
@@ -40,13 +41,14 @@ public class Test {
             Integer výsledek = dělenec / dělitel;
         } catch (Exception e) {
             ReportManager.printStackTrace(e);
-        }
+        }*/
 
         // 2020-04-27
         Sync testSync = new Sync();
-        testSync.devel();
+
         //testSync.actionInit(true);
-        testSync.actionCheck();
+        //testSync.actionCheck(true);
+        testSync.checkData(false);
 
         // odeslání výsledku
         ReportManager.getInstance().report();
@@ -88,10 +90,10 @@ public class Test {
         třídní.put("6.A", "Kárská Jitka");
         třídní.put("6.B", "Jílková Ilona");
         třídní.put("6.C", "Kovářová Lucie");
-        třídní.put("8.A", "Fantová Monika");
+        třídní.put("8.A", "Fantová Monika"); // 2020-05-03 původní mail nedorazil // monika.fantova
         třídní.put("7.B", "Smotlachová Petra");
         třídní.put("8.B", "Zářecký Tomáš");
-        třídní.put("9.A", "Neledlá Ivana");
+        třídní.put("9.A", "Nejedlá Ivana"); // 2020-05-03 původní mail nedorazil - překlep
         třídní.put("7.C", "Vilímová Iva");
         třídní.put("9.C", "Beranová Karla");
         třídní.put("7.A", "Antlová Petra");

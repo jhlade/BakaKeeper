@@ -13,7 +13,7 @@ public enum EBakaEvents {
     DIRECTORY_NEW_USER("Byly vytvořeny nové uživatelské účty"),
     DIRECTORY_NEW_CONTACT("Byly zapsány nové kontakty"),
     DIRECTORY_USER_REMOVE("Byly odstraněny neplatné uživatelské účty"),
-    DIRECTORY_CONTACT_REMOVE("Byly odstraněny nepotřebné kontakty"),
+    DIRECTORY_CONTACT_REMOVE("Z adresáře byly odstraněny nepotřebné kontakty"),
     RECORD_PAIRED("Bylo provedeno párování záznamů"),
     CHANGE_PRIMARY("Byla provedena změna primárních údajů"),
     CHANGE_SECONDARY("Byla provedena změna sekundárních údajů"),
