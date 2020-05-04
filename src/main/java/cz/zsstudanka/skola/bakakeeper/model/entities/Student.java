@@ -156,20 +156,59 @@ public class Student implements IRecordLDAP, IRecordSQL {
         }
 
         // základní údaje
-        String cn = this.dataSQL.get(EBakaSQL.F_STU_SURNAME.basename()) + " " + this.dataSQL.get(EBakaSQL.F_STU_GIVENNAME.basename());
         String targetOU = "OU=Trida-" +
                 this.dataSQL.get(EBakaSQL.F_STU_BK_CLASSLETTER.basename())
                 + ",OU=Rocnik-" +
                 this.dataSQL.get(EBakaSQL.F_STU_BK_CLASSYEAR.basename())
                 + "," + Settings.getInstance().getLDAP_baseStudents();
 
-        // TODO - ověření unikátního DN + smyčka na generování nového DN
-        String dnUniq = "";
-        String dn = "CN=" + cn + dnUniq + "," + targetOU;
+        // ověření unikátního DN + smyčka na generování nového DN
+        final int MAX_LIMIT = 10;
+        int dnAttempt = 0;
+        Boolean dnOccupied;
+        String cn;
+        String dn;
+
+        do {
+            dnAttempt++;
+
+            String dnUniq;
+
+            if (dnAttempt == 1) {
+                dnUniq = "";
+            } else {
+                dnUniq = " " + String.format("%02d", dnAttempt - 1);
+            }
+
+            // "CN=Novák Adam 1"
+            cn = this.dataSQL.get(EBakaSQL.F_STU_SURNAME.basename())
+                    + " "
+                    + this.dataSQL.get(EBakaSQL.F_STU_GIVENNAME.basename())
+                    + dnUniq;
+            dn = "CN=" + cn + "," + targetOU;
+
+            if (Settings.getInstance().debugMode()) {
+                ReportManager.log(EBakaLogType.LOG_LDAP, "Pokus č. " + dnAttempt + ": navrhuje se DN [" + dn + "].");
+            }
+
+            dnOccupied = BakaADAuthenticator.getInstance().checkDN(dn);
+
+            if (dnOccupied) {
+                if (Settings.getInstance().debugMode()) {
+                    ReportManager.log(EBakaLogType.LOG_LDAP, "Název je obsazen.");
+                }
+            }
+
+        } while (dnOccupied && dnAttempt <= MAX_LIMIT);
+
+        // překročení limitu
+        if (dnAttempt >= MAX_LIMIT) {
+            ReportManager.log(EBakaLogType.LOG_ERR, "Došlo k závažné chybě - byl překročen maximální limit návrhů nového unikátního jména v adresáři.");
+        }
 
         DataLDAP newData = new DataLDAP();
         newData.put(EBakaLDAPAttributes.CN.attribute(), cn);
-        newData.put(EBakaLDAPAttributes.NAME_DISPLAY.attribute(), cn);
+        newData.put(EBakaLDAPAttributes.NAME_DISPLAY.attribute(), this.dataSQL.get(EBakaSQL.F_STU_SURNAME.basename()) + " " + this.dataSQL.get(EBakaSQL.F_STU_GIVENNAME.basename()));
         newData.put(EBakaLDAPAttributes.NAME_LAST.attribute(), this.dataSQL.get(EBakaSQL.F_STU_SURNAME.basename()));
         newData.put(EBakaLDAPAttributes.NAME_FIRST.attribute(), this.dataSQL.get(EBakaSQL.F_STU_GIVENNAME.basename()));
         newData.put(EBakaLDAPAttributes.EXT01.attribute(), this.dataSQL.get(EBakaSQL.F_STU_ID.basename()));
@@ -194,8 +233,6 @@ public class Student implements IRecordLDAP, IRecordSQL {
         String classSCdn = "CN=Zaci-Trida-" + this.dataSQL.get(EBakaSQL.F_STU_CLASS.basename()).replace(".", "") + "," + Settings.getInstance().getLDAP_baseStudentGroups();
         BakaADAuthenticator.getInstance().addObjectToGroup(dn, baseGRdn);
         BakaADAuthenticator.getInstance().addObjectToGroup(dn, classSCdn);
-
-        // TODO doplnění LDAP dat
     }
 
     /**

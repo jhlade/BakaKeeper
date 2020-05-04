@@ -250,10 +250,7 @@ public class BakaADAuthenticator {
             }
 
         } catch (NamingException e) {
-
-            if (Settings.getInstance().debugMode()) {
-                ReportManager.handleException("Došlo k závažné chybě při práci s kontextem Active Directory.", e);
-            }
+            ReportManager.handleException("Hledaný objekt nebylo možné nalézt.", e);
 
             // prázdný výsledek - objekt nenalezen
             return null;
@@ -402,6 +399,36 @@ public class BakaADAuthenticator {
         Map<Integer, Map> result = getObjectInfo(OU, ldapQ, retAttributes);
 
         return (result == null) ? -1 : result.size();
+    }
+
+    /**
+     * Ověření existence daného DN.
+     *
+     * @param dn plné DN testovaného objektu
+     * @return existence objektu
+     */
+    public Boolean checkDN(String dn) {
+
+        // dotaz
+        String cn = BakaUtils.parseCN(dn);
+        String ou = BakaUtils.parseBase(dn);
+
+        HashMap<String, String> ldapQ = new HashMap<String, String>();
+        ldapQ.put(EBakaLDAPAttributes.CN.attribute(), cn);
+
+        // atributy
+        String[] retAttributes = {
+                EBakaLDAPAttributes.DN.attribute(),
+        };
+
+        // výsledek
+        Map result = getObjectInfo(ou, ldapQ, retAttributes);
+
+        if (result == null) {
+            return false;
+        }
+
+        return (result.size() >= 1) ? true : false;
     }
 
     /**
