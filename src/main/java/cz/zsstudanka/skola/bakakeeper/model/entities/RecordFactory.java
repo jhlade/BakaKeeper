@@ -1,11 +1,11 @@
 package cz.zsstudanka.skola.bakakeeper.model.entities;
 
 /**
- * Statická továrna na uživatelské účty.
+ * Statická továrna na záznamy.
  *
  * @author Jan Hladěna
  */
-public class UserFactory {
+public class RecordFactory {
 
     /**
      * Získání instance žáka podle předaných interních dat.
