@@ -15,8 +15,9 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
- * Žák. Je reprezentován jako aktivní žák v evidenci a jako LDAP záznam uživatele (512)
- * v aktivních OU. Je členem základní skupiny žáků a členem skupiny konkrétní třídy.
+ * Model žáka. Žák je reprezentován jako aktivní žák v evidenci a jako LDAP záznam uživatele
+ * v aktivních OU. Je vždy členem základní skupiny žáků a dále členem beżpečnostní skupiny
+ * konkrétní třídy.
  *
  * implements IRecordLDAP, IRecordSQL
  *
@@ -24,12 +25,14 @@ import java.util.Date;
  */
 public class Student implements IRecordLDAP, IRecordSQL {
 
+    /** maximální počet pokusů o vytvoření nového účtu */
     private static final int MAX_LIMIT = 10;
+
+    /** záznam je pouze částečný */
+    private Boolean partial = false;
 
     private DataSQL dataSQL;
     private DataLDAP dataLDAP;
-
-    private Boolean partial = false;
 
     /**
      * Konstruktor z páru hrubých SQL a LDAP dat.
@@ -57,18 +60,15 @@ public class Student implements IRecordLDAP, IRecordSQL {
     public Boolean resetPassword() {
 
         // neplatný účet
-        if (this.partial) {
+        if (this.partial || this.dataLDAP == null) {
             return false;
         }
 
-        // nové heslo = Pr.Jm.##
-        String newPassword = BakaUtils.removeAccents(this.dataSQL.get(EBakaSQL.F_GUA_SURNAME.basename())
-                .substring(0, 2))
-                + "."
-                + BakaUtils.removeAccents(this.dataSQL.get(EBakaSQL.F_GUA_GIVENNAME.basename())
-                .substring(0, 2))
-                + "."
-                + String.format("%2d", Integer.parseInt(this.dataSQL.get(EBakaSQL.F_STU_CLASS_ID.basename())));
+        String newPassword = BakaUtils.createInitialPassword(
+                this.dataSQL.get(EBakaSQL.F_GUA_SURNAME.basename()),
+                this.dataSQL.get(EBakaSQL.F_GUA_GIVENNAME.basename()),
+                Integer.parseInt(this.dataSQL.get(EBakaSQL.F_STU_CLASS_ID.basename()))
+                );
 
         return setPassword(newPassword, true);
     }
@@ -143,7 +143,7 @@ public class Student implements IRecordLDAP, IRecordSQL {
      * Vytvoření nového LDAP účtu z dat získaných z evidence.
      *
      */
-    protected void init() {
+    protected void initializeAccount() {
 
         // pouze parciální data
         if (!this.partial || this.dataLDAP != null) {
@@ -320,7 +320,7 @@ public class Student implements IRecordLDAP, IRecordSQL {
     }
 
     /**
-     * Třída žáka
+     * Třída žáka ve tvaru X.Y
      *
      * @return třída žáka
      */
@@ -343,9 +343,13 @@ public class Student implements IRecordLDAP, IRecordSQL {
         return this.dataLDAP.get(EBakaLDAPAttributes.DN.attribute()).toString();
     }
 
-    // TODO
     @Override
     public String getExtensionAttribute(Integer attrNum) {
+
+        // TODO
+        if (attrNum != 1) {
+            return null;
+        }
 
         if (this.partial) {
             if (this.dataLDAP == null) {
@@ -356,15 +360,19 @@ public class Student implements IRecordLDAP, IRecordSQL {
         return this.dataLDAP.get(EBakaLDAPAttributes.EXT01.attribute()).toString();
     }
 
-    // TODO
     @Override
     public Boolean setExtensionAttribute(Integer attrNum, String value) {
 
-        if (this.partial) {
-            return null;
+        if (this.partial || this.dataLDAP == null) {
+            return false;
         }
 
-        return null;
+        // TODO
+        if (attrNum != 1) {
+            return false;
+        }
+
+        return BakaADAuthenticator.getInstance().replaceAttribute(this.getDN(), EBakaLDAPAttributes.EXT01, value);
     }
 
     @Override
