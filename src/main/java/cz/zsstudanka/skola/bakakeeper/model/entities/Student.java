@@ -156,7 +156,7 @@ public class Student implements IRecordLDAP, IRecordSQL {
      * @return výsledek operace
      */
     public Boolean moveToClass(String classYear, String classLetter) {
-        return moveToClass(Integer.parseInt(classLetter), classLetter);
+        return moveToClass(Integer.parseInt(classYear), classLetter);
     }
 
     /**
