@@ -110,12 +110,13 @@ public class Student implements IRecordLDAP, IRecordSQL {
 
     /**
      * Přesunutí aktivního žáka do jiné třídy. Přesune fyzicky objekt definovaný
-     * dn do požadované OU, nastaví požadované člensktví ve skupinách
-     * a změní atribut "title" na {X}.{Y}.
+     * dn do požadované OU, nastaví požadované členství ve skupinách zabezpečení
+     * a změní atribut pracovního zařazení ("title") na označení třídy
+     * ve tvaru {X}.{Y}.
      *
      * @param year ročník, očekává se číslo 1-9
      * @param letter písmeno třídy, očekává se A-E
-     * @return
+     * @return úspěch operace
      */
     public Boolean moveToClass(Integer year, String letter) {
 
@@ -130,9 +131,6 @@ public class Student implements IRecordLDAP, IRecordSQL {
         String newClassSGdn = "CN=Zaci-Trida-" + year + letter.toUpperCase() + "," + Settings.getInstance().getLDAP_baseStudentGroups();
         String newTitle = year + "." + letter.toUpperCase();
 
-        // přesun do OU
-        result &= BakaADAuthenticator.getInstance().moveObject(this.getDN(), newClassOU, false);
-
         // změna bezpečnostní skupiny žáka
         // odebrání ze všech skupin
         BakaADAuthenticator.getInstance().removeObjectFromAllGroups(this.getDN());
@@ -144,6 +142,9 @@ public class Student implements IRecordLDAP, IRecordSQL {
 
         // změna pracovního zařazení
         result &= BakaADAuthenticator.getInstance().replaceAttribute(this.getDN(), EBakaLDAPAttributes.TITLE, newTitle);
+
+        // konečný přesun do OU
+        result &= BakaADAuthenticator.getInstance().moveObject(this.getDN(), newClassOU, false);
 
         return result;
     }
@@ -157,6 +158,17 @@ public class Student implements IRecordLDAP, IRecordSQL {
      */
     public Boolean moveToClass(String classYear, String classLetter) {
         return moveToClass(Integer.parseInt(classYear), classLetter);
+    }
+
+    /**
+     * Zjednodušená metoda pro práci s řetězcovým literálem cílové třídy.
+     * Neprovádí se kontrola vstupu.
+     *
+     * @param newClass označení třídy ve tvaru #.Y, např. "1.A"
+     * @return výsledek operace
+     */
+    public Boolean moveToClass(String newClass) {
+        return moveToClass(newClass.split(".")[0], newClass.split(".")[1]);
     }
 
     /**
