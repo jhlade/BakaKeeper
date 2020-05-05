@@ -86,7 +86,7 @@ public class Sync {
         rowData.put(EBakaSQL.F_STU_BK_CLASSLETTER.basename(), třída);
         rowData.put(EBakaSQL.F_STU_BK_CLASSYEAR.basename(), ročník);
         rowData.put(EBakaSQL.F_STU_GIVENNAME.basename(), "Malý");
-        rowData.put(EBakaSQL.F_STU_SURNAME.basename(), "Školáček");
+        rowData.put(EBakaSQL.F_STU_SURNAME.basename(), "Školáček Plyšáček");
         rowData.put(EBakaSQL.F_STU_ID.basename(), "DEV01");
         rowData.put(EBakaSQL.F_STU_MAIL.basename(), "skolacek.maly1@zs-studanka.cz");
         rowData.put("baka_flag", "0");
@@ -140,9 +140,9 @@ public class Sync {
         rowData = new DataSQL();//HashMap<String, String>();
         rowData.put(EBakaSQL.F_STU_CLASS_ID.basename(), "27");
         //rowData.put(EBakaSQL.F_STU_MAIL.basename(), "NULL");
-        rowData.put(EBakaSQL.F_STU_CLASS.basename(), ročník + "." + třída);
+        rowData.put(EBakaSQL.F_STU_CLASS.basename(), "1" + "." + třída);
         rowData.put(EBakaSQL.F_STU_BK_CLASSLETTER.basename(), třída);
-        rowData.put(EBakaSQL.F_STU_BK_CLASSYEAR.basename(), ročník);
+        rowData.put(EBakaSQL.F_STU_BK_CLASSYEAR.basename(), "1"); // 1.E
         rowData.put(EBakaSQL.F_STU_GIVENNAME.basename(), "Aaadam");
         rowData.put(EBakaSQL.F_STU_SURNAME.basename(), "Expirovaný");
         rowData.put(EBakaSQL.F_STU_ID.basename(), "DEV03");
@@ -492,9 +492,14 @@ public class Sync {
      * @param update provést plánované změny
      */
     public void actionCheck(boolean update) {
+
+        // kompletní znovunačtení konfigurace
+        reset();
+        /*
         // naplění struktur - reset iterátorů
         this.catalog.resetIterator();
         this.directory.resetIterator();
+        */
 
         if (Settings.getInstance().beVerbose()) {
             ReportManager.log("Začíná kontrola synchronizace evidence a adresáře.");
@@ -649,6 +654,7 @@ public class Sync {
      * @param repair
      */
     public void checkData(boolean repair) {
+        // kompletní znovunačtení konfigurace
         reset();
 
         while (this.catalog.iterator().hasNext()) {
@@ -662,7 +668,7 @@ public class Sync {
             );
 
             if (student.isValid()) {
-                Boolean test = student.check(); // TODO
+                Boolean test = student.check();
 
                 if (!test) {
                     ReportManager.log(EBakaLogType.LOG_ERR, "Některé údaje žáka (" +
@@ -673,6 +679,36 @@ public class Sync {
                             this.catalog.get(studentID).get(EBakaSQL.F_STU_GIVENNAME.basename()) +
                             " se liší od záznamu v evidenci."
                             );
+                }
+
+                // pokus o opravu
+                if (!test && repair) {
+                    if (Settings.getInstance().beVerbose()) {
+                        ReportManager.logWait(EBakaLogType.LOG_VERBOSE,"Bude proveden pokus o opravu údajů žáka (" +
+                                this.catalog.get(studentID).get(EBakaSQL.F_STU_CLASS.basename()) +
+                                ") " +
+                                this.catalog.get(studentID).get(EBakaSQL.F_STU_SURNAME.basename()) +
+                                " " +
+                                this.catalog.get(studentID).get(EBakaSQL.F_STU_GIVENNAME.basename()));
+                    }
+
+                    Boolean attemptRepair = student.sync(repair);
+
+                    if (attemptRepair) {
+                        // záznam opraven
+                        if (Settings.getInstance().beVerbose()) {
+                            ReportManager.logResult(EBakaLogType.LOG_OK);
+                        }
+                        // TODO hlášení
+                    } else {
+                        if (Settings.getInstance().beVerbose()) {
+                            ReportManager.logResult(EBakaLogType.LOG_ERR_VERBOSE);
+                        }
+                        // chyba
+                        ReportManager.log(EBakaLogType.LOG_ERR, "Nebylo možné provést opravu údajů.");
+                        // TODO hlášení
+                    }
+
                 }
             }
 

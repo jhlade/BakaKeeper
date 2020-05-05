@@ -19,8 +19,6 @@ import java.util.Date;
  * v aktivních OU. Je vždy členem základní skupiny žáků a dále členem beżpečnostní skupiny
  * konkrétní třídy.
  *
- * implements IRecordLDAP, IRecordSQL
- *
  * @author Jan Hladěna
  */
 public class Student implements IRecordLDAP, IRecordSQL {
@@ -262,6 +260,9 @@ public class Student implements IRecordLDAP, IRecordSQL {
 
     /**
      * Provedení kontroly a synchronizace dat z evidence do adresáře.
+     * V případě změny jména žáka je provedena pouze změna údajů o příjmení, jménu
+     * a o zobrazovaném jménu. CN objektu v LDAP adresáři zůstává původní, jak bylo
+     * zavedeno při prvotní inicializaci.
      *
      * @param repair provést po kontrole opravy
      * @return výsledek synchronizace

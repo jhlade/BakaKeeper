@@ -48,7 +48,7 @@ public class Test {
 
         //testSync.actionInit(true);
         //testSync.actionCheck(true);
-        testSync.checkData(false);
+        testSync.checkData(true);
 
         // odeslání výsledku
         ReportManager.getInstance().report();
