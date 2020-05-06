@@ -5,7 +5,6 @@ import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaADAuthenticator;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
-import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaSQL;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaUAC;
 import cz.zsstudanka.skola.bakakeeper.model.collections.LDAPrecords;
@@ -23,8 +22,12 @@ import java.util.*;
 
 public class Test {
 
+    // 2020-05-06
+    public static void test_06() {
+
+    }
+
     public static void test_04() {
-        System.out.println("====== [ TEST ] ======");
 
         // logování a reportování
         /*
@@ -52,8 +55,6 @@ public class Test {
 
         // odeslání výsledku
         ReportManager.getInstance().report();
-
-        System.out.println("====== [ TEST ] ======");
     }
 
     // 2020-05-02 korekce rutiny opravy struktury + restrukturalizace DL

@@ -8,7 +8,6 @@ import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaSQL;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.routines.Export;
-import cz.zsstudanka.skola.bakakeeper.routines.Structure;
 import cz.zsstudanka.skola.bakakeeper.routines.Test;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.settings.Version;
@@ -197,15 +196,22 @@ public class App {
                 return;
             } // export
 
+            //  kontrola současného stavu
+            if (params.containsKey("status")) {
+                return;
+            }
+
             // synchronizace
             if (params.containsKey("sync")) {
-                // TODO sync
+                // TODO
+                // struktura adresáře
+                // synchronizace
                 return;
             } // sync
 
             // bezpečnostní audit
             if (params.containsKey("audit")) {
-                // TODO kontrola assert security group list, OU, proxy
+                // TODO kontrola assert security group list, OU, proxy(?)
                 return;
             } // audit
 
@@ -236,7 +242,9 @@ public class App {
 
             // vývojový test
             if (params.containsKey("test")) {
+                System.out.println("====== [ TEST ] ======");
                 Test.test_04();
+                System.out.println("====== [ /TEST ] ======");
                 return;
             } // test
         }
@@ -278,7 +286,6 @@ public class App {
      * Interaktivní režim inicializace nastavení.
      */
     public static void actionInitialize() {
-
         // interaktivní dotazování
         Settings.getInstance().interactivePrompt();
         finalizeInit();
@@ -288,8 +295,7 @@ public class App {
      * Finalizace inicializace nastavení.
      */
     private static void finalizeInit() {
-
-        // ověření platnosti
+        // ověření platnosti nastavení
         if (!Settings.getInstance().isValid()) {
             ReportManager.log(EBakaLogType.LOG_ERR, "Nebylo možné vytvořit platná nastavení.");
             return;
@@ -319,7 +325,6 @@ public class App {
         } else {
             ReportManager.log(EBakaLogType.LOG_ERR, "Vytvoření konfigurace se nezdařilo.");
         }
-
     }
 
     /**
@@ -356,21 +361,21 @@ public class App {
      * @return výsledek kontroly konfiguračního souboru
      */
     private static Boolean checkConfig() {
-        System.out.print("Testování validity konfiguračních dat... ");
+        ReportManager.logWait(EBakaLogType.LOG_TEST, "Testování validity konfiguračních dat");
 
         if (!Settings.getInstance().isValid()) {
-            System.out.println("\t[ CHYBA ]");
+            ReportManager.logResult(EBakaLogType.LOG_ERR);
 
             if (FLAG_VERBOSE) {
-                System.err.println("[ CHYBA ] Načtená nastavení nejsou platná.");
+                ReportManager.log(EBakaLogType.LOG_ERR_VERBOSE, "Načtená nastavení nejsou platná.");
             }
 
             return false;
         } else {
-            System.out.println("\t[ OK ]");
+            ReportManager.logResult(EBakaLogType.LOG_OK);
 
             if (FLAG_VERBOSE) {
-                System.err.println("[ INFO ] Načtená nastavení jsou platná.");
+                ReportManager.log(EBakaLogType.LOG_VERBOSE, "Načtená nastavení nejsou platná.");
             }
 
             return true;
@@ -383,13 +388,13 @@ public class App {
      * @return výsledek spojení s Active Directory
      */
     private static Boolean checkLDAP() {
-        System.out.print("Testování spojení na řadič Active Directory... ");
+        ReportManager.logWait(EBakaLogType.LOG_TEST,"Testování spojení na řadič Active Directory");
 
         if (BakaADAuthenticator.getInstance().isAuthenticated()) {
-            System.out.println("\t[ OK ]");
+            ReportManager.logResult(EBakaLogType.LOG_OK);
             return true;
         } else {
-            System.out.println("\t[ CHYBA ]");
+            ReportManager.logResult(EBakaLogType.LOG_ERR);
             return false;
         }
     }
@@ -400,13 +405,13 @@ public class App {
      * @return výsledek připojení k SQL Serveru
      */
     private static Boolean checkSQL() {
-        System.out.print("Testování spojení na SQL Server... ");
+        ReportManager.logWait(EBakaLogType.LOG_TEST, "Testování spojení na SQL Server");
 
         if (BakaSQL.getInstance().testSQL()) {
-            System.out.println("\t\t[ OK ]");
+            ReportManager.logResult(EBakaLogType.LOG_OK);
             return true;
         } else {
-            System.out.println("\t\t[ CHYBA ]");
+            ReportManager.logResult(EBakaLogType.LOG_ERR);
             return false;
         }
     }
@@ -417,60 +422,47 @@ public class App {
      * @return výsledek připojení k SMTP serveru
      */
     private static Boolean checkSMTP() {
-        System.out.print("Testování spojení na SMTP server... ");
+        ReportManager.logWait(EBakaLogType.LOG_TEST, "Testování spojení na SMTP server");
 
         if (BakaMailer.getInstance().testSMTP()) {
-            System.out.println("\t\t[ OK ]");
+            ReportManager.logResult(EBakaLogType.LOG_OK);
             return true;
         } else {
-            System.out.println("\t\t[ CHYBA ]");
+            ReportManager.logResult(EBakaLogType.LOG_ERR);
             return false;
         }
     }
 
-
     /**
-     * Kontrola základní hierarchické struktury v Active Directory.
-     * V případě chyb bude proveden pokus o opravu.
-     *
-     * @param repair pokusit se provést automatickou opravu/rekonstrukci struktury
-     * @return výsledek kontroly struktury
-     *
-     * @deprecated
-     */
-    private static Boolean checkAndRepairStructure(Boolean repair) {
-        return Structure.checkAndRepairADStructure(repair);
-    }
-
-    /**
-     * Kontrola a oprava struktury.
-     *
-     * @return stav kontroly a opravy struktury
-     */
-    private Boolean repairStructure() {
-        return checkAndRepairStructure(true);
-    }
-
-    /**
-     * Identifikace účtu v obou systémech.
+     * TODO Identifikace účtu v SQL/AD.
      *
      */
     public static void actionIdentify(String login) {
-        // TODO
+        // TODO - údaj SAM/UPN/mail
         // vyhledat v AD, určit typ, pokud žák - údaje z Bakalářů (+existenci kontaktu na ZZ)
     }
 
     /**
-     * Reset hesla žáka
+     * TODO Reset hesla žáka
      *
      * @param login
      */
     public static void actionResetPassword(String login) {
-        // TODO
-        // 1) objekt musí být aktivní žák (existuje v AD a v Bakalářích)
+        // TODO - SAM/UPN/mail?
+        // 1) objekt musí být aktivní žák (existuje v AD a v Bakalářích), možná vyučující?
         // 2) provede se nastavení hesla do původní podoby (PrJm.1234)
         // 3) nastaví se flag nutnosti změny hesla při dalším přihlášení
         // 4) dost možná vyrobit akci + hint v --help
+    }
+
+    // TODO
+    public void actionCheckStructure() {
+
+    }
+
+    // TODO
+    public void actionCheckAndRepairStructure() {
+
     }
 
     /**
@@ -478,31 +470,6 @@ public class App {
      */
     public static void actionCheckSync() {
         // TODO
-    }
-
-    /**
-     * Kontrola a provedení synchronizace.
-     *
-     * @param forceSync provádět mimo kontrolu i synchronizaci
-     */
-    public static void actionSync(boolean forceSync) {
-        // TODO
-
-        /*
-        *  1) od devítek - výběr z baka po třídách
-        *  2) identifikace žáků bez školního mailu
-        *  3) (POKUD NE) vygenerování mailu podle pravidel jmen + kontrola do výšky od zam/devítek (interní seznam)
-        *  4) (OPRAVA) uložení školního mailu do Baka
-        *  5) identifikace LDAP podle jména na základě mailu (doplní se objekty)
-        *  6) (POKUD NE) vytvoření nového účtu žáka v souladu s parametry
-        *  7) (POKUD ANO) kontrola parametrů účtu
-        *  8) (POKUD ANO) kontrola náležitosti do OU a skupin
-        *  9) (POKUD CHYBA) oprava náležitosti do OU a skupin
-        * 10) Zpětná kontrola z LDAPu do Baka -> neexistující účty se přesunou do ukončených
-        *     a nastaví se jako uzamčené
-        *
-        *  2020-04-02 Povinně nejvyšší direct objekt - Skupina-Zaci pro O365.
-        * */
     }
 
     /**
