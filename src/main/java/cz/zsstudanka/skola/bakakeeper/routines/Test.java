@@ -49,8 +49,8 @@ public class Test {
         // 2020-04-27
         Sync testSync = new Sync();
 
-        //testSync.actionInit(true);
-        //testSync.actionCheck(true);
+        testSync.actionInit(true);
+        testSync.actionCheck(true);
         testSync.checkData(true);
 
         // odeslání výsledku
