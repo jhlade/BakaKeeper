@@ -508,6 +508,7 @@ public class BakaADAuthenticator {
      * @param mail primární e-mail kontaktu
      * @param mobile mobilní telefonní číslo kontaktu
      * @param dLists pole řetězců počátečních distribučních seznamů
+     * @deprecated
      */
     public void createContact(String OU, String sn, String firstName, String displayName, String mail, String mobile, String[] dLists) {
 
@@ -559,7 +560,7 @@ public class BakaADAuthenticator {
 
             for (int dl = 0; dl < dLists.length; dl++) {
                 String dlDN = "cn=" + dLists[dl] + "," + Settings.getInstance().getLDAP_baseDL();
-                addContactToDL(contactDN, dlDN);
+                addObjectToGroup(contactDN, dlDN);
             }
 
         }
@@ -760,9 +761,10 @@ public class BakaADAuthenticator {
      * @param dn plné DN objektu
      * @param attributes požadovaný atribut
      * @param oldValue stará hodnota atributu
+     * @return úspěch operace
      */
-    public void removeAttribute(String dn, EBakaLDAPAttributes attributes, String oldValue) {
-        modifyAttribute(DirContext.REMOVE_ATTRIBUTE, dn, attributes, oldValue);
+    public Boolean removeAttribute(String dn, EBakaLDAPAttributes attributes, String oldValue) {
+        return modifyAttribute(DirContext.REMOVE_ATTRIBUTE, dn, attributes, oldValue);
     }
 
     /**
@@ -771,9 +773,10 @@ public class BakaADAuthenticator {
      * @param dn plné DN objektu
      * @param attribute požadovaný atribut
      * @param value nová hodnota atributu
+     * @return úspěch operace
      */
-    public void addAttribute(String dn, EBakaLDAPAttributes attribute, String value) {
-        modifyAttribute(DirContext.ADD_ATTRIBUTE, dn, attribute, value);
+    public Boolean addAttribute(String dn, EBakaLDAPAttributes attribute, String value) {
+        return modifyAttribute(DirContext.ADD_ATTRIBUTE, dn, attribute, value);
     }
 
     /**
@@ -782,9 +785,9 @@ public class BakaADAuthenticator {
      * @param dn plné DN objektu
      * @param attribute požadovaný atribut k nahrazení
      * @param newValue nová hodnota
+     * @return úspěch operace
      */
     public Boolean replaceAttribute(String dn, EBakaLDAPAttributes attribute, String newValue) {
-
         if (modifyAttribute(DirContext.REPLACE_ATTRIBUTE, dn, attribute, newValue)) {
             return true;
         } else {
@@ -799,14 +802,15 @@ public class BakaADAuthenticator {
      * @param groupCN CN skupiny
      * @param attribute atribut
      * @param value hodnota atributu
+     * @return úspěch operace
      */
-    public void setGroupInfo(String OU, String groupCN, EBakaLDAPAttributes attribute, String value) {
+    public Boolean setGroupInfo(String OU, String groupCN, EBakaLDAPAttributes attribute, String value) {
         Map<Integer, Map<String, Object>> group = getGroupInfo(groupCN, OU);
 
         if (group.get(0).containsKey(attribute.attribute())) {
-            replaceAttribute(group.get(0).get(EBakaLDAPAttributes.DN.attribute()).toString(), attribute, value);
+            return replaceAttribute(group.get(0).get(EBakaLDAPAttributes.DN.attribute()).toString(), attribute, value);
         } else {
-            addAttribute(group.get(0).get(EBakaLDAPAttributes.DN.attribute()).toString(), attribute, value);
+            return addAttribute(group.get(0).get(EBakaLDAPAttributes.DN.attribute()).toString(), attribute, value);
         }
     }
 
@@ -848,7 +852,6 @@ public class BakaADAuthenticator {
      * @return úspěch operace
      */
     public Boolean moveObject(String objectDN, String ouName, Boolean createNewOUifNotExists, Boolean renameObject) {
-
         // kontrola existence cílové ou
         if (!createNewOUifNotExists && checkOU(ouName) == -1) {
 
@@ -932,7 +935,8 @@ public class BakaADAuthenticator {
     }
 
     /**
-     * Výpis všech přímých skupin, kterých je daný objekt členem.
+     * Výpis všech přímých skupin, kterých je daný objekt členem. V případě žádného členství
+     * je vrácen prázdný seznam.
      *
      * @param objDN plné DN objektu
      * @return seznam DN skupin jako ArrayList řětězců
@@ -959,28 +963,15 @@ public class BakaADAuthenticator {
             if (info.get(EBakaLDAPAttributes.MEMBER_OF.attribute()) != null) {
 
                 if (info.get(EBakaLDAPAttributes.MEMBER_OF.attribute()) instanceof ArrayList) {
-
                     // více skupin
-                    //result = new String[((ArrayList) info.get(EBakaLDAPAttributes.MEMBER_OF.attribute())).size()];
                     result = new ArrayList<String>(((ArrayList) info.get(EBakaLDAPAttributes.MEMBER_OF.attribute())).size());
 
                     Iterator<String> member = ((ArrayList) info.get(EBakaLDAPAttributes.MEMBER_OF.attribute())).iterator();
                     while (member.hasNext()) {
                         result.add(member.next());
                     }
-
-                    /*
-                    for (int m = 0; m  < ((ArrayList) info.get(EBakaLDAPAttributes.MEMBER_OF.attribute())).size(); m++) {
-                        result.add( ((ArrayList) info.get(EBakaLDAPAttributes.MEMBER_OF.attribute())).get(m).toString() );
-                    }*/
-
                 } else {
                     // pouze jedna skupina
-                    /*
-                    result = new String[]{
-                        info.get(EBakaLDAPAttributes.MEMBER_OF.attribute()).toString(),
-                    };*/
-
                     result = new ArrayList<>(1);
                     result.add(info.get(EBakaLDAPAttributes.MEMBER_OF.attribute()).toString());
                 }
@@ -991,57 +982,78 @@ public class BakaADAuthenticator {
             }
         }
 
+        // seřazení seznamu
+        Collections.sort(result);
         return result;
     }
 
     /**
      * Přidání objektu jako člena do skupiny.
      *
-     * @param objectDN plné jméno objektu
+     * @param objectDN plné DN objektu
      * @param destinationGroupDN plné jméno cílové skupiny
+     * @return úspěch operace
      */
-    public void addObjectToGroup(String objectDN, String destinationGroupDN) {
-        addAttribute(destinationGroupDN, EBakaLDAPAttributes.MEMBER, objectDN);
+    public Boolean addObjectToGroup(String objectDN, String destinationGroupDN) {
+        return addAttribute(destinationGroupDN, EBakaLDAPAttributes.MEMBER, objectDN);
+    }
+
+    /**
+     * Zobecněné přidání objektu do skupin v seznamu.
+     *
+     * @param objecDN plné DN objektu
+     * @param destinationGroupDNs pole plných DN cílových skupin
+     * @return úspěch operace
+     */
+    public Boolean addObjectToGroup(String objecDN, ArrayList<String> destinationGroupDNs) {
+        if (destinationGroupDNs != null && destinationGroupDNs.size() > 0) {
+            Boolean result = true;
+
+            Iterator<String> destinationGroups = destinationGroupDNs.iterator();
+            while (destinationGroups.hasNext()) {
+                result &= addObjectToGroup(objecDN, destinationGroups.next());
+            }
+
+            return result;
+        }
+
+        return true;
     }
 
     /**
      * Odstranění objektu ze zadané skupiny.
      *
-     * @param objectDN
-     * @param groupDN
+     * @param objectDN plné DN objektu
+     * @param groupDN plné DN odstraňované skupiny
+     * @return úspěch operace
      */
-    public void removeObjectFromGroup(String objectDN, String groupDN) {
+    public Boolean removeObjectFromGroup(String objectDN, String groupDN) {
         // z cílové skupiny odstraní objectDN z atributu member
-        removeAttribute(groupDN, EBakaLDAPAttributes.MEMBER, objectDN);
+        return removeAttribute(groupDN, EBakaLDAPAttributes.MEMBER, objectDN);
     }
 
     /**
      * Odebrání objektu ze všech dosavadních skupin.
      *
      * @param objectDN
+     * @return úspěch operace
      */
-    public void removeObjectFromAllGroups(String objectDN) {
+    public Boolean removeObjectFromAllGroups(String objectDN) {
         ArrayList<String> groups = listMembership(objectDN);
 
         // žádné skupiny
         if (groups == null || groups.size() == 0) {
-            return;
+            return true;
         }
+
+        Boolean result = true;
 
         // postupně odebrat všechny skupiny
         for (String grDN : groups) {
-            removeObjectFromGroup(objectDN, grDN);
+            result &= removeObjectFromGroup(objectDN, grDN);
         }
-    }
 
-    /**
-     * Přidání kontaktu do distribučního seznamu.
-     *
-     * @param contactDN plné DN kontaktu
-     * @param distributionListDN plné DN distribučního seznamu
-     */
-    public void addContactToDL(String contactDN, String distributionListDN) {
-        addAttribute(distributionListDN, EBakaLDAPAttributes.MEMBER, contactDN);
+        return result;
     }
 
 }
