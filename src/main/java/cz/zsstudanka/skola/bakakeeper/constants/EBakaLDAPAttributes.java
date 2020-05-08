@@ -7,6 +7,10 @@ package cz.zsstudanka.skola.bakakeeper.constants;
  */
 public enum EBakaLDAPAttributes {
 
+    BK_FLAG("baka_flag", null), // pomocný virtuální parametr příznaku
+    BK_FLAG_TRUE("baka_flag", "1"),
+    BK_FLAG_FALSE("baka_flag", "0"),
+
     CN ("cn", null), // common name, hlavní název objektu
     NAME_LAST("sn", null), // příjmení
     NAME_FIRST("givenName", null), // křestní jméno

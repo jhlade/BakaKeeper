@@ -20,10 +20,6 @@ import java.util.Map;
  */
 public class LDAPrecords implements IRecords {
 
-    static final String FLAG_ID = "baka_flag";
-    static final String FLAG_0  = "0";
-    static final String FLAG_1  = "1";
-
     /** klíčový atribut */
     private EBakaLDAPAttributes keyAttribute;
 
@@ -134,7 +130,7 @@ public class LDAPrecords implements IRecords {
                 }
 
                 // počáteční příznak zpracování záznamu
-                this.data.get(info.get(i).get(this.keyAttribute.attribute()).toString()).put(FLAG_ID, FLAG_0);
+                this.data.get(info.get(i).get(this.keyAttribute.attribute()).toString()).put(EBakaLDAPAttributes.BK_FLAG.attribute(), EBakaLDAPAttributes.BK_FLAG_FALSE.value());
             }
         }
     }
@@ -187,7 +183,7 @@ public class LDAPrecords implements IRecords {
      */
     public Boolean getFlag(String key) {
         if (this.data.containsKey(key)) {
-            return (this.data.get(key).get(FLAG_ID).equals(FLAG_1)) ? true : false;
+            return (this.data.get(key).get(EBakaLDAPAttributes.BK_FLAG.attribute()).equals(EBakaLDAPAttributes.BK_FLAG_TRUE.value())) ? true : false;
         }
 
         return null;
@@ -201,7 +197,7 @@ public class LDAPrecords implements IRecords {
      */
     public void setFlag(String key, Boolean flag) {
         if (this.data.containsKey(key)) {
-            this.data.get(key).replace(FLAG_ID, (flag) ? FLAG_1 : FLAG_0);
+            this.data.get(key).replace(EBakaLDAPAttributes.BK_FLAG.attribute(), (flag) ? EBakaLDAPAttributes.BK_FLAG_TRUE.value() : EBakaLDAPAttributes.BK_FLAG_FALSE.value());
         }
     }
 
@@ -212,14 +208,25 @@ public class LDAPrecords implements IRecords {
      * @return podmnožina s daným příznakem
      */
     public LinkedHashMap<String, DataLDAP> getSubsetWithFlag(Boolean flag) {
+        return this.getSubsetBy(EBakaLDAPAttributes.BK_FLAG, (flag) ? EBakaLDAPAttributes.BK_FLAG_TRUE.value() : EBakaLDAPAttributes.BK_FLAG_FALSE.value());
+    }
+
+    /**
+     * Obecná podmnožina dat podle vlastního klíče a hodnoty.
+     *
+     * @param attr klíč k porovnání
+     * @param value hodnota k porovnání
+     * @return podmnožina odpovídajících záznamů
+     */
+    public LinkedHashMap<String, DataLDAP> getSubsetBy(EBakaLDAPAttributes attr, String value) {
         LinkedHashMap<String, DataLDAP> subset = new LinkedHashMap<>();
 
-        Iterator<String> subsetIterator = this.data.keySet().iterator();
-        while (subsetIterator.hasNext()) {
+        Iterator<String> internalIterator = this.data.keySet().iterator();
+        while (internalIterator.hasNext()) {
 
-            String subID = subsetIterator.next();
+            String subID = internalIterator.next();
 
-            if (get(subID).get(FLAG_ID).equals((flag) ? FLAG_1 : FLAG_0)) {
+            if (get(subID).containsKey(attr) && get(subID).get(attr.attribute()).equals(value)) {
                 subset.put(subID, get(subID));
             }
         }

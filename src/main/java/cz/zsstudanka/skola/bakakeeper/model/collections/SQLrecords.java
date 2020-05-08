@@ -17,10 +17,6 @@ import java.util.Map;
 
 public class SQLrecords implements IRecords {
 
-    static final String FLAG_ID = "baka_flag";
-    static final String FLAG_0  = "0";
-    static final String FLAG_1  = "1";
-
     private EBakaSQL sql_table;
 
     /**
@@ -195,7 +191,7 @@ public class SQLrecords implements IRecords {
                 }
 
                 // prázdný příznak zpracování
-                rowData.put(FLAG_ID, FLAG_0);
+                rowData.put(EBakaSQL.BK_FLAG.basename(), EBakaSQL.LIT_FALSE.basename());
 
                 addRecord(rowID, rowData);
             }
@@ -258,7 +254,7 @@ public class SQLrecords implements IRecords {
     @Override
     public Boolean getFlag(String key) {
         if (this.data.containsKey(key)) {
-            return (this.data.get(key).get(FLAG_ID).equals(FLAG_1)) ? true : false;
+            return (this.data.get(key).get(EBakaSQL.BK_FLAG.basename()).equals(EBakaSQL.LIT_TRUE.basename())) ? true : false;
         }
 
         return null;
@@ -274,7 +270,7 @@ public class SQLrecords implements IRecords {
     public void setFlag(String key, Boolean flag) {
 
         if (this.data.containsKey(key)) {
-            this.data.get(key).replace(FLAG_ID, (flag) ? FLAG_1 : FLAG_0);
+            this.data.get(key).replace(EBakaSQL.BK_FLAG.basename(), (flag) ? EBakaSQL.LIT_TRUE.basename() : EBakaSQL.LIT_FALSE.basename());
         }
     }
 
@@ -285,15 +281,26 @@ public class SQLrecords implements IRecords {
      * @return podmnožina s daným příznakem
      */
     public LinkedHashMap<String, DataSQL> getSubsetWithFlag(Boolean flag) {
+        return getSubsetBy(EBakaSQL.BK_FLAG, (flag) ? EBakaSQL.LIT_TRUE.basename() : EBakaSQL.LIT_FALSE.basename());
+    }
+
+    /**
+     * Získání podmnožiny dat podle zadaného klíče a hodnoty.
+     *
+     * @param attr klíč k porovnání
+     * @param value hodnota k porovnání
+     * @return podmnožina dat
+     */
+    public LinkedHashMap<String, DataSQL> getSubsetBy(EBakaSQL attr, String value) {
         LinkedHashMap<String, DataSQL> subset = new LinkedHashMap<>();
 
-        // nový interní iterátor
-        Iterator<String> subsetIterator = this.data.keySet().iterator();
-        while (subsetIterator.hasNext()) {
+        // interní iterátor
+        Iterator<String> internalIterator = this.data.keySet().iterator();
+        while (internalIterator.hasNext()) {
 
-            String subID = subsetIterator.next();
+            String subID = internalIterator.next();
 
-            if (get(subID).get(FLAG_ID).equals((flag) ? FLAG_1 : FLAG_0)) {
+            if (get(subID).containsKey(attr.basename()) && get(subID).get(attr.basename()).equals(value)) {
                 subset.put(subID, get(subID));
             }
         }
