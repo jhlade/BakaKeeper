@@ -226,7 +226,7 @@ public class LDAPrecords implements IRecords {
 
             String subID = internalIterator.next();
 
-            if (get(subID).containsKey(attr) && get(subID).get(attr.attribute()).equals(value)) {
+            if (get(subID).containsKey(attr.attribute()) && get(subID).get(attr.attribute()).equals(value)) {
                 subset.put(subID, get(subID));
             }
         }
