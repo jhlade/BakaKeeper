@@ -52,7 +52,7 @@ public class Guardian implements IRecordLDAP, IRecordSQL {
 
         isValid &= !dataSQL.get(EBakaSQL.F_GUA_BK_SURNAME.basename()).equals(EBakaSQL.NULL.basename());
         isValid &= !dataSQL.get(EBakaSQL.F_GUA_BK_GIVENNAME.basename()).equals(EBakaSQL.NULL.basename());
-        isValid &= (BakaUtils.validateEmail(dataSQL.get(EBakaSQL.F_GUA_BK_MAIL.basename())) != null);
+        //isValid &= (BakaUtils.validateEmail(dataSQL.get(EBakaSQL.F_GUA_BK_MAIL.basename())) != null);
 
         return isValid;
     }
@@ -263,17 +263,21 @@ public class Guardian implements IRecordLDAP, IRecordSQL {
     public String getLDAPdata(EBakaLDAPAttributes attr) {
 
         if (this.dataLDAP != null) {
-            return (this.dataLDAP.containsKey(attr.attribute())) ? this.dataLDAP.get(attr.attribute()).toString() : null;
+            return (this.dataLDAP.containsKey(attr.attribute())) ? this.dataLDAP.get(attr.attribute()).toString() : "";
         }
 
-        return null;
+        return "";
     }
 
     @Override
     public Boolean setLDAPdata(EBakaLDAPAttributes attr, String value) {
 
         if (this.dataLDAP != null) {
-            return BakaADAuthenticator.getInstance().replaceAttribute(getDN(), attr, value);
+            if (value != null) {
+                return BakaADAuthenticator.getInstance().replaceAttribute(getDN(), attr, value);
+            } else {
+                return BakaADAuthenticator.getInstance().replaceAttribute(getDN(), attr, "");
+            }
         }
 
         return false;
@@ -325,10 +329,10 @@ public class Guardian implements IRecordLDAP, IRecordSQL {
     public String getSQLdata(EBakaSQL field) {
 
         if (this.dataSQL != null) {
-            return (this.dataSQL.get(field.basename()).equals(EBakaSQL.NULL)) ? null : this.dataSQL.get(field.basename());
+            return (this.dataSQL.get(field.basename()).equals(EBakaSQL.NULL)) ? "" : this.dataSQL.get(field.basename());
         }
 
-        return null;
+        return "";
     }
 
 }
