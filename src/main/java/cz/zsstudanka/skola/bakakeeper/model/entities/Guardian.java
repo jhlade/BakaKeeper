@@ -1,10 +1,14 @@
 package cz.zsstudanka.skola.bakakeeper.model.entities;
 
+import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaADAuthenticator;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaSQL;
 import cz.zsstudanka.skola.bakakeeper.model.interfaces.IRecordLDAP;
 import cz.zsstudanka.skola.bakakeeper.model.interfaces.IRecordSQL;
+import cz.zsstudanka.skola.bakakeeper.settings.Settings;
+import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
 
 import java.util.ArrayList;
 
@@ -18,9 +22,7 @@ import java.util.ArrayList;
  */
 public class Guardian implements IRecordLDAP, IRecordSQL {
 
-    private String internalID;
-
-    private Boolean partial;
+    private Boolean partial = false;
 
     private DataLDAP dataLDAP;
     private DataSQL dataSQL;
@@ -35,15 +37,217 @@ public class Guardian implements IRecordLDAP, IRecordSQL {
         this.dataLDAP = dataLDAP;
     }
 
-    protected void initialize() {
+    /**
+     * Validace dat.
+     *
+     * @return data zákonného zástupce jsou platná
+     */
+    public Boolean validateData() {
+
+        if (dataSQL == null) {
+            return false;
+        }
+
+        Boolean isValid = true;
+
+        isValid &= !dataSQL.get(EBakaSQL.F_GUA_BK_SURNAME.basename()).equals(EBakaSQL.NULL.basename());
+        isValid &= !dataSQL.get(EBakaSQL.F_GUA_BK_GIVENNAME.basename()).equals(EBakaSQL.NULL.basename());
+        isValid &= (BakaUtils.validateEmail(dataSQL.get(EBakaSQL.F_GUA_BK_MAIL.basename())) != null);
+
+        return isValid;
+    }
+
+    protected void initializeContact() {
         // TODO SQL->LDAP
     }
 
-    protected void delete() {
+    public void deleteContact() {
         // TODO LDAP->
     }
 
-    //public ArrayList<String> get
+    /**
+     * Synchronizace údajů z evidence do LDAP.
+     *
+     * @return úspěch operace
+     */
+    public Boolean sync(Boolean repair) {
+
+        if (partial) {
+            if (Settings.getInstance().debugMode()) {
+                ReportManager.log(EBakaLogType.LOG_ERR_DEBUG, "Parciální účet zákonného zástupce není možné kontrolovat.");
+            }
+
+            return null;
+        }
+
+        Boolean result = true;
+
+        if (Settings.getInstance().beVerbose()) {
+            ReportManager.log(EBakaLogType.LOG_INFO, "Probíhá kontrola údajů zákonného zástupce žáka ("+ getSQLdata(EBakaSQL.F_STU_CLASS) +") "+ getSQLdata(EBakaSQL.F_STU_SURNAME) + " " + getSQLdata(EBakaSQL.F_STU_GIVENNAME) + ".");
+        }
+
+        // příjmení
+        if (Settings.getInstance().beVerbose()) {
+            ReportManager.logWait(EBakaLogType.LOG_TEST, "Příjmení zákonného zástupce");
+        }
+
+        if (getLDAPdata(EBakaLDAPAttributes.NAME_LAST).equals(getSQLdata(EBakaSQL.F_GUA_BK_SURNAME))) {
+            if (Settings.getInstance().beVerbose()) {
+                ReportManager.logResult(EBakaLogType.LOG_OK);
+            }
+        } else {
+
+            if (Settings.getInstance().beVerbose()) {
+                ReportManager.logResult(EBakaLogType.LOG_ERR_VERBOSE);
+            }
+
+            if (Settings.getInstance().debugMode()) {
+                ReportManager.log(EBakaLogType.LOG_ERR_DEBUG, "Očekáváno [" + getSQLdata(EBakaSQL.F_GUA_BK_SURNAME) + "], získaná hodnota [" + getLDAPdata(EBakaLDAPAttributes.NAME_LAST) + "].");
+            }
+
+            if (repair) {
+
+                if (Settings.getInstance().beVerbose()) {
+                    ReportManager.log(EBakaLogType.LOG_INFO, "Proběhne pokus o opravu příjmení.");
+                }
+
+                result &= setLDAPdata(EBakaLDAPAttributes.NAME_LAST, getSQLdata(EBakaSQL.F_GUA_BK_SURNAME));
+                result &= setLDAPdata(EBakaLDAPAttributes.NAME_DISPLAY, getSQLdata(EBakaSQL.F_GUA_BK_SURNAME) + " " + getSQLdata(EBakaSQL.F_GUA_BK_GIVENNAME));
+            } else {
+                result = false;
+            }
+        }
+
+        // jméno
+        if (Settings.getInstance().beVerbose()) {
+            ReportManager.logWait(EBakaLogType.LOG_TEST, "Jméno zákonného zástupce");
+        }
+        if (getLDAPdata(EBakaLDAPAttributes.NAME_FIRST).equals(getSQLdata(EBakaSQL.F_GUA_BK_GIVENNAME))) {
+
+            if (Settings.getInstance().beVerbose()) {
+                ReportManager.logResult(EBakaLogType.LOG_OK);
+            }
+
+        } else {
+
+            if (Settings.getInstance().beVerbose()) {
+                ReportManager.logResult(EBakaLogType.LOG_ERR_VERBOSE);
+            }
+
+            if (Settings.getInstance().debugMode()) {
+                ReportManager.log(EBakaLogType.LOG_ERR_DEBUG, "Očekáváno [" + getSQLdata(EBakaSQL.F_GUA_BK_GIVENNAME) + "], získaná hodnota [" + getLDAPdata(EBakaLDAPAttributes.NAME_FIRST) + "].");
+            }
+
+            if (repair) {
+
+                if (Settings.getInstance().beVerbose()) {
+                    ReportManager.log(EBakaLogType.LOG_INFO, "Proběhne pokus o opravu jména.");
+                }
+
+                result &= setLDAPdata(EBakaLDAPAttributes.NAME_FIRST, getSQLdata(EBakaSQL.F_GUA_BK_GIVENNAME));
+                result &= setLDAPdata(EBakaLDAPAttributes.NAME_DISPLAY, getSQLdata(EBakaSQL.F_GUA_BK_SURNAME) + " " + getSQLdata(EBakaSQL.F_GUA_BK_GIVENNAME));
+            } else {
+                result = false;
+            }
+        }
+
+        // e-mail
+        if (getSQLdata(EBakaSQL.F_GUA_BK_MAIL) != null) {
+            if (Settings.getInstance().beVerbose()) {
+                ReportManager.logWait(EBakaLogType.LOG_TEST, "E-mail zákonného zástupce");
+            }
+            if (getLDAPdata(EBakaLDAPAttributes.MAIL) != null && getLDAPdata(EBakaLDAPAttributes.MAIL).equals(BakaUtils.validateEmail(getSQLdata(EBakaSQL.F_GUA_BK_MAIL)))) {
+
+                if (Settings.getInstance().beVerbose()) {
+                    ReportManager.logResult(EBakaLogType.LOG_OK);
+                }
+
+            } else {
+
+                if (Settings.getInstance().beVerbose()) {
+                    ReportManager.logResult(EBakaLogType.LOG_ERR_VERBOSE);
+                }
+
+                if (Settings.getInstance().debugMode()) {
+                    ReportManager.log(EBakaLogType.LOG_ERR_DEBUG, "Očekáváno [" + BakaUtils.validateEmail(getSQLdata(EBakaSQL.F_GUA_BK_MAIL)) + "], získaná hodnota [" + getLDAPdata(EBakaLDAPAttributes.MAIL) + "].");
+                }
+
+                if (repair) {
+
+                    if (Settings.getInstance().beVerbose()) {
+                        ReportManager.log(EBakaLogType.LOG_INFO, "Proběhne pokus o opravu e-mailu.");
+                    }
+
+                    result &= setLDAPdata(EBakaLDAPAttributes.MAIL, BakaUtils.validateEmail(getSQLdata(EBakaSQL.F_GUA_BK_MAIL)));
+                } else {
+                    result = false;
+                }
+            }
+        }
+
+        // telefon
+        if (getSQLdata(EBakaSQL.F_GUA_BK_MOBILE) != null) {
+            if (Settings.getInstance().beVerbose()) {
+                ReportManager.logWait(EBakaLogType.LOG_TEST, "Telefon zákonného zástupce");
+            }
+            if (getLDAPdata(EBakaLDAPAttributes.MOBILE) != null && getLDAPdata(EBakaLDAPAttributes.MOBILE).equals(BakaUtils.validatePhone(getSQLdata(EBakaSQL.F_GUA_BK_MOBILE)))) {
+
+                if (Settings.getInstance().beVerbose()) {
+                    ReportManager.logResult(EBakaLogType.LOG_OK);
+                }
+
+            } else {
+
+                if (Settings.getInstance().beVerbose()) {
+                    ReportManager.logResult(EBakaLogType.LOG_ERR_VERBOSE);
+                }
+
+                if (Settings.getInstance().debugMode()) {
+                    ReportManager.log(EBakaLogType.LOG_ERR_DEBUG, "Očekáváno [" + BakaUtils.validatePhone(getSQLdata(EBakaSQL.F_GUA_BK_MOBILE)) + "], získaná hodnota [" + getLDAPdata(EBakaLDAPAttributes.MOBILE) + "].");
+                }
+
+                if (repair) {
+
+                    if (Settings.getInstance().beVerbose()) {
+                        ReportManager.log(EBakaLogType.LOG_INFO, "Proběhne pokus o opravu telefonu.");
+                    }
+
+                    result &= setLDAPdata(EBakaLDAPAttributes.MOBILE, BakaUtils.validatePhone(getSQLdata(EBakaSQL.F_GUA_BK_MOBILE)));
+                } else {
+                    result = false;
+                }
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Získání všech současných distribučních skupin zákonného zástupce.
+     *
+     * @return seznam plných DN současných skupin
+     */
+    public ArrayList<String> getCurrentDistributionLists() {
+        return BakaADAuthenticator.getInstance().listMembership(this.getDN());
+    }
+
+    /**
+     * Přepsání členství kontaktu v distribučních skupinách.
+     *
+     * @param distributionLists pole plných DN distribučních skupin
+     * @return úspěch operace
+     */
+    public Boolean replaceDistributionLists(ArrayList<String> distributionLists) {
+        Boolean result = true;
+
+        // smazání všech současných skupin
+        result &= BakaADAuthenticator.getInstance().removeObjectFromAllGroups(this.getDN());
+
+        // přidání do zadaných skupin
+        result &= BakaADAuthenticator.getInstance().addObjectToGroup(this.getDN(), distributionLists);
+
+        return result;
+    }
 
     @Override
     public String getDN() {
@@ -59,7 +263,7 @@ public class Guardian implements IRecordLDAP, IRecordSQL {
     public String getLDAPdata(EBakaLDAPAttributes attr) {
 
         if (this.dataLDAP != null) {
-            return this.dataLDAP.get(attr.attribute()).toString();
+            return (this.dataLDAP.containsKey(attr.attribute())) ? this.dataLDAP.get(attr.attribute()).toString() : null;
         }
 
         return null;
@@ -121,7 +325,7 @@ public class Guardian implements IRecordLDAP, IRecordSQL {
     public String getSQLdata(EBakaSQL field) {
 
         if (this.dataSQL != null) {
-            return this.dataSQL.get(field.basename());
+            return (this.dataSQL.get(field.basename()).equals(EBakaSQL.NULL)) ? null : this.dataSQL.get(field.basename());
         }
 
         return null;

@@ -7,10 +7,7 @@ import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaSQL;
 import cz.zsstudanka.skola.bakakeeper.model.collections.LDAPrecords;
 import cz.zsstudanka.skola.bakakeeper.model.collections.SQLrecords;
-import cz.zsstudanka.skola.bakakeeper.model.entities.DataLDAP;
-import cz.zsstudanka.skola.bakakeeper.model.entities.DataSQL;
-import cz.zsstudanka.skola.bakakeeper.model.entities.Student;
-import cz.zsstudanka.skola.bakakeeper.model.entities.RecordFactory;
+import cz.zsstudanka.skola.bakakeeper.model.entities.*;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
 
@@ -54,17 +51,56 @@ public class Sync {
      */
     private void reset() {
         // SQL
-        this.catalog = new SQLrecords(null, null);
-        this.faculty = null; // TODO načtení třídních učitelů
+        this.loadCatalog();
 
         // LDAP
-        this.directory = new LDAPrecords(Settings.getInstance().getLDAP_baseStudents(), EBakaLDAPAttributes.OC_USER);
-        this.alumni = new LDAPrecords(Settings.getInstance().getLDAP_baseAlumni(), EBakaLDAPAttributes.OC_USER);
-        this.directoryFaculty = new LDAPrecords(Settings.getInstance().getLDAP_baseFaculty(), EBakaLDAPAttributes.OC_USER);
-        this.contacts = new LDAPrecords(Settings.getInstance().getLDAP_baseContacts(), EBakaLDAPAttributes.OC_CONTACT);
+        this.loadDirectoryStudents();
+        this.loadDirectoryAlumni();
+        this.loadDirectoryFaculty();
+        this.loadDirectoryContacts();
 
-        // 2020-05 vývoj
+        // TODO 2020-05 vývoj
         devel();
+    }
+
+    /**
+     * Načtení dat z evidence.
+     */
+    private void loadCatalog() {
+        this.catalog = new SQLrecords(null, null);
+        this.faculty = null; // TODO načtení třídních učitelů
+        // TODO 2020-05 vývoj
+        devel();
+    }
+
+    /**
+     * Načtení účtů žáků z adresáře.
+     */
+    private void loadDirectoryStudents() {
+        this.directory = new LDAPrecords(Settings.getInstance().getLDAP_baseStudents(), EBakaLDAPAttributes.OC_USER);
+        // TODO 2020-05 vývoj
+        devel();
+    }
+
+    /**
+     * Načtení vyřazených žákovských účtů z adresáře.
+     */
+    private void loadDirectoryAlumni() {
+        this.alumni = new LDAPrecords(Settings.getInstance().getLDAP_baseAlumni(), EBakaLDAPAttributes.OC_USER);
+    }
+
+    /**
+     * Načtení účtů zaměstnanců z adresáře.
+     */
+    private void loadDirectoryFaculty() {
+        this.directoryFaculty = new LDAPrecords(Settings.getInstance().getLDAP_baseFaculty(), EBakaLDAPAttributes.OC_USER);
+    }
+
+    /**
+     * Načtení seznamu existujících kontaktů z adresáře.
+     */
+    private void loadDirectoryContacts() {
+        this.contacts = new LDAPrecords(Settings.getInstance().getLDAP_baseContacts(), EBakaLDAPAttributes.OC_CONTACT);
     }
 
     /**
@@ -81,7 +117,6 @@ public class Sync {
         // 1, Školáček Malý, DEV01
         rowData = new DataSQL();//HashMap<String, String>();
         rowData.put(EBakaSQL.F_STU_CLASS_ID.basename(), "1");
-        //rowData.put(EBakaSQL.F_STU_MAIL.basename(), "NULL");
         rowData.put(EBakaSQL.F_STU_CLASS.basename(), ročník + "." + třída);
         rowData.put(EBakaSQL.F_STU_BK_CLASSLETTER.basename(), třída);
         rowData.put(EBakaSQL.F_STU_BK_CLASSYEAR.basename(), ročník);
@@ -89,13 +124,17 @@ public class Sync {
         rowData.put(EBakaSQL.F_STU_SURNAME.basename(), "Školáček Plyšáček");
         rowData.put(EBakaSQL.F_STU_ID.basename(), "DEV01");
         rowData.put(EBakaSQL.F_STU_MAIL.basename(), "skolacek.maly1@zs-studanka.cz");
-        rowData.put("baka_flag", "0");
+        rowData.put(EBakaSQL.BK_FLAG.basename(), EBakaSQL.LIT_FALSE.basename());
+        rowData.put(EBakaSQL.F_GUA_BK_ID.basename(), "DEV01G");
+        rowData.put(EBakaSQL.F_GUA_BK_SURNAME.basename(), "Malá");
+        rowData.put(EBakaSQL.F_GUA_BK_GIVENNAME.basename(), "Julie");
+        rowData.put(EBakaSQL.F_GUA_BK_MOBILE.basename(), "606123456");
+        rowData.put(EBakaSQL.F_GUA_BK_MAIL.basename(), "julie.kocic@joutsen.cz");
         this.catalog.addRecord("DEV01", rowData);
 
         // 2, Aaadam Testový, DEV02
         rowData = new DataSQL();//HashMap<String, String>();
         rowData.put(EBakaSQL.F_STU_CLASS_ID.basename(), "2");
-        //rowData.put(EBakaSQL.F_STU_MAIL.basename(), "NULL");
         rowData.put(EBakaSQL.F_STU_CLASS.basename(), ročník + "." + třída);
         rowData.put(EBakaSQL.F_STU_BK_CLASSLETTER.basename(), třída);
         rowData.put(EBakaSQL.F_STU_BK_CLASSYEAR.basename(), ročník);
@@ -103,14 +142,17 @@ public class Sync {
         rowData.put(EBakaSQL.F_STU_SURNAME.basename(), "Testový");
         rowData.put(EBakaSQL.F_STU_ID.basename(), "DEV02");
         rowData.put(EBakaSQL.F_STU_MAIL.basename(), "testovy.aaadam1@zs-studanka.cz");
-        rowData.put("baka_flag", "0");
+        rowData.put(EBakaSQL.BK_FLAG.basename(), EBakaSQL.LIT_FALSE.basename());
+        rowData.put(EBakaSQL.F_GUA_BK_ID.basename(), "DEV02G");
+        rowData.put(EBakaSQL.F_GUA_BK_SURNAME.basename(), "Testový");
+        rowData.put(EBakaSQL.F_GUA_BK_GIVENNAME.basename(), "Patrik");
+        rowData.put(EBakaSQL.F_GUA_BK_MOBILE.basename(), "606654321");
+        rowData.put(EBakaSQL.F_GUA_BK_MAIL.basename(), "patrik.testovy@joutsen.cz");
         this.catalog.addRecord("DEV02", rowData);
-
 
         // 11, Aaadam Nový, DEV04 - bude vytvořen a smazán
         rowData = new DataSQL();//HashMap<String, String>();
         rowData.put(EBakaSQL.F_STU_CLASS_ID.basename(), "11");
-        //rowData.put(EBakaSQL.F_STU_MAIL.basename(), "NULL");
         rowData.put(EBakaSQL.F_STU_CLASS.basename(), ročník + "." + třída);
         rowData.put(EBakaSQL.F_STU_BK_CLASSLETTER.basename(), třída);
         rowData.put(EBakaSQL.F_STU_BK_CLASSYEAR.basename(), ročník);
@@ -118,13 +160,17 @@ public class Sync {
         rowData.put(EBakaSQL.F_STU_SURNAME.basename(), "Nový");
         rowData.put(EBakaSQL.F_STU_ID.basename(), "DEV04");
         rowData.put(EBakaSQL.F_STU_MAIL.basename(), "novy.aaadam2@zs-studanka.cz");
-        rowData.put("baka_flag", "0");
+        rowData.put(EBakaSQL.BK_FLAG.basename(), EBakaSQL.LIT_FALSE.basename());
+        rowData.put(EBakaSQL.F_GUA_BK_ID.basename(), "DEV04G");
+        rowData.put(EBakaSQL.F_GUA_BK_SURNAME.basename(), "Nová");
+        rowData.put(EBakaSQL.F_GUA_BK_GIVENNAME.basename(), "Marcela");
+        rowData.put(EBakaSQL.F_GUA_BK_MOBILE.basename(), "123456789");
+        rowData.put(EBakaSQL.F_GUA_BK_MAIL.basename(), "macek.new@joutsen.cz");
         this.catalog.addRecord("DEV04", rowData);
 
         // 12, Aaadam Nový, DEV05 - shodné jméno
         rowData = new DataSQL();//HashMap<String, String>();
         rowData.put(EBakaSQL.F_STU_CLASS_ID.basename(), "12");
-        //rowData.put(EBakaSQL.F_STU_MAIL.basename(), "NULL");
         rowData.put(EBakaSQL.F_STU_CLASS.basename(), ročník + "." + třída);
         rowData.put(EBakaSQL.F_STU_BK_CLASSLETTER.basename(), třída);
         rowData.put(EBakaSQL.F_STU_BK_CLASSYEAR.basename(), ročník);
@@ -132,14 +178,17 @@ public class Sync {
         rowData.put(EBakaSQL.F_STU_SURNAME.basename(), "Nový");
         rowData.put(EBakaSQL.F_STU_ID.basename(), "DEV05");
         rowData.put(EBakaSQL.F_STU_MAIL.basename(), "novy.aaadam3@zs-studanka.cz");
-        rowData.put("baka_flag", "0");
+        rowData.put(EBakaSQL.BK_FLAG.basename(), EBakaSQL.LIT_FALSE.basename());
+        rowData.put(EBakaSQL.F_GUA_BK_ID.basename(), "DEV05G");
+        rowData.put(EBakaSQL.F_GUA_BK_SURNAME.basename(), "Nový");
+        rowData.put(EBakaSQL.F_GUA_BK_GIVENNAME.basename(), "Kocour");
+        rowData.put(EBakaSQL.F_GUA_BK_MOBILE.basename(), "255256250");
+        rowData.put(EBakaSQL.F_GUA_BK_MAIL.basename(), "mike666@joutsen.cz");
         this.catalog.addRecord("DEV05", rowData);
-
 
         // 27, Aaadam Expirovaný, DEV03
         rowData = new DataSQL();//HashMap<String, String>();
         rowData.put(EBakaSQL.F_STU_CLASS_ID.basename(), "27");
-        //rowData.put(EBakaSQL.F_STU_MAIL.basename(), "NULL");
         rowData.put(EBakaSQL.F_STU_CLASS.basename(), "1" + "." + třída);
         rowData.put(EBakaSQL.F_STU_BK_CLASSLETTER.basename(), třída);
         rowData.put(EBakaSQL.F_STU_BK_CLASSYEAR.basename(), "1"); // 1.E
@@ -147,7 +196,12 @@ public class Sync {
         rowData.put(EBakaSQL.F_STU_SURNAME.basename(), "Expirovaný");
         rowData.put(EBakaSQL.F_STU_ID.basename(), "DEV03");
         rowData.put(EBakaSQL.F_STU_MAIL.basename(), "expirovany.aaadam1@zs-studanka.cz");
-        rowData.put("baka_flag", "0");
+        rowData.put(EBakaSQL.BK_FLAG.basename(), EBakaSQL.LIT_FALSE.basename());
+        rowData.put(EBakaSQL.F_GUA_BK_ID.basename(), "DEV03G");
+        rowData.put(EBakaSQL.F_GUA_BK_SURNAME.basename(), "Expirovaná");
+        rowData.put(EBakaSQL.F_GUA_BK_GIVENNAME.basename(), "Markéta");
+        rowData.put(EBakaSQL.F_GUA_BK_MOBILE.basename(), "999324564");
+        rowData.put(EBakaSQL.F_GUA_BK_MAIL.basename(), "makyna.awesome@joutsen.cz");
         this.catalog.addRecord("DEV03", rowData);
     }
 
@@ -711,6 +765,121 @@ public class Sync {
 
                 }
             }
+
+        }
+    }
+
+    /**
+     * Kontrola a zavedení primárních zákonných zástupců žáků do globální adresáře.
+     *
+     * TODO
+     *
+     * smazání nespárovaných/nepotřebných
+     *
+     * @param attemptRepair provést opravy v datech
+     */
+    public void syncGuardian(Boolean attemptRepair) {
+
+        // skupiny <rodič, <DN třída>>
+        HashMap<String, ArrayList<String>> guardianDL = new HashMap<>();
+
+        // znovunačtení po synchronizaci dat
+        this.loadDirectoryContacts();
+        this.loadCatalog();
+
+        Iterator<String> students = this.catalog.iterator();
+        while (students.hasNext()) {
+
+            String studentID = students.next();
+
+            if (Settings.getInstance().beVerbose()) {
+                ReportManager.log("Probíhá zpracování zákonného zástupce žáka (" +
+                        catalog.get(studentID).get(EBakaSQL.F_STU_CLASS.basename()) + ") " +
+                        catalog.get(studentID).get(EBakaSQL.F_STU_SURNAME.basename()) + " " +
+                        catalog.get(studentID).get(EBakaSQL.F_STU_GIVENNAME.basename()) + ".");
+            }
+
+            // vytvoření seznamu tříd
+            if (!guardianDL.containsKey(catalog.get(studentID).get(EBakaSQL.F_GUA_BK_MAIL.basename()))) {
+                guardianDL.put(catalog.get(studentID).get(EBakaSQL.F_GUA_BK_MAIL.basename()), new ArrayList<String>());
+            }
+
+            // vytvoření DN skupiny třídy
+            String classDN = "Rodice-Trida-" + (catalog.get(studentID).get(EBakaSQL.F_STU_CLASS.basename())).replace(".", "") + "," + Settings.getInstance().getLDAP_baseDL();
+            guardianDL.get(catalog.get(studentID).get(EBakaSQL.F_GUA_BK_MAIL.basename())).add(classDN);
+
+            // předběžná validace dat
+            Guardian partialGuardian = RecordFactory.getGuardianByPair(catalog.get(studentID), null);
+            if (!partialGuardian.validateData()) {
+                ReportManager.log(EBakaLogType.LOG_ERR, "Žák ("+
+                                catalog.get(studentID).get(EBakaSQL.F_STU_CLASS.basename()) + ") " +
+                                catalog.get(studentID).get(EBakaSQL.F_STU_SURNAME.basename()) + " " +
+                                catalog.get(studentID).get(EBakaSQL.F_STU_GIVENNAME.basename()) + " " +
+                                "nemá v evidenci správně vyplněné údaje primárního zákonného zástupce.");
+                // TODO hlášení
+                //continue;
+            }
+
+            // ověření existence kontaktu v adresáři
+            if (this.contacts.get(catalog.get(studentID).get(EBakaSQL.F_GUA_BK_MAIL.field())) != null) {
+
+                // přidání příznaku zpracování
+                this.contacts.setFlag(catalog.get(studentID).get(EBakaSQL.F_GUA_BK_MAIL.field()), true);
+
+                if (Settings.getInstance().beVerbose()) {
+                    ReportManager.log("Proběhne kontrola údajů zákonného zástupce.");
+                }
+
+                // instance záznamu
+                Guardian guardian = RecordFactory.getGuardianByPair(catalog.get(studentID), this.contacts.get(catalog.get(studentID).get(EBakaSQL.F_GUA_BK_MAIL.field())));
+                Boolean guardianSync = guardian.sync(attemptRepair);
+
+                if (guardianSync) {
+                    if (Settings.getInstance().beVerbose()) {
+                        ReportManager.log(EBakaLogType.LOG_OK, "Kontrola údajů zákonného zástupce žáka proběhla v pořádku.");
+                    }
+                } else {
+                    ReportManager.log(EBakaLogType.LOG_ERR, "Nebylo možné provést synchronizaci záznamu zákonného zástupce.");
+                }
+
+            } else {
+                if (Settings.getInstance().beVerbose()) {
+                    ReportManager.log("Zákonný zástupce v adresáři neexistuje.");
+                }
+
+                // konec zpracování
+                if (!attemptRepair) {
+                    if (Settings.getInstance().debugMode()) {
+                        ReportManager.log("Není vyžadována oprava, vytvoření nového kontaktu neproběhne.");
+                    }
+
+                    continue;
+                }
+
+                // vytvoření nového kontaktu
+                Guardian guardian = RecordFactory.newGuardian(catalog.get(studentID));
+
+            }
+
+            // projdi žáka a získej informace o rodiči (validace)
+            // ověř existenci rodiče
+            // - pokud neexistuje, přidej do vytvořivších záznamů
+            // - pokud existuje, tapni rodiče
+            // přidej generátor třídy do guardianDL
+        }
+
+        // synchronizace distribučních skupin zákonných zástupců
+        Iterator<String> guardianDLiterator = guardianDL.keySet().iterator();
+        while (guardianDLiterator.hasNext()) {
+            String guardianID = guardianDLiterator.next();
+
+            // TODO získání podle podmnožiny
+            //if (contacts.get())
+
+            // seřazení získaného seznamu
+            Collections.sort(guardianDL.get(guardianID));
+
+            //if ()
 
         }
     }

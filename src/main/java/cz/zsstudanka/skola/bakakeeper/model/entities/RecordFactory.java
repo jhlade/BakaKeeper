@@ -31,4 +31,22 @@ public class RecordFactory {
         return create;
     }
 
+    /**
+     * Získání instance existujícího kontaktu zákonného zástupce na základě předaných dat.
+     *
+     * @param dataSQL data z evidence
+     * @param dataLDAP data z AD
+     * @return instance zákonného zástupce
+     */
+    public static Guardian getGuardianByPair(DataSQL dataSQL, DataLDAP dataLDAP) {
+        return new Guardian(dataSQL, dataLDAP);
+    }
+
+    public static Guardian newGuardian(DataSQL studentData) {
+        Guardian create = new Guardian(studentData, null);
+        create.initializeContact();
+
+        return create;
+    }
+
 }

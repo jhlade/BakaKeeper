@@ -508,7 +508,7 @@ public class Student implements IRecordLDAP, IRecordSQL {
     public String getLDAPdata(EBakaLDAPAttributes attr) {
 
         if (this.dataLDAP != null) {
-            return this.dataLDAP.get(attr.attribute()).toString();
+            return (this.dataLDAP.containsKey(attr.attribute())) ? this.dataLDAP.get(attr.attribute()).toString() : null;
         }
 
         return null;
@@ -565,7 +565,7 @@ public class Student implements IRecordLDAP, IRecordSQL {
     public String getSQLdata(EBakaSQL field) {
 
         if (this.dataSQL != null) {
-            return this.dataSQL.get(field.basename());
+            return (this.dataSQL.get(field.basename()).equals(EBakaSQL.NULL)) ? null : this.dataSQL.get(field.basename());
         }
 
         return null;
