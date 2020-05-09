@@ -805,7 +805,7 @@ public class Sync {
             }
 
             // vytvoření DN skupiny třídy
-            String classDN = "Rodice-Trida-" + (catalog.get(studentID).get(EBakaSQL.F_STU_CLASS.basename())).replace(".", "") + "," + Settings.getInstance().getLDAP_baseDL();
+            String classDN = "CN=Rodice-Trida-" + (catalog.get(studentID).get(EBakaSQL.F_STU_CLASS.basename())).replace(".", "") + "," + Settings.getInstance().getLDAP_baseDL();
             guardianDL.get(catalog.get(studentID).get(EBakaSQL.F_GUA_BK_MAIL.basename())).add(classDN);
 
             // předběžná validace dat
@@ -823,12 +823,12 @@ public class Sync {
             // ověření existence kontaktu v adresáři
             if (this.contacts.get(catalog.get(studentID).get(EBakaSQL.F_GUA_BK_MAIL.field())) != null) {
 
-                // přidání příznaku zpracování
-                this.contacts.setFlag(catalog.get(studentID).get(EBakaSQL.F_GUA_BK_MAIL.field()), true);
-
                 if (Settings.getInstance().beVerbose()) {
                     ReportManager.log("Proběhne kontrola údajů zákonného zástupce.");
                 }
+
+                // TODO přidání příznaku zpracování
+                this.contacts.setFlag(catalog.get(studentID).get(EBakaSQL.F_GUA_BK_MAIL.basename()), true);
 
                 // instance záznamu
                 Guardian guardian = RecordFactory.getGuardianByPair(catalog.get(studentID), this.contacts.get(catalog.get(studentID).get(EBakaSQL.F_GUA_BK_MAIL.field())));
@@ -839,7 +839,10 @@ public class Sync {
                         ReportManager.log(EBakaLogType.LOG_OK, "Kontrola údajů zákonného zástupce žáka proběhla v pořádku.");
                     }
                 } else {
-                    ReportManager.log(EBakaLogType.LOG_ERR, "Nebylo možné provést synchronizaci záznamu zákonného zástupce.");
+                    ReportManager.log(EBakaLogType.LOG_ERR, "Nebylo možné provést synchronizaci záznamu zákonného zástupce žáka (" +
+                            catalog.get(studentID).get(EBakaSQL.F_STU_CLASS.basename()) + ") " +
+                            catalog.get(studentID).get(EBakaSQL.F_STU_SURNAME.basename()) + " " +
+                            catalog.get(studentID).get(EBakaSQL.F_STU_GIVENNAME.basename()) + ".");
                 }
 
             } else {
@@ -858,6 +861,7 @@ public class Sync {
 
                 // vytvoření nového kontaktu
                 Guardian guardian = RecordFactory.newGuardian(catalog.get(studentID));
+                // TODO
 
             }
 
@@ -868,19 +872,76 @@ public class Sync {
             // přidej generátor třídy do guardianDL
         }
 
+        // smazání neplatných kontaktů
+        LinkedHashMap<String, DataLDAP> contactsToDelete = contacts.getSubsetWithFlag(false);
+        if (contactsToDelete.size() > 0) {
+
+            if (Settings.getInstance().beVerbose()) {
+                ReportManager.log("Byly nalezeny neplatné kontakty, proběhne jejich smazání.");
+            }
+
+            Iterator<String> contactsToDeleteIterator = contactsToDelete.keySet().iterator();
+            while (contactsToDeleteIterator.hasNext()) {
+
+                String guardianID = contactsToDeleteIterator.next();
+
+                // parciální instance
+                Guardian contactToDelete = RecordFactory.getGuardianByPair(null, contacts.get(guardianID));
+
+                if (attemptRepair) {
+                    // TODO
+                    Boolean delete = contactToDelete.deleteContact();
+
+                    if (Settings.getInstance().beVerbose()) {
+                        ReportManager.log("Byl vymazán neplatný kontakt " + contactToDelete.getSurname() + " " + contactToDelete.getGivenName() + ".");
+                    }
+
+                    // TODO hlášení
+                } else {
+                    if (Settings.getInstance().beVerbose()) {
+                        ReportManager.log("Je třeba smazat neplatný záznam zákonného zástupce " + contactToDelete.getSurname() + " " + contactToDelete.getGivenName() + ".");
+                    }
+                    // TODO hlášení
+                }
+            }
+        }
+
+        // znovunačtení synchronizovaných dat
+        this.loadDirectoryContacts();
+
         // synchronizace distribučních skupin zákonných zástupců
-        Iterator<String> guardianDLiterator = guardianDL.keySet().iterator();
-        while (guardianDLiterator.hasNext()) {
-            String guardianID = guardianDLiterator.next();
+        if (attemptRepair) {
+            Iterator<String> guardianDLiterator = guardianDL.keySet().iterator();
+            while (guardianDLiterator.hasNext()) {
+                String guardianID = guardianDLiterator.next();
 
-            // TODO získání podle podmnožiny
-            //if (contacts.get())
+                // seřazení získaného seznamu
+                Collections.sort(guardianDL.get(guardianID));
 
-            // seřazení získaného seznamu
-            Collections.sort(guardianDL.get(guardianID));
+                LinkedHashMap<String, DataSQL> guardianDetails = catalog.getSubsetBy(EBakaSQL.F_GUA_BK_MAIL, guardianID);
+                String studentID = "";
+                if (guardianDetails.size() <= 0) {
+                    continue;
+                } else {
+                    Iterator<String> guardianSelectionIterator = guardianDetails.keySet().iterator();
+                    studentID = guardianSelectionIterator.next();
+                }
 
-            //if ()
+                // parciální instance zákonného zástupce
+                Guardian guardian = RecordFactory.getGuardianByPair(catalog.get(studentID), contacts.get(guardianID));
+                Boolean updateDL = guardian.replaceDistributionLists(guardianDL.get(guardianID));
 
+                String guardianName = guardian.getSurname() + " " + guardian.getGivenName();
+
+                if (updateDL) {
+                    if (Settings.getInstance().beVerbose()) {
+                        ReportManager.log(EBakaLogType.LOG_OK, "Distribuční skupiny zákonného zástupce " + guardianName + " byly aktulizovány.");
+                    }
+                } else {
+                    ReportManager.log(EBakaLogType.LOG_ERR, "Nebylo možné aktualizovat distribuční skupiny zákonného zástupce " + guardianName + ".");
+                }
+
+            }
         }
     }
 

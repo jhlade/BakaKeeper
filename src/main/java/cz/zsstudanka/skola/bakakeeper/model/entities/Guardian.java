@@ -61,8 +61,13 @@ public class Guardian implements IRecordLDAP, IRecordSQL {
         // TODO SQL->LDAP
     }
 
-    public void deleteContact() {
-        // TODO LDAP->
+    /**
+     * TODO návratová hodnota
+     * @return
+     */
+    public Boolean deleteContact() {
+        BakaADAuthenticator.getInstance().deleteRecord(this.getDN());
+        return true;
     }
 
     /**
@@ -183,6 +188,14 @@ public class Guardian implements IRecordLDAP, IRecordSQL {
                     result = false;
                 }
             }
+
+            // mail v doméně školy
+            if (BakaUtils.validateEmail(getSQLdata(EBakaSQL.F_GUA_BK_MAIL)).contains(Settings.getInstance().getMailDomain())) {
+                if (repair) {
+                    result &= setLDAPdata(EBakaLDAPAttributes.MSXCH_REQ_AUTH, EBakaLDAPAttributes.BK_LITERAL_FALSE.value());
+                    result &= setLDAPdata(EBakaLDAPAttributes.MSXCH_GAL_HIDDEN, EBakaLDAPAttributes.BK_LITERAL_FALSE.value());
+                }
+            }
         }
 
         // telefon
@@ -238,6 +251,11 @@ public class Guardian implements IRecordLDAP, IRecordSQL {
      * @return úspěch operace
      */
     public Boolean replaceDistributionLists(ArrayList<String> distributionLists) {
+
+        if (dataLDAP == null) {
+            return false;
+        }
+
         Boolean result = true;
 
         // smazání všech současných skupin
@@ -247,6 +265,32 @@ public class Guardian implements IRecordLDAP, IRecordSQL {
         result &= BakaADAuthenticator.getInstance().addObjectToGroup(this.getDN(), distributionLists);
 
         return result;
+    }
+
+    /**
+     * Příjmení zákonného zástupce.
+     *
+     * @return příjmení zákonného zástupce žáka
+     */
+    public String getSurname() {
+        if (this.dataSQL == null) {
+            return this.dataLDAP.get(EBakaLDAPAttributes.NAME_LAST.attribute()).toString();
+        }
+
+        return this.dataSQL.get(EBakaSQL.F_GUA_BK_SURNAME.basename());
+    }
+
+    /**
+     * Jméno zákonného zástupce.
+     *
+     * @return jméno zákonného zástupce žáka
+     */
+    public String getGivenName() {
+        if (this.dataSQL == null) {
+            return this.dataLDAP.get(EBakaLDAPAttributes.NAME_FIRST.attribute()).toString();
+        }
+
+        return this.dataSQL.get(EBakaSQL.F_GUA_BK_GIVENNAME.basename());
     }
 
     @Override
