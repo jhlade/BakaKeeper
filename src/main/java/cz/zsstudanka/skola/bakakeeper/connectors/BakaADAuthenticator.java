@@ -697,7 +697,7 @@ public class BakaADAuthenticator {
      *
      * @param dn plné DN objektu
      */
-    private void deleteRecord(String dn) {
+    public void deleteRecord(String dn) {
 
         // kontext
         LdapContext ctxGC = null;
