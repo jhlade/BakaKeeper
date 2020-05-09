@@ -12,33 +12,25 @@ public class BakaUtils {
 
     /**
      * Validace a úprava e-mailové adresy.
-     * TODO doplnit
      *
      * @param email mailová adresa k validaci
      * @return validovaná adresa nebo null
      */
     public static String validateEmail(String email) {
-        // regexp - nebo null
-        // TODO validace
-        return email.trim();
+        String regex = "^[\\w-_\\.+]*[\\w-_\\.]\\@([\\w]+\\.)+[\\w]+[\\w]$";
+        return (email.matches(regex)) ? email.trim() : null;
     }
 
     /**
      * Validace a úprava telefonního čísla.
-     * TODO doplnit
      *
      * @param phone telefonní číslo
-     * @return upravené telefonní číslo nebo null TODO ?
+     * @return upravené telefonní číslo nebo prázdný řetězec
      */
     public static String validatePhone(String phone) {
-
         if (phone == null) return "";
-        // TODO validace
-
-
-        String basePhone = phone.replace(" ", "").trim();
-
-        return (basePhone.length() > 0) ? basePhone : "";
+        String basePhone = phone.replaceAll(" ", "").trim();
+        return (basePhone.length() > 0 && basePhone.matches("^\\d{9}$")) ? basePhone : "";
     }
 
     /**
@@ -395,5 +387,4 @@ public class BakaUtils {
         // následující DN
         return "CN=" + nextCN + "," + parseBase(dn);
     }
-
 }
