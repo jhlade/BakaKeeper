@@ -52,7 +52,7 @@ public class Test {
         //testSync.actionInit(true);
         //testSync.actionCheck(true);
         //testSync.checkData(true);
-        testSync.syncGuardian(false);
+        testSync.syncGuardian(true);
 
         // odeslání výsledku
         ReportManager.getInstance().report();
