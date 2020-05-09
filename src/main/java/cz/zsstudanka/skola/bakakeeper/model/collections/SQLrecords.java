@@ -181,7 +181,7 @@ public class SQLrecords implements IRecords {
                 DataSQL rowData = new DataSQL();//new HashMap<String, String>();
 
                 for (EBakaSQL col : this.dataStructure) {
-                    rowData.put(col.basename(), (rs.getString(col.basename()) == null) ? "(NULL)" : rs.getString(col.basename()).trim());
+                    rowData.put(col.basename(), (rs.getString(col.basename()) == null) ? EBakaSQL.NULL.basename() : rs.getString(col.basename()).trim());
 
                     if (Settings.getInstance().debugMode()) {
                         if (rs.getString(col.basename()) == null) {

@@ -57,6 +57,7 @@ public enum EBakaSQL {
     S_STU_BK_GUA_MOBILE(F_GUA_MOBILE.field + " AS " + F_GUA_BK_MOBILE.field, "Výběr: telefon zákonného zástupce."),
     S_STU_BK_GUA_MAIL(F_GUA_MAIL.field + " AS " + F_GUA_BK_MAIL.field, "Výběr: e-mailová adresa zákonného zástupce."),
 
+    NULL("(NULL)", "Literál prázdných dat."),
     DEBUG("DEBUG_FIELD", "Pro účely ladění.");
 
     private final String field;
