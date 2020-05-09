@@ -48,8 +48,8 @@ import java.util.Map;
 public class Structure {
 
     // řetězcové literály logických hodnot pro LDAP
-    static final String LIT_TRUE  = "TRUE";
-    static final String LIT_FALSE = "FALSE";
+    static final String LIT_TRUE  = EBakaLDAPAttributes.BK_LITERAL_TRUE.value();
+    static final String LIT_FALSE = EBakaLDAPAttributes.BK_LITERAL_FALSE.value();
 
     /**
      * Kontrola základní hierarchické struktury OU a skupin v Active Directory.
