@@ -36,6 +36,11 @@ public enum EBakaSQL {
     F_GUA_GIVENNAME(TBL_GUA.field + "." + "JMENO", "Jméno zákonného zástupce."),
     F_GUA_MOBILE(TBL_GUA.field + "." + "TEL_MOBIL", "Mobilní telefon zákonného zástupce."),
     F_GUA_MAIL(TBL_GUA.field + "." + "E_MAIL", "E-mailová adresa zákonného zástupce."),
+    F_GUA_BK_ID("ZZ_KOD", "Alias - ID zákonného zástupce."),
+    F_GUA_BK_SURNAME("ZZ_PRIJMENI", "Alias - příjmení zákonného zástupce."),
+    F_GUA_BK_GIVENNAME("ZZ_JMENO", "Alias - jméno zákonného zástupce."),
+    F_GUA_BK_MAIL("ZZ_MAIL", "Alias - e-mailová adresa zákonného zástupce."),
+    F_GUA_BK_MOBILE("ZZ_TELEFON", "Alias - mobilní telefon zákonného zástupce."),
 
     // pole - Student:Guardian
     F_GS_GUAID(TBL_STU_GUA.field + "." + "ID_ZZ", "ID zákonného zástupce."),
@@ -46,11 +51,11 @@ public enum EBakaSQL {
     // selektor pole - aliases
     S_STU_BK_CLASSYEAR("SUBSTRING(" + TBL_STU.field + "." + "TRIDA, 1, 1) AS " + F_STU_BK_CLASSYEAR.field, "Výběr: ročník žáka."),
     S_STU_BK_CLASSLETTER("SUBSTRING(" + TBL_STU.field + "." + "TRIDA, 3, 1) AS " + F_STU_BK_CLASSLETTER.field, "Výběr: písmeno třídy žáka."),
-    S_STU_BK_GUA_ID(F_GUA_ID.field + " AS ZZ_KOD", "Výběr: ID zákonného zástupce."),
-    S_STU_BK_GUA_SURNAME(F_GUA_SURNAME.field + " AS ZZ_PRIJMENI", "Výběr: příjmení zákonného zástupce."),
-    S_STU_BK_GUA_GIVENNAME(F_GUA_GIVENNAME.field + " AS ZZ_JMENO", "Výběr: jméno zákonného zástupce."),
-    S_STU_BK_GUA_MOBILE(F_GUA_MOBILE.field + " AS ZZ_TELEFON", "Výběr: telefon zákonného zástupce."),
-    S_STU_BK_GUA_MAIL(F_GUA_MAIL.field + " AS ZZ_MAIL", "Výběr: e-mailová adresa zákonného zástupce."),
+    S_STU_BK_GUA_ID(F_GUA_ID.field + " AS " + F_GUA_BK_ID.field, "Výběr: ID zákonného zástupce."),
+    S_STU_BK_GUA_SURNAME(F_GUA_SURNAME.field + " AS " + F_GUA_BK_SURNAME.field, "Výběr: příjmení zákonného zástupce."),
+    S_STU_BK_GUA_GIVENNAME(F_GUA_GIVENNAME.field + " AS " + F_GUA_BK_GIVENNAME.field, "Výběr: jméno zákonného zástupce."),
+    S_STU_BK_GUA_MOBILE(F_GUA_MOBILE.field + " AS " + F_GUA_BK_MOBILE.field, "Výběr: telefon zákonného zástupce."),
+    S_STU_BK_GUA_MAIL(F_GUA_MAIL.field + " AS " + F_GUA_BK_MAIL.field, "Výběr: e-mailová adresa zákonného zástupce."),
 
     DEBUG("DEBUG_FIELD", "Pro účely ladění.");
 
