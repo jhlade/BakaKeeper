@@ -107,4 +107,11 @@ public class BakaUtilsTest {
     public void classStringFromDN() {
         assertEquals("1.A", BakaUtils.classStringFromDN("CN=Malý Vojta,OU=Trida-A,OU=Rocnik-1,OU=Zaci,OU=Skola,DC=skola,DC=local"));
     }
+
+    @Test
+    public void validateEmail() {
+        assertEquals("kocour.v.botach@domena.org", BakaUtils.validateEmail("kocour.v.botach@domena.org"));
+        assertEquals("mail@zs-kocourkov.cz", BakaUtils.validateEmail("mail@zs-kocourkov.cz"));
+        assertEquals("a-b-c-d@zs-kocourkov.cz", BakaUtils.validateEmail("a-b-c-d@zs-kocourkov.cz"));
+    }
 }
