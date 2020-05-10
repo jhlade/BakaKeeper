@@ -85,7 +85,7 @@ public class LDAPrecords implements IRecords {
                     EBakaLDAPAttributes.EXT01.attribute(),
             };
 
-            keyAttribute = EBakaLDAPAttributes.MAIL;
+            keyAttribute = EBakaLDAPAttributes.EXT01;
         }
 
         // pro účty

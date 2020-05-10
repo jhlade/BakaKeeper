@@ -63,7 +63,9 @@ public class Guardian implements IRecordLDAP, IRecordSQL {
 
         isValid &= !dataSQL.get(EBakaSQL.F_GUA_BK_SURNAME.basename()).equals(EBakaSQL.NULL.basename());
         isValid &= !dataSQL.get(EBakaSQL.F_GUA_BK_GIVENNAME.basename()).equals(EBakaSQL.NULL.basename());
-        //isValid &= (BakaUtils.validateEmail(dataSQL.get(EBakaSQL.F_GUA_BK_MAIL.basename())) != null);
+        isValid &= !dataSQL.get(EBakaSQL.F_GUA_BK_SURNAME.basename()).contains(",");
+        isValid &= !dataSQL.get(EBakaSQL.F_GUA_BK_GIVENNAME.basename()).contains(",");
+        // TODO e-mail?
 
         return isValid;
     }
@@ -127,12 +129,20 @@ public class Guardian implements IRecordLDAP, IRecordSQL {
         newData.put(EBakaLDAPAttributes.NAME_LAST.attribute(), this.dataSQL.get(EBakaSQL.F_GUA_BK_SURNAME.basename()));
         newData.put(EBakaLDAPAttributes.NAME_FIRST.attribute(), this.dataSQL.get(EBakaSQL.F_GUA_BK_GIVENNAME.basename()));
         newData.put(EBakaLDAPAttributes.EXT01.attribute(), this.dataSQL.get(EBakaSQL.F_GUA_BK_ID.basename()));
-        newData.put(EBakaLDAPAttributes.MAIL.attribute(), this.dataSQL.get(EBakaSQL.F_GUA_BK_MAIL.basename()));
-        newData.put(EBakaLDAPAttributes.MOBILE.attribute(), this.dataSQL.get(EBakaSQL.F_GUA_BK_MOBILE.basename()));
 
-        newData.put(EBakaLDAPAttributes.MSXCH_REQ_AUTH.attribute(), EBakaLDAPAttributes.BK_FLAG_TRUE.value());
-        newData.put(EBakaLDAPAttributes.MSXCH_GAL_HIDDEN.attribute(), EBakaLDAPAttributes.BK_FLAG_TRUE.value());
-        newData.put(EBakaLDAPAttributes.UID.attribute(), this.dataSQL.get(EBakaSQL.F_GUA_BK_MAIL.basename()));
+        // e-mail
+        if (BakaUtils.validateEmail(this.dataSQL.get(EBakaSQL.F_GUA_BK_MAIL.basename())).length() > 0) {
+            newData.put(EBakaLDAPAttributes.MAIL.attribute(), BakaUtils.validateEmail(this.dataSQL.get(EBakaSQL.F_GUA_BK_MAIL.basename())));
+        }
+
+        // telefon
+        if (BakaUtils.validatePhone(this.dataSQL.get(EBakaSQL.F_GUA_BK_MOBILE.basename())).length() > 0) {
+            newData.put(EBakaLDAPAttributes.MOBILE.attribute(), BakaUtils.validatePhone(this.dataSQL.get(EBakaSQL.F_GUA_BK_MOBILE.basename())));
+        }
+
+        // autorizace + skyrtí v GAL
+        newData.put(EBakaLDAPAttributes.MSXCH_REQ_AUTH.attribute(), EBakaLDAPAttributes.BK_LITERAL_TRUE.value());
+        newData.put(EBakaLDAPAttributes.MSXCH_GAL_HIDDEN.attribute(), EBakaLDAPAttributes.BK_LITERAL_TRUE.value());
 
         BakaADAuthenticator.getInstance().createNewContact(cn, newData);
 
@@ -437,7 +447,7 @@ public class Guardian implements IRecordLDAP, IRecordSQL {
     public String getInternalID() {
 
         if (this.dataSQL != null) {
-            return this.dataSQL.get(EBakaSQL.F_GUA_ID.basename());
+            return this.dataSQL.get(EBakaSQL.F_GUA_BK_ID.basename());
         }
 
         if (this.dataLDAP != null) {
