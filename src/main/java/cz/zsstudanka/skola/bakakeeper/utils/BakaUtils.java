@@ -14,11 +14,11 @@ public class BakaUtils {
      * Validace a úprava e-mailové adresy.
      *
      * @param email mailová adresa k validaci
-     * @return validovaná adresa nebo null
+     * @return validovaná adresa nebo prázdný řetězec
      */
     public static String validateEmail(String email) {
         String regex = "^[\\w-_\\.+]*[\\w-_\\.]\\@([\\w]+\\.)+[\\w]+[\\w]$";
-        return (email.matches(regex)) ? email.trim() : null;
+        return (email.matches(regex)) ? email.trim().toLowerCase() : "";
     }
 
     /**
