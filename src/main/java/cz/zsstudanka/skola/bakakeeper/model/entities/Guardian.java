@@ -66,7 +66,7 @@ public class Guardian implements IRecordLDAP, IRecordSQL {
      * @return
      */
     public Boolean deleteContact() {
-        BakaADAuthenticator.getInstance().deleteRecord(this.getDN());
+        BakaADAuthenticator.getInstance().deleteContact(this.getDN());
         return true;
     }
 

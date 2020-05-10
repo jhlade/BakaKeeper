@@ -263,37 +263,6 @@ public class BakaADAuthenticator {
     }
 
     /**
-     * Základní informace o jednom kontaktu na základě e-mailové adresy.
-     *
-     * @param mail
-     * @return
-     */
-    public Map<Integer, Map> getContactInfo(String mail) {
-
-        // dotaz
-        HashMap<String, String> ldapQ = new HashMap<String, String>();
-
-        ldapQ.put(EBakaLDAPAttributes.OC_CONTACT.attribute(), EBakaLDAPAttributes.OC_CONTACT.value());
-        //ldapQ.put("dn", "dn=" + dn + Settings.getInstance().getLDAP_baseKontakty());
-        ldapQ.put(EBakaLDAPAttributes.MAIL.attribute(), mail);
-
-        // požadované atributy
-        String[] retAttributes = {
-                EBakaLDAPAttributes.NAME_FIRST.attribute(),
-                EBakaLDAPAttributes.NAME_LAST.attribute(),
-                EBakaLDAPAttributes.NAME_DISPLAY.attribute(),
-                EBakaLDAPAttributes.MAIL.attribute(),
-                EBakaLDAPAttributes.MOBILE.attribute(),
-                EBakaLDAPAttributes.DN.attribute(),
-                EBakaLDAPAttributes.MSXCH_GAL_HIDDEN.attribute(),
-                EBakaLDAPAttributes.MEMBER_OF.attribute(),
-                EBakaLDAPAttributes.EXT01.attribute(),
-        };
-
-        return ((Map<Integer, Map>) getObjectInfo(Settings.getInstance().getLDAP_baseContacts(), ldapQ, retAttributes)).get(0);
-    }
-
-    /**
      * Informace o konkrétní skupině nebo distribučním seznamu.
      *
      * @param cn základní jméno skupiny
@@ -453,7 +422,7 @@ public class BakaADAuthenticator {
     /**
      * Vytvoření nového uživatele v Active Directory.
      *
-     * @param cn Základní jméno uživatele
+     * @param cn základní jméno uživatele
      * @param targetOU cílová organizační jednotka
      * @param data parametry uživatele
      */
@@ -499,71 +468,80 @@ public class BakaADAuthenticator {
     }
 
     /**
-     * Vytvoření nového kontaktu.
+     * Vytvoření nového kontaktu v Acrtive Directory.
      *
-     * @param OU organizační jednotka s kontakty
-     * @param sn příjmení kontaktu
-     * @param firstName křestní jméno kontaktu
-     * @param displayName zobrazované jméno kontaktu
-     * @param mail primární e-mail kontaktu
-     * @param mobile mobilní telefonní číslo kontaktu
-     * @param dLists pole řetězců počátečních distribučních seznamů
-     * @deprecated
+     * @param cn základní jméno kontaktu
+     * @param data parametry kontaktu
      */
-    public void createContact(String OU, String sn, String firstName, String displayName, String mail, String mobile, String[] dLists) {
+    public void createNewContact(String cn, DataLDAP data) {
 
-        if (mail == null || mail.length() < 1) {
-
-            if (Settings.getInstance().beVerbose()) {
-                ReportManager.log(EBakaLogType.LOG_ERR_VERBOSE, "Nebyl nalezen platný e-mail pro zákonného zástupce " + displayName + ".");
-            }
-
-            return;
-        }
-
-        String[] objClasses = {
-            EBakaLDAPAttributes.OC_TOP.value(),
-            EBakaLDAPAttributes.OC_CONTACT.value(),
+        // třída objektu - kontakt
+        String[] objectClasses = {
+                EBakaLDAPAttributes.OC_TOP.value(),
+                EBakaLDAPAttributes.OC_PERSON.value(),
+                EBakaLDAPAttributes.OC_ORG_PERSON.value(),
+                EBakaLDAPAttributes.OC_CONTACT.value()
         };
 
-        // příprava atributů s kontakty
-        Attribute[] attrs = new Attribute[(mobile != null && mobile.length() > 0) ? 7 : 6];
-        attrs[0] = new BasicAttribute(EBakaLDAPAttributes.NAME_LAST.attribute(), sn);
-        attrs[1] = new BasicAttribute(EBakaLDAPAttributes.NAME_FIRST.attribute(), firstName);
-        attrs[2] = new BasicAttribute(EBakaLDAPAttributes.NAME_DISPLAY.attribute(), displayName);
-        attrs[3] = new BasicAttribute(EBakaLDAPAttributes.MAIL.attribute(), mail);
+        // data objektu
+        Attribute[] attrs = new Attribute[data.size()];
+        int a = 0;
 
-        // interní kontakt - nelze schovat v GAL nebo zakázat
-        if (!mail.contains(Settings.getInstance().getMailDomain())) {
-            attrs[4] = new BasicAttribute(EBakaLDAPAttributes.MSXCH_GAL_HIDDEN.attribute(), EBakaLDAPAttributes.MSXCH_GAL_HIDDEN.value());
-            attrs[5] = new BasicAttribute(EBakaLDAPAttributes.MSXCH_REQ_AUTH.attribute(), EBakaLDAPAttributes.MSXCH_REQ_AUTH.value());
-        } else {
-            attrs[4] = new BasicAttribute(EBakaLDAPAttributes.MSXCH_GAL_HIDDEN.attribute(), "FALSE");
-            attrs[5] = new BasicAttribute(EBakaLDAPAttributes.MSXCH_REQ_AUTH.attribute(), "FALSE");
-        }
+        Boolean inDomain = data.get(EBakaLDAPAttributes.MAIL.attribute()).toString().contains(Settings.getInstance().getMailDomain());
 
-        if (mobile != null && mobile.length() > 0) {
-            attrs[6] = new BasicAttribute(EBakaLDAPAttributes.MOBILE.attribute(), mobile);
-        }
+        Iterator<String> dataIterator = data.keySet().iterator();
+        while (dataIterator.hasNext()) {
+            String attrKey = dataIterator.next();
 
-        try {
-            createRecord(displayName, OU, objClasses, attrs);
-        } catch (Exception e) {
-            ReportManager.handleException("Nezdařilo se vytvořit kontakt.", e);
-        }
+            Object finalData = data.get(attrKey);
 
-        // prvotní přidání do distribučního seznamu
-        if (dLists != null && dLists.length > 0 ) {
-
-            // plné DN nového kontaktu
-            String contactDN = "cn=" + displayName + "," + OU;
-
-            for (int dl = 0; dl < dLists.length; dl++) {
-                String dlDN = "cn=" + dLists[dl] + "," + Settings.getInstance().getLDAP_baseDL();
-                addObjectToGroup(contactDN, dlDN);
+            // vyžadováno ověření
+            if (inDomain && attrKey.equals(EBakaLDAPAttributes.MSXCH_REQ_AUTH.attribute())) {
+                finalData = EBakaLDAPAttributes.BK_LITERAL_FALSE.value();
             }
 
+            // skrytí v GAL
+            if (inDomain && attrKey.equals(EBakaLDAPAttributes.MSXCH_GAL_HIDDEN.attribute())) {
+                finalData = EBakaLDAPAttributes.BK_LITERAL_FALSE.value();
+            }
+
+            attrs[a] = new BasicAttribute(attrKey, finalData);
+            a++;
         }
+
+        // OU s kontakty
+        String targetOU = Settings.getInstance().getLDAP_baseContacts();
+
+        // vytvoření záznamu - kontaktu
+        createRecord(cn, targetOU, objectClasses, attrs);
+    }
+
+    /**
+     * Bezpečné smazání kontaktu.
+     *
+     * @param dn plné jméno kontaktu
+     * @return úspěch operace
+     */
+    public Boolean deleteContact(String dn) {
+
+        // dotaz
+        HashMap<String, String> ldapQ = new HashMap<>();
+        ldapQ.put(EBakaLDAPAttributes.OC_CONTACT.attribute(), EBakaLDAPAttributes.OC_CONTACT.value());
+        ldapQ.put(EBakaLDAPAttributes.DN.attribute(), dn);
+
+        // požadované atributy
+        String[] retAttributes = {
+                EBakaLDAPAttributes.DN.attribute(),
+        };
+
+        Map info = getObjectInfo(Settings.getInstance().getLDAP_baseContacts(), ldapQ, retAttributes);
+
+        // kontakt nenalezen
+        if (info.size() != 1) {
+            return false;
+        }
+
+        return deleteRecord(dn);
     }
 
     /**
@@ -697,7 +675,7 @@ public class BakaADAuthenticator {
      *
      * @param dn plné DN objektu
      */
-    public void deleteRecord(String dn) {
+    private Boolean deleteRecord(String dn) {
 
         // kontext
         LdapContext ctxGC = null;
@@ -705,10 +683,12 @@ public class BakaADAuthenticator {
         try {
             ctxGC = new InitialLdapContext(env, null);
             ctxGC.destroySubcontext(dn);
+            return true;
         } catch (Exception e) {
             ReportManager.handleException("Nebylo možné smazat záznam [" + dn + "].", e);
         }
 
+        return false;
     }
 
     /**
