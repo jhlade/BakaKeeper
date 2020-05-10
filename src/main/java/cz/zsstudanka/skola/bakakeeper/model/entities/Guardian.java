@@ -346,6 +346,13 @@ public class Guardian implements IRecordLDAP, IRecordSQL {
             return false;
         }
 
+        if (distributionLists.equals(getCurrentDistributionLists())) {
+            if (Settings.getInstance().debugMode()) {
+                ReportManager.log(EBakaLogType.LOG_DEBUG, "Distribuční skupiny zákonného zástupce " + getSurname() + " " + getGivenName() + " jsou v pořádku.");
+            }
+            return true;
+        }
+
         Boolean result = true;
 
         // smazání všech současných skupin
@@ -353,6 +360,14 @@ public class Guardian implements IRecordLDAP, IRecordSQL {
 
         // přidání do zadaných skupin
         result &= BakaADAuthenticator.getInstance().addObjectToGroup(this.getDN(), distributionLists);
+
+        if (result) {
+            if (Settings.getInstance().beVerbose()) {
+                ReportManager.log(EBakaLogType.LOG_OK, "Distribuční skupiny zákonného zástupce " + getSurname() + " " + getGivenName() + " byly aktulizovány.");
+            }
+        } else {
+            ReportManager.log(EBakaLogType.LOG_ERR, "Nebylo možné aktualizovat distribuční skupiny zákonného zástupce " + getSurname() + " " + getGivenName() + ".");
+        }
 
         return result;
     }
