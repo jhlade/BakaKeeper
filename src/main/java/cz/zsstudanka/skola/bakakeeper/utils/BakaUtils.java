@@ -17,6 +17,10 @@ public class BakaUtils {
      * @return validovaná adresa nebo prázdný řetězec
      */
     public static String validateEmail(String email) {
+        if (email == null) {
+            return "";
+        }
+
         String regex = "^[\\w-_\\.+]*[\\w-_\\.]\\@([\\w-_]+\\.)+[\\w]+[\\w]$";
         return (email.matches(regex)) ? email.trim().toLowerCase() : "";
     }
