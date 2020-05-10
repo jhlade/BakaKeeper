@@ -22,11 +22,21 @@ import java.util.ArrayList;
  */
 public class Guardian implements IRecordLDAP, IRecordSQL {
 
+    /** maximální počet pokusů o vytvoření nového účtu */
+    private static final int MAX_LIMIT = 10;
+
+    /** parciálně vytvořený záznam */
     private Boolean partial = false;
 
     private DataLDAP dataLDAP;
     private DataSQL dataSQL;
 
+    /**
+     * Konstruktor kontaktu na základě SQL a LDAP dat.
+     *
+     * @param dataSQL data získaná z evidence
+     * @param dataLDAP data získaná z AD
+     */
     protected Guardian(DataSQL dataSQL, DataLDAP dataLDAP) {
 
         if (dataSQL == null || dataLDAP == null) {
@@ -39,6 +49,7 @@ public class Guardian implements IRecordLDAP, IRecordSQL {
 
     /**
      * Validace dat.
+     * TODO
      *
      * @return data zákonného zástupce jsou platná
      */
@@ -57,17 +68,84 @@ public class Guardian implements IRecordLDAP, IRecordSQL {
         return isValid;
     }
 
+    /**
+     * TODO
+     */
     protected void initializeContact() {
-        // TODO SQL->LDAP
+
+        // pouze parciální data
+        if (!this.partial || this.dataLDAP != null) {
+            if (Settings.getInstance().beVerbose()) {
+                ReportManager.log(EBakaLogType.LOG_ERR_VERBOSE, "Inicializace nového kontaktu je možná pouze z parciálních SQL dat.");
+            }
+
+            if (Settings.getInstance().debugMode()) {
+                ReportManager.log(EBakaLogType.LOG_ERR_DEBUG, "Bylo předáno " + this.dataLDAP.size() + " atributů.");
+            }
+
+            return;
+        }
+
+        // ověření unikátního DN + smyčka na generování nového DN kontaktu
+        int dnAttempt = 0;
+        Boolean dnOccupied;
+
+        // počáteční název
+        String cn = this.dataSQL.get(EBakaSQL.F_GUA_BK_SURNAME.basename()) + " " + this.dataSQL.get(EBakaSQL.F_GUA_BK_GIVENNAME.basename());
+        String dn = "CN=" + cn + "," + Settings.getInstance().getLDAP_baseContacts();
+
+        do {
+            dnAttempt++;
+
+            if (Settings.getInstance().debugMode()) {
+                ReportManager.log(EBakaLogType.LOG_LDAP, "Pokus č. " + dnAttempt + ": navrhuje se nové DN [" + dn + "].");
+            }
+
+            dnOccupied = BakaADAuthenticator.getInstance().checkDN(dn);
+
+            if (dnOccupied) {
+                if (Settings.getInstance().debugMode()) {
+                    ReportManager.log(EBakaLogType.LOG_LDAP, "Název je obsazen. Bude vygenerován nový.");
+                }
+
+                dn = BakaUtils.nextDN(dn);
+            }
+
+            cn = BakaUtils.parseCN(dn);
+
+        } while (dnOccupied && dnAttempt <= MAX_LIMIT);
+
+        // překročení limitu
+        if (dnAttempt >= MAX_LIMIT) {
+            ReportManager.log(EBakaLogType.LOG_ERR, "Došlo k závažné chybě - byl překročen maximální limit návrhů nového unikátního jména v adresáři.");
+        }
+
+        // data kontaktu
+        DataLDAP newData = new DataLDAP();
+        newData.put(EBakaLDAPAttributes.CN.attribute(), cn);
+        newData.put(EBakaLDAPAttributes.NAME_DISPLAY.attribute(), this.dataSQL.get(EBakaSQL.F_GUA_BK_SURNAME.basename()) + " " + this.dataSQL.get(EBakaSQL.F_GUA_BK_GIVENNAME.basename()));
+        newData.put(EBakaLDAPAttributes.NAME_LAST.attribute(), this.dataSQL.get(EBakaSQL.F_GUA_BK_SURNAME.basename()));
+        newData.put(EBakaLDAPAttributes.NAME_FIRST.attribute(), this.dataSQL.get(EBakaSQL.F_GUA_BK_GIVENNAME.basename()));
+        newData.put(EBakaLDAPAttributes.EXT01.attribute(), this.dataSQL.get(EBakaSQL.F_GUA_BK_ID.basename()));
+        newData.put(EBakaLDAPAttributes.MAIL.attribute(), this.dataSQL.get(EBakaSQL.F_GUA_BK_MAIL.basename()));
+        newData.put(EBakaLDAPAttributes.MOBILE.attribute(), this.dataSQL.get(EBakaSQL.F_GUA_BK_MOBILE.basename()));
+
+        newData.put(EBakaLDAPAttributes.MSXCH_REQ_AUTH.attribute(), EBakaLDAPAttributes.BK_FLAG_TRUE.value());
+        newData.put(EBakaLDAPAttributes.MSXCH_GAL_HIDDEN.attribute(), EBakaLDAPAttributes.BK_FLAG_TRUE.value());
+        newData.put(EBakaLDAPAttributes.UID.attribute(), this.dataSQL.get(EBakaSQL.F_GUA_BK_MAIL.basename()));
+
+        BakaADAuthenticator.getInstance().createNewContact(cn, newData);
+
+        this.dataLDAP = newData;
     }
 
     /**
-     * TODO návratová hodnota
-     * @return
+     * Smazání kontaktu z adresáře.
+     *
+     * @return úspěch oeprace
      */
     public Boolean deleteContact() {
-        BakaADAuthenticator.getInstance().deleteContact(this.getDN());
-        return true;
+        return BakaADAuthenticator.getInstance().deleteContact(this.getDN());
     }
 
     /**
