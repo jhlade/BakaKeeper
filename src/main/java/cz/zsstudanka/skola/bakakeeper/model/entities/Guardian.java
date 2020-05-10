@@ -65,7 +65,9 @@ public class Guardian implements IRecordLDAP, IRecordSQL {
         isValid &= !dataSQL.get(EBakaSQL.F_GUA_BK_GIVENNAME.basename()).equals(EBakaSQL.NULL.basename());
         isValid &= !dataSQL.get(EBakaSQL.F_GUA_BK_SURNAME.basename()).contains(",");
         isValid &= !dataSQL.get(EBakaSQL.F_GUA_BK_GIVENNAME.basename()).contains(",");
-        // TODO e-mail?
+        isValid &= !dataSQL.get(EBakaSQL.F_GUA_BK_SURNAME.basename()).contains(".");
+        isValid &= !dataSQL.get(EBakaSQL.F_GUA_BK_GIVENNAME.basename()).contains(".");
+        isValid &= BakaUtils.mailIsValid(dataSQL.get(EBakaSQL.F_GUA_BK_MAIL.basename()));
 
         return isValid;
     }

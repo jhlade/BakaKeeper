@@ -113,5 +113,7 @@ public class BakaUtilsTest {
         assertEquals("kocour.v.botach@domena.org", BakaUtils.validateEmail("kocour.v.botach@domena.org"));
         assertEquals("mail@zs-kocourkov.cz", BakaUtils.validateEmail("mail@zs-kocourkov.cz"));
         assertEquals("a-b-c-d@zs-kocourkov.cz", BakaUtils.validateEmail("a-b-c-d@zs-kocourkov.cz"));
+        assertEquals("", BakaUtils.validateEmail("mail1@dom1.cz, mail2@dom2.cz"));
+        assertEquals("", BakaUtils.validateEmail("abcdefgh"));
     }
 }

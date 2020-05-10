@@ -22,6 +22,21 @@ public class BakaUtils {
     }
 
     /**
+     * Jednoduché ověření platnosti e-mailové adresy. Pokud je vložen prázdný řetězec,
+     * jsou data považována také za platná (= žádná e-mailová adresa).
+     *
+     * @param email vstupní e-mailopvá adresa
+     * @return formát je platný
+     */
+    public static Boolean mailIsValid(String email) {
+        if (email.equals("")) {
+            return true;
+        }
+
+        return (validateEmail(email) != "") ? true : false;
+    }
+
+    /**
      * Validace a úprava telefonního čísla.
      *
      * @param phone telefonní číslo
