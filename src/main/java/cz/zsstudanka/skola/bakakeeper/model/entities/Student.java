@@ -256,6 +256,8 @@ public class Student implements IRecordLDAP, IRecordSQL {
         String classSCdn = "CN=Zaci-Trida-" + this.dataSQL.get(EBakaSQL.F_STU_CLASS.basename()).replace(".", "") + "," + Settings.getInstance().getLDAP_baseStudentGroups();
         BakaADAuthenticator.getInstance().addObjectToGroup(dn, baseGRdn);
         BakaADAuthenticator.getInstance().addObjectToGroup(dn, classSCdn);
+
+        this.dataLDAP = newData;
     }
 
     /**
