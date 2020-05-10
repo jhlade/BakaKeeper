@@ -487,13 +487,17 @@ public class BakaADAuthenticator {
         Attribute[] attrs = new Attribute[data.size()];
         int a = 0;
 
-        Boolean inDomain = data.get(EBakaLDAPAttributes.MAIL.attribute()).toString().contains(Settings.getInstance().getMailDomain());
+        Boolean inDomain = (data.containsKey(EBakaLDAPAttributes.MAIL.attribute()) && data.get(EBakaLDAPAttributes.MAIL.attribute()).toString().contains(Settings.getInstance().getMailDomain()));
 
         Iterator<String> dataIterator = data.keySet().iterator();
         while (dataIterator.hasNext()) {
             String attrKey = dataIterator.next();
 
             Object finalData = data.get(attrKey);
+
+            if (Settings.getInstance().debugMode()) {
+                ReportManager.log(EBakaLogType.LOG_LDAP, "Mapuje se " + attrKey + " = [" + finalData + "]");
+            }
 
             // vyžadováno ověření
             if (inDomain && attrKey.equals(EBakaLDAPAttributes.MSXCH_REQ_AUTH.attribute())) {
