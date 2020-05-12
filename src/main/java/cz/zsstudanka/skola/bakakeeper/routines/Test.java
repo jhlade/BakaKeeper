@@ -22,7 +22,7 @@ import java.util.*;
 
 public class Test {
 
-    // 2020-05-06
+    // 2020-05-12 příprava na RM
     public static void test_06() {
 
     }
