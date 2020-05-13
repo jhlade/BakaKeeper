@@ -8,6 +8,7 @@ import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaSQL;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.routines.Export;
+import cz.zsstudanka.skola.bakakeeper.routines.Sync;
 import cz.zsstudanka.skola.bakakeeper.routines.Test;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.settings.Version;
@@ -203,9 +204,7 @@ public class App {
 
             // synchronizace
             if (params.containsKey("sync")) {
-                // TODO
-                // struktura adresáře
-                // synchronizace
+                Sync.actionSync();
                 return;
             } // sync
 

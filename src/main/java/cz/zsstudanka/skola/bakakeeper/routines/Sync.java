@@ -954,8 +954,8 @@ public class Sync {
      * - Zavedení nových žáků TODO RM vytvoří report pro třídního
      * - Zablokování vyřazených žáků
      */
-    public void actionSync() {
-
+    public static void actionSync() {
+        // TODO
     }
 
 }
