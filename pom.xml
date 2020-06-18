@@ -62,6 +62,12 @@
                             <classpathPrefix>lib/</classpathPrefix>
                             <mainClass>cz.zsstudanka.skola.bakakeeper.App</mainClass>
                         </manifest>
+                        <manifestEntries>
+                            <Built-By>${user.name}</Built-By>
+                            <Build-Jdk>${java.version} (${java.vendor} ${java.vm.version})</Build-Jdk>
+                            <Build-Timestamp>${maven.build.timestamp}}</Build-Timestamp>
+                            <Build-OS>${os.name} ${os.arch} ${os.version}</Build-OS>
+                        </manifestEntries>
                     </archive>
                 </configuration>
             </plugin>
