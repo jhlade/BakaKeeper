@@ -21,7 +21,7 @@ public class BakaUtils {
             return "";
         }
 
-        String regex = "^[\\w-_\\.+]*[\\w-_\\.]\\@([\\w-_]+\\.)+[\\w]+[\\w]$";
+        String regex = "^[\\w-_\\.+]*[\\w-_]\\@([\\w-_]+\\.)+[\\w]+[\\w]$";
         return (email.matches(regex)) ? email.trim().toLowerCase() : "";
     }
 
