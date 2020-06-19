@@ -44,6 +44,9 @@ public class LDAPrecords implements IRecords {
     /** hrubá data k zápisu; klíč = DN, obsah = data k zápisu */
     private HashMap<String, Map<EBakaLDAPAttributes, String>> dataToWrite = new LinkedHashMap<>();
 
+    /** instanční podmnožina záznamů s neprázdným proxy-listem */
+    private HashMap<String, DataLDAP> proxyData = null;
+
     /**
      * Konstrukce kolekce podle bázové OU z daného typu záznamů.
      *
@@ -72,6 +75,7 @@ public class LDAPrecords implements IRecords {
                     EBakaLDAPAttributes.DN.attribute(),
 
                     EBakaLDAPAttributes.MAIL.attribute(),
+                    //EBakaLDAPAttributes.TARGET_ADDR.attribute(),
                     EBakaLDAPAttributes.MOBILE.attribute(),
 
                     EBakaLDAPAttributes.NAME_FIRST.attribute(),
@@ -96,6 +100,7 @@ public class LDAPrecords implements IRecords {
                     EBakaLDAPAttributes.UPN.attribute(),
                     EBakaLDAPAttributes.LOGIN.attribute(),
                     EBakaLDAPAttributes.MAIL.attribute(),
+                    EBakaLDAPAttributes.PROXY_ADDR.attribute(),
 
                     EBakaLDAPAttributes.NAME_FIRST.attribute(),
                     EBakaLDAPAttributes.NAME_LAST.attribute(),
@@ -172,6 +177,17 @@ public class LDAPrecords implements IRecords {
             return this.data.get(key);
         }
 
+        // zrychlená kontrola v proxy klíči
+        if (this.getProxyListSubset().size() > 0) {
+            Iterator<String> subKey = getProxyListSubset().keySet().iterator();
+            while (subKey.hasNext()) {
+                // neparsuje se - pouze porovnání obsahu v prostém řetězci
+                if (getProxyListSubset().get(subKey).get(EBakaLDAPAttributes.PROXY_ADDR.attribute()).toString().toLowerCase().contains(key.toLowerCase())) {
+                    return this.data.get(subKey);
+                }
+            }
+        }
+
         return null;
     }
 
@@ -226,12 +242,35 @@ public class LDAPrecords implements IRecords {
 
             String subID = internalIterator.next();
 
+            if (attr.equals(EBakaLDAPAttributes.PROXY_ADDR)) {
+                // zvláštní případ - pokud existuje atribut proxyAddresses, je záznam přidán bez ohledu na hodnotu
+                if (get(subID).containsKey(attr.attribute()) && get(subID).get(attr.attribute()) != null) {
+                    subset.put(subID, get(subID));
+                }
+                continue;
+            }
+
             if (get(subID).containsKey(attr.attribute()) && get(subID).get(attr.attribute()).equals(value)) {
                 subset.put(subID, get(subID));
             }
         }
 
         return subset;
+    }
+
+    /**
+     * Získání podmnožiny dat s neprázdným seznamem proxyAddresses.
+     *
+     * @return podmnožina s neprázdným proxyAddresses atributem
+     */
+    private HashMap<String, DataLDAP> getProxyListSubset() {
+        if (this.proxyData != null) {
+            return this.proxyData;
+        }
+
+        this.proxyData = getSubsetBy(EBakaLDAPAttributes.PROXY_ADDR, null);
+
+        return this.proxyData;
     }
 
     /**
