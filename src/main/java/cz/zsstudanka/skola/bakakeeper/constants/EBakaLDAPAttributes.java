@@ -25,6 +25,8 @@ public enum EBakaLDAPAttributes {
     MEMBER ("member", null), // člen skupiny
 
     MAIL ("mail", null), // primární e-mail
+    PROXY_ADDR("proxyAddresses", null), // seznam proxy-adres
+    TARGET_ADDR("targetAddress", null), // cílová e-mailová adresa
     MOBILE ("mobile", null), // mobilní telefon
     NAME_DISPLAY("displayName", null), // zobrazované jméno
     DESCRIPTION ("description", null), // popisek
