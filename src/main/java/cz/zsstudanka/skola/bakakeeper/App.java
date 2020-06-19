@@ -133,7 +133,7 @@ public class App {
 
             // verze
             if (params.containsKey("version")) {
-                System.out.print(Version.getInstance().getInfo());
+                System.out.print(Version.getInstance().getInfo(true));
                 return;
             }
 
