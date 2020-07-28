@@ -117,4 +117,12 @@ public class BakaUtilsTest {
         assertEquals("", BakaUtils.validateEmail("abcdefgh"));
         assertEquals("", BakaUtils.validateEmail("konik.@konikov.tld"));
     }
+
+    @Test
+    public void createWebAppLoginFromName() {
+        String match = "[A-Z]{1}[a-z]{4}[0-9]{5}";
+        assertEquals(BakaUtils.createWebAppLoginFromName("Kocour", "Mikeš").matches(match), true);
+        assertEquals(BakaUtils.createWebAppLoginFromName("Thi", "Li Ka").matches(match), true);
+        assertEquals(BakaUtils.createWebAppLoginFromName("Šňůrka Tkanička", "Tibor Petr").matches(match), true);
+    }
 }

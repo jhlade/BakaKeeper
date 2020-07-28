@@ -102,13 +102,34 @@ public class BakaUtils {
      * TODO - refaktor create4p2
      *
      * @param surname celé příjmení
-     * @param givenName celé prnví jméno
-     * @param attempt číslpo pokusu
-     * @return histroická forma loginu ve tvaru 4+2
+     * @param givenName celé první jméno
+     * @param attempt číslo pokusu
+     * @return historická forma loginu ve tvaru 4+2
      */
     public static String createLegacyLogin(String surname, String givenName, Integer attempt) {
         // TODO
         return null;
+    }
+
+    /**
+     * Vytvoření přihlašovacího jména (žáka) do webové aplikace Bakaláři. Ve výchozím stavu
+     * je použito pět písmen z příjmení (bez diakritiky, první velké) a náhodné pětimístné číslo.
+     *
+     * @param surname celé příjmení
+     * @param givenName celé jméno
+     * @return login do ebové aplikace
+     */
+    public static String createWebAppLoginFromName(String surname, String givenName) {
+
+        final int nameLength = 5;
+        final int max = 99999;
+        final int min = 10000;
+
+        Integer randomPart = (int) (Math.random() * (max - min + 1) + min);
+
+        String namePart = removeAccents(surname.substring(0, 1) + (surname.substring(1) + givenName).toLowerCase()).substring(0, 5);
+
+        return String.format("%s%d", namePart, randomPart);
     }
 
     /**
