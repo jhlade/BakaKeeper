@@ -8,7 +8,7 @@ import static org.junit.Assert.assertEquals;
 /**
  * Testy pro manipulační jednotku BakaUtils.
  *
- * (c) Jan Hladěna
+ * @author Jan Hladěna
  */
 public class BakaUtilsTest {
 
