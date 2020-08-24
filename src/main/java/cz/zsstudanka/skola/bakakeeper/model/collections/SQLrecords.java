@@ -137,7 +137,7 @@ public class SQLrecords implements IRecords {
 
         // WHERE
         selectBuilder.append("WHERE ");
-        selectBuilder.append(EBakaSQL.F_STU_CLASS.field() + " LIKE '%.%' ");
+        selectBuilder.append(EBakaSQL.F_STU_CLASS.field() + " LIKE '[1-9].[A-E]' ");
         selectBuilder.append("AND " + EBakaSQL.F_STU_EXPIRED.field() + " IS NULL ");
 
         // filtrování podle ročníku/třídy
