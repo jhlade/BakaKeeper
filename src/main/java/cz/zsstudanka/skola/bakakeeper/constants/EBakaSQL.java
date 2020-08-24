@@ -11,6 +11,11 @@ public enum EBakaSQL {
     LIT_TRUE("1", "Logická hodnota PRAVDA."),
     LIT_FALSE("0", "Logická hodnota NEPRAVDA."),
 
+    LIT_WEB_STUDENT("Z", "Kód pro označení webového účtu žáka."),
+    LIT_WEB_FACULTY("V", "Kód pro označení webového účtu učitele."),
+    LIT_WEB_GUARDIAN("R", "Kód pro označení webového účtu zákonného zástupce."),
+    LIT_WEB_SYSIG("NOUSR", ""),
+
     BK_FLAG("baka_flag", "Pomocný virtuální parametr příznaku."),
 
     // tabulky
@@ -18,6 +23,7 @@ public enum EBakaSQL {
     TBL_FAC("dbo.ucitele", "Tabulka s daty učitelů."), // TODO kontrola
     TBL_GUA("dbo.zaci_zzd", "Tabulka s daty zákonných zástupců žáků."),
     TBL_STU_GUA("dbo.zaci_zzr", "Tabulka s definicí vztahů zákonných zástupců k žákům."),
+    TBL_WEB_LOGIN("dbo.webuser", "Tabulka s definicí přístupů uživatelů webové aplikace."),
 
     // pole - Student
     F_STU_ID(TBL_STU.field + "." + "INTERN_KOD", "Interní kód žáka."),
@@ -47,6 +53,13 @@ public enum EBakaSQL {
     F_GS_STUID(TBL_STU_GUA.field + "." + "INTERN_KOD", "ID žáka."),
     FS_GS_IS_GUA(TBL_STU_GUA.field + "." + "JE_ZZ", "Příznak, zda je kontakt zákonným zástupcem."),
     FS_GS_IS_PRI(TBL_STU_GUA.field + "." + "PRIMARNI", "Příznak, zda je kontakt nejbližší kontaktní osobou žáka."),
+
+    // pole - Web
+    F_WEB_USRID(TBL_WEB_LOGIN.field + "." + "INTERN_KOD", "ID uživatele."),
+    F_WEB_LOGIN(TBL_WEB_LOGIN.field + "." + "LOGIN", "Přihlašovací jméno uživatatele do webové aplikace."),
+    F_WEB_TYPE(TBL_WEB_LOGIN.field + "." + "KOD1", "Typ uživatelského účtu definovaný literálem Z/V/R."),
+    F_WEB_MODIFIED(TBL_WEB_LOGIN.field + "." + "MODIFIED", "Datum poslední modifikace webovéo přístupu."),
+    F_WEB_MODIFIEDBY(TBL_WEB_LOGIN.field + "." + "MODIFIEDBY", "Označení odpovědnosti  modifikace."),
 
     // selektor pole - aliases
     S_STU_BK_CLASSYEAR("SUBSTRING(" + TBL_STU.field + "." + "TRIDA, 1, 1) AS " + F_STU_BK_CLASSYEAR.field, "Výběr: ročník žáka."),
