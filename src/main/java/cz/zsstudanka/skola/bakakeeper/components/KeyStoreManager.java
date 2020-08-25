@@ -65,7 +65,7 @@ public class KeyStoreManager {
     }
 
     /**
-     * Znovuobrdržení certifikátu nejjednodušší možnou cestou - stávající úložiště je smazáno a je
+     * Znovuobdržení certifikátu nejjednodušší možnou cestou - stávající úložiště je smazáno a je
      * provedena jeho reinicializace.
      *
      * @return výsledek nové inicializace
@@ -77,11 +77,11 @@ public class KeyStoreManager {
         if (keystoreFile.delete()) {
             // nastavení příznaku inicializace
             App.FLAG_INIT = true;
+            // nová inicializace úložiště
             return initialize();
         }
 
         return false;
-
     }
 
 }
