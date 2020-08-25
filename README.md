@@ -8,7 +8,7 @@ se celoškolní použití Office365, ale není to nezbytně nutné.
 získaných v evidenci Bakalářů (jména, zařazení do ročníku/třídy
 v OU a skupinách včetně povýšení školního roku, tvorba nového
 přihlašovacího jména, e-mailu a počátečního hesla, vyřazení
-účtů po ukončení vzdělávání).
+účtů po ukončení vzdělávání). Jednovláknově, atomicky, transakčně.
 * Automatická definice přístupů k webové aplikaci pro žáky
 a jejich zákonné zástupce (metoda vyžádání nového hesla
 na základě ověřené e-mailové adresy).
