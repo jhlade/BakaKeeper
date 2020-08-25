@@ -10,10 +10,13 @@ public enum EBakaSQL {
     // literály
     LIT_TRUE("1", "Logická hodnota PRAVDA."),
     LIT_FALSE("0", "Logická hodnota NEPRAVDA."),
+    LIT_MALE("M", "Pohlaví muž."),
+    LIT_FEMALE("Z", "Pohlaví žena."),
 
+    // literály pro označení cizího klíče webového přístupu v poli KOD1
     LIT_WEB_STUDENT("Z", "Kód pro označení webového účtu žáka."),
     LIT_WEB_FACULTY("V", "Kód pro označení webového účtu vyučujícího."),
-    LIT_WEB_GUARDIAN("R", "Kód pro označení webového účtu zákonného zástupce / rodiče."),
+    LIT_WEB_GUARDIAN("R", "Kód pro označení webového účtu rodiče (primárního zákonného zástupce)."),
     LIT_WEB_ADMIN("S", "Kód pro označení webového účtu správce."),
     LIT_WEB_SYSSIG("NOUSR", ""),
 
