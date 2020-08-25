@@ -202,6 +202,12 @@ public class App {
                 return;
             }
 
+            // kontrola synchronizace
+            if (params.containsKey("checksync")) {
+                Sync.actionCheckSync();
+                return;
+            } // checksync
+
             // synchronizace
             if (params.containsKey("sync")) {
                 Sync.actionSync();
@@ -452,23 +458,6 @@ public class App {
         // 2) provede se nastavení hesla do původní podoby (PrJm.1234)
         // 3) nastaví se flag nutnosti změny hesla při dalším přihlášení
         // 4) dost možná vyrobit akci + hint v --help
-    }
-
-    // TODO
-    public void actionCheckStructure() {
-
-    }
-
-    // TODO
-    public void actionCheckAndRepairStructure() {
-
-    }
-
-    /**
-     * Kontrola stavu synchronizace.
-     */
-    public static void actionCheckSync() {
-        // TODO
     }
 
     /**

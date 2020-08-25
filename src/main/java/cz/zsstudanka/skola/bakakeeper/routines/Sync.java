@@ -955,7 +955,22 @@ public class Sync {
      * - Zablokování vyřazených žáků
      */
     public static void actionSync() {
-        // TODO
+        Sync checker = new Sync();
+        checker.actionInit(true);
+        checker.actionCheck(true);
+        checker.checkData(true);
+        checker.syncGuardian(true);
+    }
+
+    /**
+     * Provedení kontroly stavu synchronizace.
+     */
+    public static void actionCheckSync() {
+        Sync checker = new Sync();
+        checker.actionInit(false);
+        checker.actionCheck(false);
+        checker.checkData(false);
+        checker.syncGuardian(false);
     }
 
 }
