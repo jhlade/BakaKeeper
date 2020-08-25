@@ -1,5 +1,6 @@
 package cz.zsstudanka.skola.bakakeeper.connectors;
 
+import cz.zsstudanka.skola.bakakeeper.components.KeyStoreManager;
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
@@ -104,9 +105,26 @@ public class BakaADAuthenticator {
 
         LdapContext ctxGC = null;
 
+        Boolean reinitializeKeystore = false;
+
         try {
             // autentizace
-            ctxGC = new InitialLdapContext(env, null);
+            try {
+                ctxGC = new InitialLdapContext(env, null);
+            } catch (NamingException namingEx) {
+                reinitializeKeystore = true;
+                ReportManager.handleException("Došlo k chybě při vytváření SSL spojení, proběhne pokus o opravu.", namingEx);
+            }
+
+            if (reinitializeKeystore) {
+                if (KeyStoreManager.reinitialize()) {
+                    ReportManager.log(EBakaLogType.LOG_VERBOSE, "Úložiště klíčů bylo obnoveno.");
+                } else {
+                    ReportManager.log(EBakaLogType.LOG_ERR_VERBOSE, "Nebylo možné obnovit úložiště klíčů.");
+                }
+
+                ctxGC = new InitialLdapContext(env, null);
+            }
 
             setAuthSucceeded(true);
 

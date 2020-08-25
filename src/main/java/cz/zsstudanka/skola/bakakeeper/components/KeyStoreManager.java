@@ -6,6 +6,7 @@ import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 
 import javax.net.SocketFactory;
 import javax.net.ssl.SSLSocket;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.security.KeyStore;
 import java.security.cert.Certificate;
@@ -41,7 +42,8 @@ public class KeyStoreManager {
                 }
 
                 for (Certificate cert : certs) {
-                    if(cert instanceof X509Certificate) {
+                    if (cert instanceof X509Certificate) {
+                        // zápis certifikátu do úložiště
                         jks.setCertificateEntry(Settings.getInstance().getLDAP_host(), cert);
                     }
                 }
@@ -60,6 +62,26 @@ public class KeyStoreManager {
         }
 
         return true;
+    }
+
+    /**
+     * Znovuobrdržení certifikátu nejjednodušší možnou cestou - stávající úložiště je smazáno a je
+     * provedena jeho reinicializace.
+     *
+     * @return výsledek nové inicializace
+     */
+    public static Boolean reinitialize() {
+
+        File keystoreFile = new File(Settings.getInstance().DEFAULT_JKS_FILE);
+
+        if (keystoreFile.delete()) {
+            // nastavení příznaku inicializace
+            App.FLAG_INIT = true;
+            return initialize();
+        }
+
+        return false;
+
     }
 
 }
