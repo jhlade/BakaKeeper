@@ -22,6 +22,11 @@ import java.util.*;
 
 public class Test {
 
+    // 2020-08-25 webový přístup
+    public static void test_07() {
+
+    }
+
     // 2020-05-12 příprava na RM
     public static void test_06() {
 
