@@ -1,5 +1,6 @@
 package cz.zsstudanka.bakakeeper.utils;
 
+import cz.zsstudanka.skola.bakakeeper.components.EncryptionManager;
 import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
 import org.junit.Test;
 
@@ -124,5 +125,16 @@ public class BakaUtilsTest {
         assertEquals(BakaUtils.createWebAppLoginFromName("Kocour", "Mikeš").matches(match), true);
         assertEquals(BakaUtils.createWebAppLoginFromName("Thi", "Li Ka").matches(match), true);
         assertEquals(BakaUtils.createWebAppLoginFromName("Šňůrka Tkanička", "Tibor Petr").matches(match), true);
+    }
+
+    @Test
+    public void encryptionTest() throws Exception {
+        String testPass = "suP/er-tAjn3.he$lO";
+        String testText = "Příliš žluťoučký kůň úpěl ďábelské ódy při práci v Bakalářích.";
+
+        assertEquals(EncryptionManager.decrypt(
+                        EncryptionManager.encrypt(testText, testPass),
+                    testPass),
+                testText);
     }
 }
