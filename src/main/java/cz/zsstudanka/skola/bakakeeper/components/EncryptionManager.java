@@ -14,19 +14,28 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
 import java.util.Base64;
 
+/**
+ * Statické služby pro poskytování AES Galois/Counter šifrování
+ * na základě zvolené fráze.
+ *
+ * @author Jan Hladěna
+ */
 public class EncryptionManager {
 
+    /** velikost jednoho paketu [B] - hypoteticky může být už od 1 B */
+    protected static final int CHUNK_SIZE = 4096;
+
     /** AES transformace Galois/Counter */
-    public static final String ENC_TRANSFORMATION = "AES/GCM/NoPadding";
+    private static final String ENC_TRANSFORMATION = "AES/GCM/NoPadding";
 
     /** délka autentizačních dat [b] */
-    public static final int TAG_BITS = 128;
+    protected static final int TAG_BITS = 128; // 16 B
 
     /** velikost inicializačního vektoru [B] */
-    public static final int IV_BYTES = 12;
+    protected static final int IV_BYTES = 12;
 
     /** délka náhodné soli [B] */
-    public static final int SALT_BYTES = 16;
+    protected static final int SALT_BYTES = 16;
 
     /** délka AES šifry [b] */
     private static final int AES_BITS = 256;
@@ -35,15 +44,15 @@ public class EncryptionManager {
     private static final int AES_ITER = 65536;
 
     /**
-     * TODO
+     * Poskytovaná šifra.
      *
-     * @param aesKey klíč
+     * @param aesKey AES klíč
      * @param iv inicializační vektor
-     * @param mode režim
-     * @return manažer šifrování
+     * @param mode režim (šifrování/desšifrování)
+     * @return šifra
      * @throws Exception
      */
-    public static Cipher getCipher(SecretKey aesKey, byte[] iv, int mode) throws Exception {
+    private static Cipher getCipher(SecretKey aesKey, byte[] iv, int mode) throws Exception {
         Cipher cipher = Cipher.getInstance(ENC_TRANSFORMATION);
         cipher.init(mode, aesKey, new GCMParameterSpec(TAG_BITS, iv));
         return cipher;
@@ -55,7 +64,7 @@ public class EncryptionManager {
      * @param count počet bajtů
      * @return náhodný vektor
      */
-    public static byte[] getRandomBytes(int count) {
+    private static byte[] getRandomBytes(int count) {
         byte[] randomBytes = new byte[count];
 
         new SecureRandom().nextBytes(randomBytes);
@@ -71,9 +80,9 @@ public class EncryptionManager {
      * @throws NoSuchAlgorithmException
      * @throws InvalidKeySpecException
      */
-    public static SecretKey getKeyFromPassphrase(String passphrase, byte[] salt) throws NoSuchAlgorithmException, InvalidKeySpecException {
+    private static SecretKey getKeyFromPassphrase(String passphrase, byte[] salt) throws NoSuchAlgorithmException, InvalidKeySpecException {
 
-        // továrna na tajné klíče
+        // továrna na tajné klíče odvozené z hesla
         // typ Password-Based Key Derivation Function 2, HMAC SHA-256
         SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
 
@@ -85,11 +94,11 @@ public class EncryptionManager {
     }
 
     /**
-     * TODO
+     * Základní zašifrování vstupních dat.
      *
-     * @param plainData
-     * @param passphrase
-     * @return
+     * @param plainData vstupní data
+     * @param passphrase tajná fráze
+     * @return zašifrovaná data s IV, solí a autentizační značkou
      * @throws Exception
      */
     public static byte[] encrypt(byte[] plainData, String passphrase) throws Exception {
@@ -120,14 +129,13 @@ public class EncryptionManager {
     }
 
     /**
-     * TODO
+     * Základní dešifrování dat.
      *
-     * @param cipherInput
-     * @param passphrase
-     * @return
+     * @param cipherInput šifrovaná vstupní data ve formátu IV, sůl, cD, autentizační značka
+     * @param passphrase tajná fráze
+     * @return dešifrovaná data
      */
     public static byte[] decrypt(byte[] cipherInput, String passphrase) throws Exception {
-
         // buffer - rozbalení IV + sůl + šifrovaná data
         ByteBuffer cipherBuffer = ByteBuffer.wrap(cipherInput);
 
@@ -154,11 +162,11 @@ public class EncryptionManager {
     }
 
     /**
-     * Zašifrování vstupního řetězce pomocí dané fráze. Výsledek je zakódován v B64.
+     * Zašifrování vstupního textového řetězce pomocí dané fráze. Výsledek je zakódován v B64.
      *
      * @param plainText čistý text
-     * @param passphrase heslo
-     * @return zašifrovaný text
+     * @param passphrase tajná fráze
+     * @return zašifrovaný text kódovaný v Base64
      * @throws Exception výjimka při šifrování
      */
     public static String encrypt(String plainText, String passphrase) throws Exception {
@@ -167,11 +175,11 @@ public class EncryptionManager {
     }
 
     /**
-     * Dešifrování vstupního řetězce pomocí dané fráze.
+     * Dešifrování vstupního textového řetězce kódovaného v Base64 pomocí dané fráze.
      *
-     * @param cipherText zašifrovaný text
-     * @param passphrase heslo
-     * @return čistý text
+     * @param cipherText zašifrovaný text kódovaný v Base64
+     * @param passphrase tajná fráze
+     * @return čistý dešifrovaný text
      * @throws Exception výjimka při dešiforvání
      */
     public static String decrypt(String cipherText, String passphrase) throws Exception {
