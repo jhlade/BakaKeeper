@@ -1,4 +1,4 @@
-package cz.zsstudanka.bakakeeper.utils;
+package cz.zsstudanka.bakakeeper.components;
 
 import cz.zsstudanka.skola.bakakeeper.components.EncryptionManager;
 import org.junit.Test;
