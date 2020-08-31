@@ -178,12 +178,18 @@ public class LDAPrecords implements IRecords {
         }
 
         // zrychlená kontrola v proxy klíči
+        // TODO kontrola+přepis
         if (this.getProxyListSubset().size() > 0) {
             Iterator<String> subKey = getProxyListSubset().keySet().iterator();
             while (subKey.hasNext()) {
-                // neparsuje se - pouze porovnání obsahu v prostém řetězci
-                if (getProxyListSubset().get(subKey).get(EBakaLDAPAttributes.PROXY_ADDR.attribute()).toString().toLowerCase().contains(key.toLowerCase())) {
-                    return this.data.get(subKey);
+                try {
+                    // neparsuje se - pouze porovnání obsahu v prostém řetězci
+                    if (getProxyListSubset().get(subKey).get(EBakaLDAPAttributes.PROXY_ADDR.attribute()).toString().toLowerCase().contains(key.toLowerCase())) {
+                        return this.data.get(subKey);
+                    }
+                } catch (Exception e) {
+                    ReportManager.handleException("Selhalo prohledávání podklíče v proxyAddresses poli.", e);
+                    break;
                 }
             }
         }

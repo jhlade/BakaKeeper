@@ -22,6 +22,180 @@ import java.util.*;
 
 public class Test {
 
+    // sestavy pro 2020/2021
+    public static void test_08() {
+        System.out.println("====== [ TEST 2020-08-31 RESET HESEL 1. ročníku ] ======");
+
+        // třídní učitelé - manuální seznam
+        Map<String, String> třídní = new HashMap<>();
+        třídní.put("1.A", "Burgetová Lada");
+        třídní.put("1.B", "Patlevičová Marcela");
+        třídní.put("1.C", "Sedláková Jana");
+        třídní.put("1.D", "Burgetová Martina");
+
+        Map<String, String> sestavy = new HashMap<>();
+
+        for (int ročník = 1; ročník <= 1; ročník++) {
+            System.out.println("====== [ ROČNÍK " + ročník + " ] ======");
+
+            for (char třída = 'A'; třída <= 'D'; třída++) {
+
+                String literálTřídy = ročník + "." + třída;
+
+                if (!třídní.containsKey(literálTřídy)) {
+                    continue;
+                }
+
+                System.out.println("====== [ TŘÍDA " + literálTřídy + " ] ======");
+
+                // SQL data
+                SQLrecords dataTřídy = new SQLrecords(ročník, String.valueOf(třída));
+                System.out.println("[i] Načteno " + dataTřídy.count() + " položek z evidence.");
+
+                // LDAP data
+                LDAPrecords dataAD = new LDAPrecords("OU=Trida-"+String.valueOf(třída)+",OU=Rocnik-"+String.valueOf(ročník)+"," + Settings.getInstance().getLDAP_baseStudents(), EBakaLDAPAttributes.OC_USER);
+                System.out.println("[i] Načteno " + dataAD.count() + " položek z domény.");
+
+                String třídníUčitel = třídní.get(literálTřídy);
+                System.out.println("Třídní učitel: " + třídníUčitel);
+
+                // tvorba sestavy
+                StringBuilder sestava = new StringBuilder();
+                sestava.append("\\documentclass[10pt]{article}\n\n");
+                sestava.append("\\usepackage[czech]{babel}\n");
+                sestava.append("\\usepackage[utf8]{inputenc}\n");
+                sestava.append("\\usepackage{tabularx}\n\n");
+                sestava.append("\\usepackage{geometry}\n");
+                sestava.append("\\geometry{a4paper,total={170mm,257mm},left=20mm,top=20mm}\n");
+                sestava.append("\\def\\arraystretch{1.5}%\n\n");
+                sestava.append("\\usepackage{fancyhdr}\n");
+                sestava.append("\\pagestyle{fancy}\n\n");
+                sestava.append("\\begin{document}");
+
+                sestava.append("\\fancyhf{}\n");
+                sestava.append("\\lhead{" + literálTřídy + "}\n");
+                sestava.append("\\rhead{" + třídníUčitel + "}\n");
+                sestava.append("\\lfoot{" + Settings.getInstance().systemInfoTag() + "}");
+                sestava.append("\\rfoot{" + Version.getInstance().getTag() + "}");
+
+                sestava.append("\\noindent\n");
+                sestava.append("\\Large{Třída " + literálTřídy + "}\n\n");
+                sestava.append("\\begin{table}[htbp]\n\n");
+                sestava.append("\\centering\n");
+                sestava.append("\\begin{tabularx}{\\textwidth}{| c | X | X | r | c |}\n");
+                sestava.append("\\hline\n");
+                sestava.append("\\bf{Č.\\,tř.\\,výk} & \\bf{Příjmení} & \\bf{Jméno} & \\bf{UPN}  & \\bf{Heslo}  \\\\ \\hline \\hline\n");
+
+                String template = "__CLASS_ID__ & __SURNAME__ & __GIVENNAME__ & \\texttt{__UPN__} & \\texttt{__PWD__} \\\\ \\hline\n";
+
+                // získání dat - iterace nad evidencí
+                while (dataTřídy.iterator().hasNext()) {
+
+                    Map<String, String> žák = dataTřídy.get(dataTřídy.iterator().next());
+
+                    // data
+                    Integer číslo = Integer.parseInt(žák.get(EBakaSQL.F_STU_CLASS_ID.basename()));
+                    String příjmení = žák.get(EBakaSQL.F_STU_SURNAME.basename());
+                    String jméno = žák.get(EBakaSQL.F_STU_GIVENNAME.basename());
+                    String upn = žák.get(EBakaSQL.F_STU_MAIL.basename());
+                    String heslo = BakaUtils.createInitialPassword(příjmení, jméno, číslo);
+
+                    // práce na heslech
+                    System.out.println("[ " + žák.get(EBakaSQL.F_STU_ID.basename()) + " ] " + příjmení + " " + jméno);
+                    String dnŽáka = dataAD.get(upn).get(EBakaLDAPAttributes.DN.attribute()).toString();
+                    System.out.println(dnŽáka);
+
+                    //BakaADAuthenticator.getInstance().replaceAttribute(dnŽáka, EBakaLDAPAttributes.PW_UNICODE, heslo);
+                    //BakaADAuthenticator.getInstance().replaceAttribute(dnŽáka, EBakaLDAPAttributes.PW_LASTSET, EBakaLDAPAttributes.PW_LASTSET.value());
+
+                    // zápis do tabulky v sestavě
+                    sestava.append(template
+                            .replace("__CLASS_ID__", číslo.toString())
+                            .replace("__SURNAME__", příjmení)
+                            .replace("__GIVENNAME__", jméno)
+                            .replace("__UPN__", upn)
+                            .replace("__PWD__", heslo)
+                    );
+                }
+
+                sestava.append("\\end{tabularx}\n\n");
+                sestava.append("\\end{table}\n\n");
+                sestava.append("\\noindent\n");
+                sestava.append("UPN = \\textit{User Principal Name}, slouží jako přihlašovací jméno do~služeb\n");
+                sestava.append("Office~365 a~zároveň jako platný tvar e-mailové adresy.\\par\n");
+                sestava.append("~\\par\n\n");
+                sestava.append("\\noindent\n");
+                sestava.append("Žáci si mohou své heslo sami změnit na~portálu https://heslo.zs-studanka.cz.\\par\n\n");
+                sestava.append("\\end{document}\n");
+
+                sestavy.put(literálTřídy, sestava.toString());
+
+                System.out.println("====== [ /TŘÍDA " + literálTřídy + " ] ======\n");
+            }
+
+            System.out.println("====== [ /ROČNÍK " + ročník + " ] ======\n");
+        }
+
+        System.out.println("====== [ Ukládání sestav ] ======");
+
+        Iterator<String> tex = sestavy.keySet().iterator();
+        while (tex.hasNext()) {
+
+            String třída = tex.next();
+
+            SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
+            Date date = new Date();
+
+            String soubor = "./reports/" + formatter.format(date)
+                    + "_" + třída.toLowerCase().replace(".", "")
+                    + ".tex";
+
+            try (PrintStream out = new PrintStream(new FileOutputStream(soubor))) {
+                out.print(sestavy.get(třída));
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+
+            // pdf lualatex
+            try {
+                Process p = Runtime.getRuntime().exec("/usr/bin/lualatex " + soubor);
+
+                System.out.println("Čekání na LuaLaTeX ...");
+                p.waitFor();
+                System.out.println("PDF hotovo.");
+
+            } catch (Exception x) {
+                System.out.println("Proces pro LuaLaTeX se nespustil.");
+                x.printStackTrace(System.err);
+            }
+
+
+            String zpráva = "V příloze naleznete sestavu s novými přístupovými údaji žáků " +
+                    třída + " pro použití v prostředí Office365. Všichni žáci mají přiřazené " +
+                    "odpovídající žákovské licence, mohou tedy ihned plně používat všechny cloudové služby O365.\n\n" +
+                    "Tuto sestavu považujte za důvěrnou a distribuci " +
+                    "hesel, pokud to bude možné, provádějte jednotlivě.\n\n";
+
+            String[] třídníSplit = třídní.get(třída).split(" ");
+            String mailTřídního = BakaUtils.removeAccents(třídníSplit[1]).toLowerCase()
+                    + "."
+                    + BakaUtils.removeAccents(třídníSplit[0]).toLowerCase()
+                    + "@zs-studanka.cz";
+
+            System.out.println("Příjemce: " + mailTřídního);
+
+
+            BakaMailer.getInstance().mail(new String[]{mailTřídního, "ict@zs-studanka.cz"},
+            //BakaMailer.getInstance().mail(new String[]{"ict@zs-studanka.cz"},
+            //BakaMailer.getInstance().mail(new String[]{"jan.hladena@zs-studanka.cz"},
+                    "Přístupové údaje žáků " + třída, zpráva,
+                    new String[]{"./" + BakaUtils.fileBaseName(soubor.replace(".tex", ".pdf"))});
+
+        }
+
+        System.out.println("====== [ / TEST 2020-08-31 RESET HESEL 1. ročníku ] ======");
+    }
+
     // 2020-08-25 webový přístup
     public static void test_07() {
 

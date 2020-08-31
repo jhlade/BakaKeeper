@@ -810,7 +810,7 @@ public class Sync {
                         catalog.get(studentID).get(EBakaSQL.F_STU_SURNAME.basename()) + " " +
                         catalog.get(studentID).get(EBakaSQL.F_STU_GIVENNAME.basename()) + " " +
                         "nemá v evidenci správně vyplněné údaje primárního zákonného zástupce.");
-                // TODO hlášení
+                // TODO hlášení pro třídního/ICT
                 continue;
             }
 
