@@ -1,6 +1,5 @@
 package cz.zsstudanka.skola.bakakeeper.routines;
 
-
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaADAuthenticator;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
@@ -21,6 +20,50 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class Test {
+
+    // 2020-08-31 práce se třídnictvím
+    public static void test_09() {
+        System.out.println("====== [ TEST 2020-08-31 SQL definice třídnictví ] ======");
+
+        SQLrecords třídníUčitelé = new SQLrecords(true);
+
+        System.out.println("Bylo nalezeno " + třídníUčitelé.count() + " třídních učitelů.");
+
+        while (třídníUčitelé.iterator().hasNext()) {
+            Map<String, String> učitel = třídníUčitelé.get(třídníUčitelé.iterator().next());
+
+            String třída = učitel.get(EBakaSQL.F_CLASS_LABEL.basename());
+            String příjmení = učitel.get(EBakaSQL.F_FAC_SURNAME.basename());
+            String jméno = učitel.get(EBakaSQL.F_FAC_GIVENNAME.basename());
+            String email = učitel.get(EBakaSQL.F_FAC_EMAIL.basename());
+
+            System.out.println(třída + ":\t" + příjmení + " " + jméno + "\t\t("+email+")");
+        }
+
+        System.out.println("====== [ / TEST 2020-08-31 SQL definice třídnictví ] ======");
+
+        System.out.println("\n====== [ TEST 2020-08-31 SQL definice aktivních učitelů ] ======");
+
+        SQLrecords všichniUčitelé = new SQLrecords(false);
+
+        System.out.println("Letos je aktivních " + všichniUčitelé.count() + " učitelů.");
+
+        while (všichniUčitelé.iterator().hasNext()) {
+            Map<String, String> učitel = všichniUčitelé.get(všichniUčitelé.iterator().next());
+
+            //System.out.println("DUMP " + učitel.toString());
+
+            String třída = (učitel.containsKey(EBakaSQL.F_CLASS_LABEL.basename())) ? učitel.get(EBakaSQL.F_CLASS_LABEL.basename()) : "netřídní";
+            String příjmení = (učitel.containsKey(EBakaSQL.F_FAC_SURNAME.basename())) ? učitel.get(EBakaSQL.F_FAC_SURNAME.basename()) : "??? bez příjmení ???";
+            String jméno = (učitel.containsKey(EBakaSQL.F_FAC_GIVENNAME.basename())) ? učitel.get(EBakaSQL.F_FAC_GIVENNAME.basename()) : "??? bze jména ???";
+            String email = (učitel.containsKey(EBakaSQL.F_FAC_EMAIL.basename())) ? učitel.get(EBakaSQL.F_FAC_EMAIL.basename()) : "NULL";
+
+            System.out.println(třída + ":\t" + příjmení + " " + jméno + "\t\t("+ email +")");
+        }
+
+
+        System.out.println("\n====== [ / TEST 2020-08-31 SQL definice aktivních učitelů ] ======");
+    }
 
     // sestavy pro 2020/2021
     public static void test_08() {

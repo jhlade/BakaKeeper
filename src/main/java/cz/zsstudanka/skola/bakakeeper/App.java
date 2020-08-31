@@ -27,7 +27,7 @@ public class App {
 
     // TODO vývojářský režim - nebude se zapisovat do ostrých dat
     /** příznak vývoajářského režimu - neprobíhá zápis do ostrých dat */
-    public static Boolean FLAG_DEVEL = false;
+    public static Boolean FLAG_DEVEL = true;
 
     /** příznak inicializace */
     public static Boolean FLAG_INIT = false;
@@ -248,7 +248,7 @@ public class App {
             // vývojový test
             if (params.containsKey("test")) {
                 System.out.println("====== [ TEST ] ======");
-                Test.test_08();
+                Test.test_09();
                 System.out.println("====== [ /TEST ] ======");
                 return;
             } // test
