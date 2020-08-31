@@ -363,7 +363,7 @@ public class Guardian implements IRecordLDAP, IRecordSQL {
 
         if (result) {
             if (Settings.getInstance().beVerbose()) {
-                ReportManager.log(EBakaLogType.LOG_OK, "Distribuční skupiny zákonného zástupce " + getSurname() + " " + getGivenName() + " byly aktulizovány.");
+                ReportManager.log(EBakaLogType.LOG_OK, "Distribuční skupiny zákonného zástupce " + getSurname() + " " + getGivenName() + " byly aktualizovány.");
             }
         } else {
             ReportManager.log(EBakaLogType.LOG_ERR, "Nebylo možné aktualizovat distribuční skupiny zákonného zástupce " + getSurname() + " " + getGivenName() + ".");
