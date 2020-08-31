@@ -28,6 +28,7 @@ public enum EBakaSQL {
     TBL_GUA("dbo.zaci_zzd", "Tabulka s daty zákonných zástupců žáků."),
     TBL_STU_GUA("dbo.zaci_zzr", "Tabulka s definicí vztahů zákonných zástupců k žákům."),
     TBL_WEB_LOGIN("dbo.webuser", "Tabulka s definicí přístupů uživatelů webové aplikace."),
+    TBL_CLASS("dbo.tridy", "Tabulka s definicí tříd."),
 
     // pole - Student
     F_STU_ID(TBL_STU.field + "." + "INTERN_KOD", "Interní kód žáka."),
@@ -52,6 +53,18 @@ public enum EBakaSQL {
     F_GUA_BK_MAIL("ZZ_MAIL", "Alias - e-mailová adresa zákonného zástupce."),
     F_GUA_BK_MOBILE("ZZ_TELEFON", "Alias - mobilní telefon zákonného zástupce."),
 
+    // pole - Faculty - učitel
+    F_FAC_ID(TBL_FAC.field + "." + "INTERN_KOD", "Interní kód vyučujícího."),
+    F_FAC_GIVENNAME(TBL_FAC.field + "." + "JMENO", "Jméno vyučujícího."),
+    F_FAC_SURNAME(TBL_FAC.field + "." + "PRIJMENI", "Příjmneí vyučujícího."),
+    F_FAC_EMAIL(TBL_FAC.field + "." + "E_MAIL", "E-mailová adresa vyučujícího."),
+    F_FAC_ACTIVE(TBL_FAC.field + "." + "UCI_LETOS", "Příznak vyučujícího aktivního v aktuálním školním roce."),
+
+    // pole - Class - třída
+    F_CLASS_YEAR(TBL_CLASS.field + "." + "ROCNIK", "Ročník třídy."),
+    F_CLASS_LABEL(TBL_CLASS.field + "." + "ZKRATKA", "Označení třídy výrazem ^[0-9]\\.[A-E]$."),
+    F_CLASS_TEACHER(TBL_CLASS.field + "." + "TRIDNICTVI", "Cizí klíč (F_FAC_ID) - třídní učitel."),
+
     // pole - Student:Guardian
     F_GS_GUAID(TBL_STU_GUA.field + "." + "ID_ZZ", "ID zákonného zástupce."),
     F_GS_STUID(TBL_STU_GUA.field + "." + "INTERN_KOD", "ID žáka."),
@@ -74,6 +87,7 @@ public enum EBakaSQL {
     S_STU_BK_GUA_MOBILE(F_GUA_MOBILE.field + " AS " + F_GUA_BK_MOBILE.field, "Výběr: telefon zákonného zástupce."),
     S_STU_BK_GUA_MAIL(F_GUA_MAIL.field + " AS " + F_GUA_BK_MAIL.field, "Výběr: e-mailová adresa zákonného zástupce."),
 
+    // ostatní
     NULL("(NULL)", "Literál prázdných dat."),
     DEBUG("DEBUG_FIELD", "Pro účely ladění.");
 
@@ -108,10 +122,8 @@ public enum EBakaSQL {
             case TBL_STU:
                 return F_STU_ID;
 
-            // TODO
-            /*
             case TBL_FAC:
-                return F_FAC_ID; */
+                return F_FAC_ID;
 
             case TBL_GUA:
                 return F_GUA_ID;
