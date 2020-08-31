@@ -20,7 +20,7 @@ public class SQLrecords implements IRecords {
     private EBakaSQL sql_table;
 
     /**
-     * Pole žáka a s ním spjatého promárního zákonného zůástupce.
+     * Pole žáka a s ním spjatého primárního zákonného zůástupce.
      */
     private final EBakaSQL[] STUDENT_DATA_STRUCTURE = {
             EBakaSQL.F_STU_ID, // PK
@@ -33,12 +33,30 @@ public class SQLrecords implements IRecords {
             EBakaSQL.S_STU_BK_GUA_MAIL, EBakaSQL.S_STU_BK_GUA_MOBILE // [zákonný zástupce]
     };
 
+    /**
+     * Pole učitele; TODO - možná opačný join s příznakem třídnictví?
+     *
+     * Tohle jsou všichni aktivní učitelé, nenulová třída označuje třídnictví:
+     * SELECT dbo.ucitele.INTERN_KOD, dbo.ucitele.E_MAIL, dbo.ucitele.JMENO, dbo.ucitele.PRIJMENI, dbo.tridy.ZKRATKA
+     * FROM dbo.tridy RIGHT JOIN dbo.ucitele ON (dbo.tridy.TRIDNICTVI = dbo.ucitele.INTERN_KOD)
+     * WHERE dbo.ucitele.UCI_LETOS = '1' AND (dbo.tridy.ZKRATKA LIKE '[1-9].[A-E]' OR dbo.tridy.ZKRATKA IS NULL)
+     * ORDER BY dbo.ucitele.PRIJMENI;
+     *
+     * Pouze třídní učitelé:
+     * SELECT dbo.ucitele.INTERN_KOD, dbo.ucitele.E_MAIL, dbo.ucitele.JMENO, dbo.ucitele.PRIJMENI, dbo.tridy.ZKRATKA
+     * FROM dbo.ucitele RIGHT JOIN dbo.tridy ON (dbo.tridy.TRIDNICTVI = dbo.ucitele.INTERN_KOD)
+     * WHERE dbo.tridy.ZKRATKA LIKE '[1-9].[A-E]' AND dbo.ucitele.UCI_LETOS = '1'
+     * ORDER BY dbo.tridy.ZKRATKA;
+     */
     private final EBakaSQL[] FACULTY_DATA_STRUCTURE = {
-            // TODO - učitelé
+            EBakaSQL.F_FAC_ID, // PK
+            EBakaSQL.F_FAC_SURNAME, EBakaSQL.F_FAC_GIVENNAME, // jméno
+            EBakaSQL.F_FAC_EMAIL,
+            EBakaSQL.F_CLASS_LABEL, // je vlastníkem třídy (literál [1-9].[A-E] nebo NULL)
     };
 
     private final EBakaSQL[] GUARDIAN_DATA_STRUCTURE = {
-        // TODO - (zvlášť) zákonní zástupci
+        // TODO - (zvlášť ?) zákonní zástupci
     };
 
     /** použitá struktura */
@@ -69,9 +87,87 @@ public class SQLrecords implements IRecords {
         populate();
     }
 
+
+    /**
+     * Konstruktor pro data učitelů.
+     *
+     * @param classTeachersOnly je-li PRAVDA, konstruují se pouze učitelé s aktuálním třídnictvím
+     */
+    public SQLrecords(boolean classTeachersOnly) {
+
+        // tabulka učitele
+        this.sql_table = EBakaSQL.TBL_FAC;
+        // struktura pro tabulku učitele
+        this.dataStructure = FACULTY_DATA_STRUCTURE;
+
+        StringBuilder selectBuilder = new StringBuilder();
+
+        // INTERN_KOD
+        selectBuilder.append(EBakaSQL.F_FAC_ID.field());
+        selectBuilder.append(", ");
+        // E_MAIL
+        selectBuilder.append(EBakaSQL.F_FAC_EMAIL.field());
+        selectBuilder.append(", ");
+        // JMENO
+        selectBuilder.append(EBakaSQL.F_FAC_GIVENNAME.field());
+        selectBuilder.append(", ");
+        // PRIJMENI
+        selectBuilder.append(EBakaSQL.F_FAC_SURNAME.field());
+        selectBuilder.append(", ");
+        // TRIDA
+        selectBuilder.append(EBakaSQL.F_CLASS_LABEL.field());
+        selectBuilder.append(" ");
+
+        selectBuilder.append("FROM ");
+
+        // pouze třídní učitelé
+        if (classTeachersOnly) {
+            selectBuilder.append(EBakaSQL.TBL_FAC.field() + " RIGHT JOIN " + EBakaSQL.TBL_CLASS.field() + " ");
+            selectBuilder.append("ON ");
+            selectBuilder.append("(");
+                selectBuilder.append(EBakaSQL.F_CLASS_TEACHER.field() + " = " + EBakaSQL.F_FAC_ID.field());
+            selectBuilder.append(") ");
+
+            selectBuilder.append("WHERE ");
+            selectBuilder.append(EBakaSQL.F_CLASS_LABEL.field() + " LIKE '[1-9].[A-E]' ");
+            selectBuilder.append("AND ");
+            selectBuilder.append(EBakaSQL.F_FAC_ACTIVE.field() + " = '" + EBakaSQL.LIT_TRUE.field() + "' ");
+
+            selectBuilder.append("ORDER BY " + EBakaSQL.F_CLASS_LABEL.field() + " ASC");
+        } else {
+            // všichni aktivní učitelé
+            selectBuilder.append(EBakaSQL.TBL_CLASS.field() + " RIGHT JOIN " + EBakaSQL.TBL_FAC.field() + " ");
+            selectBuilder.append("ON ");
+            selectBuilder.append("(");
+            selectBuilder.append(EBakaSQL.F_CLASS_TEACHER.field() + " = " + EBakaSQL.F_FAC_ID.field());
+            selectBuilder.append(") ");
+
+            selectBuilder.append("WHERE ");
+            selectBuilder.append(EBakaSQL.F_FAC_ACTIVE.field() + " = '" + EBakaSQL.LIT_TRUE.field() + "' ");
+            selectBuilder.append("AND ");
+            selectBuilder.append("(");
+                selectBuilder.append(EBakaSQL.F_CLASS_LABEL.field() + " LIKE '[1-9].[A-E]' ");
+                selectBuilder.append("OR ");
+                selectBuilder.append(EBakaSQL.F_CLASS_LABEL.field() + " IS NULL");
+            selectBuilder.append(")");
+
+            selectBuilder.append("ORDER BY " + EBakaSQL.F_FAC_SURNAME.field() + " ASC");
+        }
+
+        this.select = selectBuilder.toString();
+
+        populate();
+    }
+
+    /**
+     * Konstruktor pro data žáků.
+     *
+     * @param classYear ročník žáků
+     * @param classLetter písmeno třídy žáků
+     */
     public SQLrecords(Integer classYear, String classLetter) {
 
-        // tabulka s žáka
+        // tabulka žáka
         this.sql_table = EBakaSQL.TBL_STU;
         // struktura pro tabulku žáka a zákonného zástupce
         this.dataStructure = STUDENT_DATA_STRUCTURE;
