@@ -1,6 +1,7 @@
 package cz.zsstudanka.skola.bakakeeper.routines;
 
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
+import cz.zsstudanka.skola.bakakeeper.connectors.BakaADAuthenticator;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaEvents;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
@@ -38,10 +39,13 @@ public class Sync {
     /** LDAP data - kontaky na zákonné zástupce */
     private LDAPrecords contacts;
 
-    /** maximální limit počtu pokusů o výtvoření adresy */
+    /** maximální limit počtu pokusů o vytvoření adresy */
     private static final int LIMIT = 10;
 
 
+    /**
+     * Výchozí konstruktor s naplněním dat.
+     */
     public Sync() {
         reset();
     }
@@ -68,9 +72,7 @@ public class Sync {
      */
     private void loadCatalog() {
         this.catalog = new SQLrecords(null, null);
-        this.faculty = null; // TODO načtení třídních učitelů
-        // TODO 2020-05 vývoj
-        devel();
+        this.faculty = new SQLrecords(true);
     }
 
     /**
@@ -78,8 +80,6 @@ public class Sync {
      */
     private void loadDirectoryStudents() {
         this.directory = new LDAPrecords(Settings.getInstance().getLDAP_baseStudents(), EBakaLDAPAttributes.OC_USER);
-        // TODO 2020-05 vývoj
-        devel();
     }
 
     /**
@@ -203,6 +203,15 @@ public class Sync {
         rowData.put(EBakaSQL.F_GUA_BK_MOBILE.basename(), "999324564");
         rowData.put(EBakaSQL.F_GUA_BK_MAIL.basename(), "makyna.awesome@joutsen.cz");
         this.catalog.addRecord("DEV03", rowData);
+
+        // Třídní učitel 1.E
+        rowData = new DataSQL();//HashMap<String, String>();
+        rowData.put(EBakaSQL.F_CLASS_LABEL.basename(), "1.E");
+        rowData.put(EBakaSQL.F_FAC_SURNAME.basename(), "Hladěna");
+        rowData.put(EBakaSQL.F_FAC_GIVENNAME.basename(), "Jan");
+        rowData.put(EBakaSQL.F_FAC_EMAIL.basename(), "jan.hladena@zs-studanka.cz");
+        rowData.put(EBakaSQL.F_FAC_ID.basename(), "DEVCT01");
+        this.faculty.addRecord("DEVCT01", rowData);
     }
 
     /**
@@ -950,12 +959,168 @@ public class Sync {
     }
 
     /**
+     * Kontrola a synchronizace třídních učitelů a odpovídajících distribučních skupin.
+     *
+     * @param attemptRepair pokusit se o opravu v případě neshody
+     */
+    public void syncClassTeacher(boolean attemptRepair) {
+
+        if (Settings.getInstance().beVerbose()) {
+            ReportManager.log(EBakaLogType.LOG_VERBOSE, "Začíná kontrola distribučních skupin třídních učitelů.");
+        }
+
+        // smyčka po ročnících
+        for (char year = '1'; year <= '9'; year++) {
+
+            // smyčka po třídách
+            for (char classLetter = 'A'; classLetter <= 'E'; classLetter++) {
+
+                String classLabel = year + "." + classLetter;
+                String classDistributionListDN = "CN=Ucitele-Tridni-" + year + classLetter + "," + Settings.getInstance().getLDAP_baseDL();
+
+                if (Settings.getInstance().beVerbose()) {
+                    ReportManager.logWait(EBakaLogType.LOG_VERBOSE, "Probíhá zpracování třídy " + classLabel);
+                }
+
+                // distribuční data z adresáře
+                ArrayList<String> classTeachersInDL = BakaADAuthenticator.getInstance().listDirectMembers(classDistributionListDN);
+
+                // data z evidence - 0..1
+                DataSQL classTeacher = this.faculty.getBy(EBakaSQL.F_CLASS_LABEL, classLabel);
+
+                // v evidenci je prázdný výsledek = neexistující třída
+                if (classTeacher == null) {
+
+                    // požadavek - zcela prázdný distribuční seznam
+                    if (classTeachersInDL.size() == 0) {
+                        // OK
+                        if (Settings.getInstance().beVerbose()) {
+                            ReportManager.logResult(EBakaLogType.LOG_OK);
+                        }
+
+                        if (Settings.getInstance().debugMode()) {
+                            ReportManager.log(EBakaLogType.LOG_DEBUG, "Třída " + classLabel + " je bez označení třídního učitele, nebo neexistuje.");
+                        }
+
+                        // žádná další činnost není vyžadována
+                        continue;
+                    } else {
+                        // CHYBA, je potřeba smazat všechny členy současného distribučního seznamu
+                        if (Settings.getInstance().beVerbose()) {
+                            ReportManager.logResult(EBakaLogType.LOG_ERR);
+                        }
+
+                        if (Settings.getInstance().debugMode()) {
+                            ReportManager.log(EBakaLogType.LOG_ERR_DEBUG, "Třída " + classLabel +
+                                    " je bez označení třídního učitele, nebo neexistuje, avšak odpovídající distribuční seznam není prázdný.");
+                        }
+
+                        if (attemptRepair) {
+                            if (Settings.getInstance().beVerbose()) {
+                                ReportManager.logWait(EBakaLogType.LOG_VERBOSE, "Probíhá pokus o opravu třídy " + classLabel);
+                            }
+
+                            // celkový prces opravy
+                            Boolean repair = true;
+
+                            // smazat jednotlivé členy
+                            for (String singleDN: classTeachersInDL) {
+
+                                if (Settings.getInstance().debugMode()) {
+                                    // uzavření předchozího řádku
+                                    ReportManager.logResult(EBakaLogType.LOG_DEBUG);
+
+                                    ReportManager.logWait(EBakaLogType.LOG_DEBUG, "Z distribučního seznamu [" + classDistributionListDN + "] se odstraňuje záznam [" + singleDN + "].");
+                                }
+
+                                Boolean removeSingle = BakaADAuthenticator.getInstance().removeObjectFromGroup(singleDN, classDistributionListDN);
+                                repair &= removeSingle;
+
+                                // TODO
+                                if (removeSingle) {
+
+                                } else {
+
+                                }
+
+                            }
+
+                            if (Settings.getInstance().beVerbose()) {
+
+                                if (Settings.getInstance().debugMode()) {
+                                    // otevření řádku
+                                    ReportManager.logWait(EBakaLogType.LOG_DEBUG, "--->");
+                                }
+
+                                if (repair) {
+                                    ReportManager.logResult(EBakaLogType.LOG_OK);
+                                } else {
+                                    ReportManager.logResult(EBakaLogType.LOG_ERR);
+                                }
+                            }
+
+                        } else {
+                            // upozornit na chybu
+                            ReportManager.log(EBakaLogType.LOG_WARN, "Je vyžadována oprava. Třída " + classLabel + " nemá definovaného " +
+                                    "třídního učitele (nebo neexistuje), avšak odpovídající distribuční seznam není prázdný.");
+                        }
+                    }
+
+                    // neexistující třída/bez třídního
+                } else {
+                    // TODO
+                    // požadavek - jeden odpovídající záznam v distribučním seznamu
+
+
+                }
+
+                // odpovídající data z adresáře
+                DataLDAP classTeacherDN = this.directoryFaculty.getBy(EBakaLDAPAttributes.MAIL, classTeacher.get(EBakaSQL.F_FAC_EMAIL.basename()));
+
+                if (classTeacher != null) {
+
+                } else {
+
+                }
+
+                /*
+                if (Settings.getInstance().beVerbose()) {
+                    ReportManager.logResult();
+                }
+                */
+
+
+                // pokus
+                /*
+                DataSQL pokus = this.faculty.getBy(EBakaSQL.F_CLASS_LABEL, classLabel);
+                if (pokus != null) {
+                    System.out.println("Nalezeno: " + pokus);
+
+                    // existuje LDAP?
+                    DataLDAP pokus2 = this.directoryFaculty.getBy(EBakaLDAPAttributes.MAIL, pokus.get(EBakaSQL.F_FAC_EMAIL.basename()));
+                    if (pokus2 != null) {
+                        System.out.println("Nalezeno v LDAP: " + pokus2);
+                    } else {
+                        System.out.println("V LDAPu nic.");
+                    }
+                }
+                */
+
+            }
+
+            // TODO !!!
+            break;
+        }
+    }
+
+    /**
      * Provedení synchronizace evidence a dresáře.
      * - Zavedení nových žáků TODO RM vytvoří report pro třídního
      * - Zablokování vyřazených žáků
      */
     public static void actionSync() {
         Sync checker = new Sync();
+        checker.syncClassTeacher(true);
         checker.actionInit(true);
         checker.actionCheck(true);
         checker.checkData(true);
@@ -967,6 +1132,7 @@ public class Sync {
      */
     public static void actionCheckSync() {
         Sync checker = new Sync();
+        checker.syncClassTeacher(false);
         checker.actionInit(false);
         checker.actionCheck(false);
         checker.checkData(false);
