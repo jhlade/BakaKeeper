@@ -327,6 +327,14 @@ public class SQLrecords implements IRecords {
      * @param data získaná data
      */
     public void addRecord(String id, DataSQL data) {
+        // záznam se kryje
+        if (this.data.containsKey(id)) {
+            if (Settings.getInstance().beVerbose()) {
+                ReportManager.log(EBakaLogType.LOG_ERR_VERBOSE, "Nebylo možné přidat záznam s ID = [" + id + "] do kolekce.");
+            }
+            return;
+        }
+
         this.data.put(id, data);
     }
 
