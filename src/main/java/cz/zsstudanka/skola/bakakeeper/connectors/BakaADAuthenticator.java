@@ -990,6 +990,40 @@ public class BakaADAuthenticator {
     }
 
     /**
+     * Výpis všech přímých členů skupiny definované pomocí plného DN.
+     *
+     * @param dn plné DN skupiny
+     * @return seznam DN přímo podřízených objektů
+     */
+    public ArrayList<String> listDirectMembers(String dn) {
+        ArrayList<String> result = new ArrayList<>(0);
+
+        // dotaz na typ = uživatel
+        HashMap<String, String> ldapQ = new HashMap<String, String>();
+        ldapQ.put(EBakaLDAPAttributes.OC_USER.attribute(), EBakaLDAPAttributes.OC_USER.value());
+        ldapQ.put(EBakaLDAPAttributes.ST_USER.attribute(), EBakaLDAPAttributes.ST_USER.value());
+        ldapQ.put(EBakaLDAPAttributes.MEMBER_OF.attribute(), dn);
+
+        // získat DN
+        String[] retAttributes = {
+                EBakaLDAPAttributes.DN.attribute(),
+        };
+
+        Map<Integer, Map<String, String>> query = (Map<Integer, Map<String, String>>) getObjectInfo(Settings.getInstance().getLDAP_base(), ldapQ, retAttributes);
+
+        if (query.size() > 0) {
+            result = new ArrayList<String>(query.size());
+
+            int memberCounter = 0;
+            for (memberCounter = 0; memberCounter < query.size(); memberCounter++) {
+                result.add(query.get(memberCounter).get(EBakaLDAPAttributes.DN.attribute()));
+            }
+        }
+
+        return result;
+    }
+
+    /**
      * Přidání objektu jako člena do skupiny.
      *
      * @param objectDN plné DN objektu
