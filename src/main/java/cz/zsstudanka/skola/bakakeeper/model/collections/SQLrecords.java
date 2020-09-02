@@ -321,6 +321,30 @@ public class SQLrecords implements IRecords {
     }
 
     /**
+     * Získání jednoho záznamu podle hodnoty jednoho pole.
+     *
+     * @param field pole k prohledání
+     * @param value hledaná hodnota
+     * @return odpovídající záznam
+     */
+    public DataSQL getBy(EBakaSQL field, String value) {
+        Iterator<String> tmpIterator = this.data.keySet().iterator();
+        while (tmpIterator.hasNext()) {
+            DataSQL item = this.data.get(tmpIterator.next());
+
+            // pole existuje
+            if (item.containsKey(field.basename())) {
+                // hodnota nalezena
+                if (item.get(field.basename()).equals(value)) {
+                    return item;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Přidání záznamu do kolekce.
      *
      * @param id interní kód záznamu

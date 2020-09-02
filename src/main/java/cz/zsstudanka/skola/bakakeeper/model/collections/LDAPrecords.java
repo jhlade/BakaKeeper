@@ -198,6 +198,25 @@ public class LDAPrecords implements IRecords {
     }
 
     /**
+     * Získání jednoho záznamu podle konkrétního atributu a jeho řetězcové hodnoty.
+     *
+     * @param attr atribut
+     * @param value hledaná hodnota
+     * @return hledaný objekt
+     */
+    public DataLDAP getBy(EBakaLDAPAttributes attr, String value) {
+
+        LinkedHashMap<String, DataLDAP> subset = this.getSubsetBy(attr, value);
+
+        if (subset.size() == 1) {
+            Iterator<String> internalIterator = subset.keySet().iterator();
+            return this.get(internalIterator.next());
+        }
+
+        return null;
+    }
+
+    /**
      * Získání příznaku konkrétního objektu.
      *
      * @param key klíč objektu
