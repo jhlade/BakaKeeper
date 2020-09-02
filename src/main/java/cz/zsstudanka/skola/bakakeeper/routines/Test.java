@@ -21,6 +21,16 @@ import java.util.*;
 
 public class Test {
 
+    // 2020-09-02 synchronziace třídních učitelů
+    public static void test_10() {
+        System.out.println("====== [ TEST 2020-09-02 synchronizace skupin třídních učitelů ] ======");
+
+        Sync třídníSync = new Sync();
+        třídníSync.syncClassTeacher(false);
+
+        System.out.println("====== [ / TEST 2020-09-02 synchronizace skupin třídních učitelů ] ======");
+    }
+
     // 2020-08-31 práce se třídnictvím
     public static void test_09() {
         System.out.println("====== [ TEST 2020-08-31 SQL definice třídnictví ] ======");
