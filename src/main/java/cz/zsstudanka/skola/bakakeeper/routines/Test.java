@@ -26,7 +26,7 @@ public class Test {
         System.out.println("====== [ TEST 2020-09-02 synchronizace skupin třídních učitelů ] ======");
 
         Sync třídníSync = new Sync();
-        třídníSync.syncClassTeacher(false);
+        třídníSync.syncClassTeacher(true);
 
         System.out.println("====== [ / TEST 2020-09-02 synchronizace skupin třídních učitelů ] ======");
     }

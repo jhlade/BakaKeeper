@@ -63,8 +63,11 @@ public class Sync {
         this.loadDirectoryFaculty();
         this.loadDirectoryContacts();
 
-        // TODO 2020-05 vývoj
-        devel();
+        // TODO vývoj
+        if (Settings.getInstance().develMode()) {
+            ReportManager.log(EBakaLogType.LOG_DEVEL, "Vytváří se fiktivní vývojová data.");
+            devel();
+        }
     }
 
     /**
@@ -985,10 +988,11 @@ public class Sync {
                 // distribuční data z adresáře
                 ArrayList<String> classTeachersInDL = BakaADAuthenticator.getInstance().listDirectMembers(classDistributionListDN);
 
-                // data z evidence - 0..1
+                // data z evidence - 0..1 pro třídního, TODO 0..N pro zastupujícího
                 DataSQL classTeacher = this.faculty.getBy(EBakaSQL.F_CLASS_LABEL, classLabel);
 
                 // v evidenci je prázdný výsledek = neexistující třída
+                // bez třídního, distribuční sesznam musí být prázdný
                 if (classTeacher == null) {
 
                     // požadavek - zcela prázdný distribuční seznam
@@ -1020,14 +1024,14 @@ public class Sync {
                                 ReportManager.logWait(EBakaLogType.LOG_VERBOSE, "Probíhá pokus o opravu třídy " + classLabel);
                             }
 
-                            // celkový prces opravy
+                            // celkový proces opravy
                             Boolean repair = true;
 
                             // smazat jednotlivé členy
                             for (String singleDN: classTeachersInDL) {
 
                                 if (Settings.getInstance().debugMode()) {
-                                    // uzavření předchozího řádku
+                                    // uzavření předchozího řádku RM
                                     ReportManager.logResult(EBakaLogType.LOG_DEBUG);
 
                                     ReportManager.logWait(EBakaLogType.LOG_DEBUG, "Z distribučního seznamu [" + classDistributionListDN + "] se odstraňuje záznam [" + singleDN + "].");
@@ -1036,19 +1040,24 @@ public class Sync {
                                 Boolean removeSingle = BakaADAuthenticator.getInstance().removeObjectFromGroup(singleDN, classDistributionListDN);
                                 repair &= removeSingle;
 
-                                // TODO
-                                if (removeSingle) {
 
-                                } else {
-
+                                if (Settings.getInstance().debugMode()) {
+                                    if (removeSingle) {
+                                        // jeden záznam byl odstraněn
+                                        ReportManager.logResult(EBakaLogType.LOG_OK);
+                                    } else {
+                                        // nezdařilo se smazat jeden záznam
+                                        ReportManager.logResult(EBakaLogType.LOG_ERR);
+                                        ReportManager.log(EBakaLogType.LOG_ERR_VERBOSE, "Z distribučního seznamu pro třídu " + classLabel + " ([" + classDistributionListDN + "]) nebylo možné smazat záznam [" + singleDN + "].");
+                                    }
                                 }
 
-                            }
+                            } // for - současní členové DL
 
                             if (Settings.getInstance().beVerbose()) {
 
                                 if (Settings.getInstance().debugMode()) {
-                                    // otevření řádku
+                                    // otevření nového řádku pro další zpracování
                                     ReportManager.logWait(EBakaLogType.LOG_DEBUG, "--->");
                                 }
 
@@ -1056,6 +1065,10 @@ public class Sync {
                                     ReportManager.logResult(EBakaLogType.LOG_OK);
                                 } else {
                                     ReportManager.logResult(EBakaLogType.LOG_ERR);
+
+                                    if (Settings.getInstance().debugMode()) {
+                                        ReportManager.log(EBakaLogType.LOG_ERR_DEBUG, "Nezdařilo se opravit distribuční seznam třídy " + classLabel + " ([" + classDistributionListDN + "]), který by měl být zcela prázdný.");
+                                    }
                                 }
                             }
 
@@ -1066,50 +1079,152 @@ public class Sync {
                         }
                     }
 
-                    // neexistující třída/bez třídního
+                    // konec - neexistující třída/bez třídního
                 } else {
-                    // TODO
                     // požadavek - jeden odpovídající záznam v distribučním seznamu
 
+                    // odpovídající data z adresáře
+                    DataLDAP classTeacherDN = this.directoryFaculty.getBy(EBakaLDAPAttributes.MAIL, classTeacher.get(EBakaSQL.F_FAC_EMAIL.basename()));
 
-                }
+                    // záznamy k odstranění
+                    ArrayList<String> dnToRemove = new ArrayList<>();
 
-                // odpovídající data z adresáře
-                DataLDAP classTeacherDN = this.directoryFaculty.getBy(EBakaLDAPAttributes.MAIL, classTeacher.get(EBakaSQL.F_FAC_EMAIL.basename()));
+                    // záznamy pro přidání
+                    ArrayList<String> dnToAdd = new ArrayList<>();
 
-                if (classTeacher != null) {
+                    // uživatel v adresáři neexistuje
+                    if (classTeacherDN == null) {
+                        ReportManager.log(EBakaLogType.LOG_ERR, "Třídní učitel " + classLabel + " je v evidenci zapsán, nicméně nebyl nalezen v adresáři podle e-mailu - chyba nebo neexistující účet.");
 
-                } else {
+                        if (Settings.getInstance().beVerbose()) {
+                            ReportManager.log(EBakaLogType.LOG_ERR_VERBOSE, "Účet uživatele [" + classTeacher.get(EBakaSQL.F_FAC_SURNAME.basename()) + " " + classTeacher.get(EBakaSQL.F_FAC_GIVENNAME.basename()) + "] se nepodařilo najít v adresáři.");
+                        }
 
-                }
-
-                /*
-                if (Settings.getInstance().beVerbose()) {
-                    ReportManager.logResult();
-                }
-                */
-
-
-                // pokus
-                /*
-                DataSQL pokus = this.faculty.getBy(EBakaSQL.F_CLASS_LABEL, classLabel);
-                if (pokus != null) {
-                    System.out.println("Nalezeno: " + pokus);
-
-                    // existuje LDAP?
-                    DataLDAP pokus2 = this.directoryFaculty.getBy(EBakaLDAPAttributes.MAIL, pokus.get(EBakaSQL.F_FAC_EMAIL.basename()));
-                    if (pokus2 != null) {
-                        System.out.println("Nalezeno v LDAP: " + pokus2);
+                        if (Settings.getInstance().debugMode()) {
+                            ReportManager.log(EBakaLogType.LOG_ERR_DEBUG, "Pro uživatele [" + classTeacher.get(EBakaSQL.F_FAC_SURNAME.basename()) +
+                                    " " + classTeacher.get(EBakaSQL.F_FAC_GIVENNAME.basename()) +
+                                    "] s evidenčním ID [" + classTeacher.get(EBakaSQL.F_FAC_ID.basename()) + "] nebylo možné najít odpovídající AD účet podle " +
+                                    "hledané e-mailové adresy [" + classTeacher.get(EBakaSQL.F_FAC_EMAIL.basename()) + "].");
+                        }
                     } else {
-                        System.out.println("V LDAPu nic.");
+                        // účet byl nalezen, DN se přidá pro porovnání
+                        dnToAdd.add(classTeacherDN.get(EBakaLDAPAttributes.DN.attribute()).toString());
                     }
-                }
-                */
 
+                    if (dnToAdd.equals(classTeachersInDL)) {
+                        // OK
+                        if (Settings.getInstance().beVerbose()) {
+                            ReportManager.logResult(EBakaLogType.LOG_OK);
+                        }
+
+                        if (Settings.getInstance().debugMode()) {
+                            ReportManager.log(EBakaLogType.LOG_DEBUG, "Distribuční seznam třídních učiteů " + classLabel + " je v pořádku.");
+                        }
+
+                        continue;
+                    } else {
+                        // hlášení
+                        if (Settings.getInstance().beVerbose()) {
+                            ReportManager.logResult(EBakaLogType.LOG_ERR);
+                        }
+
+                        if (!attemptRepair) {
+                            ReportManager.log(EBakaLogType.LOG_WARN, "Distribuční seznam třídních učitelů " + classLabel + " je třeba opravit.");
+                            continue;
+                        }
+
+                        // celkový průběh
+                        boolean repairDN = true;
+
+                        if (Settings.getInstance().debugMode()) {
+                            ReportManager.log(EBakaLogType.LOG_ERR_DEBUG, "Současný distribuční seznam třídních učitelů " + classLabel + " je třeba opravit.");
+                        }
+
+                        // kopie aktuálního stavu
+                        dnToRemove = new ArrayList(classTeachersInDL);
+
+                        // bude se mazat vše kromě platných záznamů
+                        dnToRemove.removeAll(dnToAdd);
+
+                        // existující záznamy se nebudou přidávat dvakrát
+                        dnToAdd.removeAll(classTeachersInDL);
+
+                        // smazání neplatných záznamů
+                        if (dnToRemove.size() > 0) {
+
+                            for (String rmDN: dnToRemove) {
+
+                                if (Settings.getInstance().beVerbose()) {
+                                    ReportManager.logWait(EBakaLogType.LOG_VERBOSE, "Odstraňuje se neplatný záznam [" + rmDN + "]");
+                                }
+
+                                boolean remove = BakaADAuthenticator.getInstance().removeObjectFromGroup(rmDN, classDistributionListDN);
+
+                                if (Settings.getInstance().beVerbose()) {
+                                    if (remove) {
+                                        ReportManager.logResult(EBakaLogType.LOG_OK);
+                                    } else {
+                                        ReportManager.logResult(EBakaLogType.LOG_ERR_VERBOSE);
+
+                                        if (Settings.getInstance().debugMode()) {
+                                            ReportManager.log(EBakaLogType.LOG_ERR_DEBUG, "Z distrubučnáho seznamu [" + classDistributionListDN + "] nebylo možné odstranit záznam [" + rmDN + "].");
+                                        }
+                                    }
+                                }
+
+                                repairDN &= remove;
+
+                            } // for - mazání
+
+                        } else {
+                            if (Settings.getInstance().debugMode()) {
+                                ReportManager.log(EBakaLogType.LOG_DEBUG, "Z distribučního seznamu pro třídní učitele " + classLabel + " není třeba nic odstraňovat.");
+                            }
+                        }
+
+                        // přidání platných záznamů
+                        if (dnToAdd.size() > 0) {
+
+                            for (String addDN: dnToAdd) {
+
+                                if (Settings.getInstance().beVerbose()) {
+                                    ReportManager.logWait(EBakaLogType.LOG_VERBOSE, "Přidává se nový záznam [" + addDN + "]");
+                                }
+
+                                boolean add = BakaADAuthenticator.getInstance().addObjectToGroup(addDN, classDistributionListDN);
+
+                                if (Settings.getInstance().beVerbose()) {
+                                    if (add) {
+                                        ReportManager.logResult(EBakaLogType.LOG_OK);
+                                    } else {
+                                        ReportManager.logResult(EBakaLogType.LOG_ERR_VERBOSE);
+
+                                        if (Settings.getInstance().debugMode()) {
+                                            ReportManager.log(EBakaLogType.LOG_ERR_DEBUG, "Do distrubučnáho seznamu [" + classDistributionListDN + "] nebylo možné přidat záznam [" + addDN + "].");
+                                        }
+                                    }
+                                }
+
+                                repairDN &= add;
+
+                            } // for - přidávání
+
+                            if (!repairDN) {
+                                ReportManager.log(EBakaLogType.LOG_ERR, "Nebylo možné opravit distribuční seznam třídních učitelů " + classLabel + ".");
+                            } else {
+                                if (Settings.getInstance().beVerbose()) {
+                                    ReportManager.log(EBakaLogType.LOG_VERBOSE, "Distribuční seznam třídních učitelů " + classLabel + " byl opraven.");
+                                }
+                            }
+
+                        } else {
+                            if (Settings.getInstance().debugMode()) {
+                                ReportManager.log(EBakaLogType.LOG_DEBUG, "Do distribučního seznamu pro třídní učitele " + classLabel + " není třeba nic přidávat.");
+                            }
+                        }
+                    } // úprava DL
+                } // konec
             }
-
-            // TODO !!!
-            break;
         }
     }
 
