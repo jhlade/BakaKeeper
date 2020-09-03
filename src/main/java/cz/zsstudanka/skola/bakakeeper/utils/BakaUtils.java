@@ -1,10 +1,9 @@
 package cz.zsstudanka.skola.bakakeeper.utils;
 
 import java.text.Normalizer;
-import java.util.Base64;
 
 /**
- * Pomocné statické nástroje pro úpravu dat.
+ * Pomocné statické nástroje pro úpravu a validaci dat.
  *
  * @author Jan Hladěna
  */
@@ -15,7 +14,7 @@ public class BakaUtils {
      * Pokud je adresa nevalidní, je vrácen prázdný řetězec.
      *
      * @param email mailová adresa k validaci
-     * @return validovaná adresa nebo prázdný řetězec
+     * @return validovaná adresa s malými písmeny nebo prázdný řetězec
      */
     public static String validateEmail(String email) {
         if (email == null) {
@@ -46,7 +45,7 @@ public class BakaUtils {
      * Pokud číslo není platné, je vrácen prázdný řetězec.
      *
      * @param phone telefonní číslo
-     * @return upravené telefonní číslo nebo prázdný řetězec
+     * @return upravené telefonní číslo bez mezer nebo prázdný řetězec
      */
     public static String validatePhone(String phone) {
         if (phone == null) return "";
@@ -65,24 +64,14 @@ public class BakaUtils {
     }
 
     /**
-     * Zakódování vstupního řetězce do base64.
-     *
-     * @param input vstupní řetězec
-     * @return b64 kódovaný výstupní řetězec
-     */
-    public static String base64encode(String input) {
-        return Base64.getEncoder().encodeToString(input.getBytes());
-    }
-
-    /**
      * @deprecated
      *
      * Vytvoření neověřeného 4+2-INDOŠ loginu z celého jména. Projekt INDOŠ z roku 2001 formátoval přihlašovací
      * jméno jako první čtyři písmena z příjmení a první dvě písmena z křestního jména uživatele.
-     * Např. Josef Novák - novajo.
+     * Např. Novák Josef - novajo.
      *
-     * @param displayName zobrazované jméno (Příjmení Jméno Jméno, Svobodová Nováková Jana Kateřina)
-     * @return login 4+2 (svobja)
+     * @param displayName zobrazované jméno (ve formátu Příjmení Jméno; př. Novák Josef, Svobodová Nováková Jana Kateřina)
+     * @return login 4+2 (Novák Josef = novajo)
      */
     public static String create4p2(String displayName) {
         StringBuilder login = new StringBuilder();
@@ -99,30 +88,12 @@ public class BakaUtils {
         return login.toString();
     }
 
-
-    /**
-     * Vytvoření historického loginu ve formátu 4+2 ("prijjm") jako v projektu INDOŠ. Projekt INDOŠ z roku 2001
-     * formátoval přihlašovací jméno jako první čtyři písmena z příjmení a první dvě písmena z křestního jména
-     * uživatele. Např. Josef Novák - novajo. Použitelné pro vyučující. Číslo pokusu identifikuje posun písmen
-     * na pozici [3].
-     * TODO - refaktor create4p2
-     *
-     * @param surname celé příjmení
-     * @param givenName celé první jméno
-     * @param attempt číslo pokusu
-     * @return historická forma loginu ve tvaru 4+2
-     */
-    public static String createLegacyLogin(String surname, String givenName, Integer attempt) {
-        // TODO
-        return null;
-    }
-
     /**
      * Vytvoření přihlašovacího jména (žáka) do webové aplikace Bakaláři. Ve výchozím stavu aplikace
      * je použito pět písmen z příjmení (bez diakritiky, první velké) a náhodné pětimístné číslo. Pro použití
      * webové aplikace musí být tento login nejprve vytvořen; heslo lze následně samostaně změnit žádostí o změnu hesla,
      * kdy aplikace zašle tento údaj s ověřovacím řetězcem na e-mail uvedený v poli dbo.zaci.E_MAIL (školní adresa
-     * vytvořená procesem synchronizace).
+     * vytvořená procesem synchronizace, nebo ověřená adresa zákonného zástupce v poli dbo.zaci_zzd.E_MAIL).
      *
      * @param surname celé příjmení
      * @param givenName celé jméno
@@ -133,13 +104,13 @@ public class BakaUtils {
         // konstanty převzaty z výchozího chování Bakalářů, lze změnit
         final int nameLength = 5;
         final int max = 99999;
-        final int min = 10000; // zjednodušeno
+        final int min = 1;
 
         Integer randomPart = (int) (Math.random() * (max - min + 1) + min);
 
         String namePart = removeAccents(surname.substring(0, 1) + (surname.substring(1) + givenName).toLowerCase()).substring(0, nameLength);
 
-        return String.format("%s%d", namePart, randomPart);
+        return String.format("%s%05d", namePart, randomPart);
     }
 
     /**
@@ -186,12 +157,12 @@ public class BakaUtils {
      * @param surname příjmení
      * @param givenName jméno
      * @param attempt číslo pokusu
-     * @return pre-Windows 2000 login (sAMAccountName)
+     * @return pre-Windows 2000 login (LDAP atribut sAMAccountName)
      */
     public static String createSAMloginFromName(String surname, String givenName, Integer attempt) {
 
-        // maximální limit délky řetězce hodnoty atributu sAMAccountNate v AD - 20 znaků
-        final int MAX_LIMIT = 20;
+        // maximální limit délky řetězce hodnoty atributu sAMAccountName v AD - 20 znaků
+        final int MAX_SAM_LIMIT = 20;
 
         String[] snParts = surname.replace("-", " ")
                 .replaceAll("\\s+", " ")
@@ -206,10 +177,10 @@ public class BakaUtils {
 
         String base = removeAccents(snParts[0]).toLowerCase() + "." + removeAccents(gnParts[0]).toLowerCase();
 
-        if (base.length() <= MAX_LIMIT - ((attempt == 0) ? 0 : String.format("%d", attempt).length())) {
+        if (base.length() <= MAX_SAM_LIMIT - ((attempt == 0) ? 0 : String.format("%d", attempt).length())) {
             return base + ((attempt == 0) ? "" : attempt.toString());
         } else {
-            return (base.substring(0, MAX_LIMIT - ((attempt == 0) ? 0 : String.format("%d", attempt).length()))) + ((attempt == 0) ? "" : String.format("%d", attempt));
+            return (base.substring(0, MAX_SAM_LIMIT - ((attempt == 0) ? 0 : String.format("%d", attempt).length()))) + ((attempt == 0) ? "" : String.format("%d", attempt));
         }
     }
 
@@ -219,7 +190,7 @@ public class BakaUtils {
      *
      * @param surname příjmení
      * @param givenName jméno
-     * @return pre-Windows 2000 login (sAMAccountName) v prvním pokusu
+     * @return pre-Windows 2000 login (LDAP atribut sAMAccountName) v prvním pokusu
      */
     public static String createSAMloginFromName(String surname, String givenName) {
         return createSAMloginFromName(surname, givenName, 0);
@@ -232,7 +203,7 @@ public class BakaUtils {
      * @param surname příjmení
      * @param givenName jméno
      * @param currentUPN současně přidělené UPN
-     * @return pre-Windows 2000 login (sAMAccountName)
+     * @return pre-Windows 2000 login (LDAP atribut sAMAccountName)
      */
     public static String createSAMloginFromUPNbase(String surname, String givenName, String currentUPN) {
 
@@ -248,7 +219,7 @@ public class BakaUtils {
     }
 
     /**
-     * Vytvoří počáteční heslo žáka na základě jeho příjmení, jména a čísla v třídním výkazu
+     * Vytvoření počáteční heslo žáka na základě jeho příjmení, jména a čísla v třídním výkazu
      * ve formátu 'Pr.Jm.##'.
      *
      * @param surname příjmení žáka
@@ -271,10 +242,10 @@ public class BakaUtils {
     }
 
     /**
-     * Bázové jméno souboru ze zadané úplné cesty.
+     * Bázové jméno souboru ze zadané úplné nebo částečné cesty.
      *
      * @param path úlpná nebo částečná cesta k souboru
-     * @return jednoduchý tvar jména
+     * @return jednoduchý tvar jména souboru
      */
     public static String fileBaseName(String path) {
         String[] parts = path.split(".+?/(?=[^/]+$)");
@@ -283,9 +254,10 @@ public class BakaUtils {
 
     /**
      * Zpracování DN objektu pro identifikaci zařazení do školní třídy.
-     * Pokud objekt není aktivním žákem (nachází se mimo OU pro žáky),
+     * Pokud objekt není aktivním žákem (nachází se mimo základní OU pro žáky),
      * je vráceno pole prázdných položek (null).
      *
+     * Př.:
      * CN=Novák Josef,OU=Trida-A,OU=Rocnik-1,OU=Zaci,OU=Uzivatele,OU=Skola,DC=skola,DC=local
      * => String[2] = {"1", "A"}
      *
@@ -312,6 +284,7 @@ public class BakaUtils {
      * Číslo ročníku žáka na základě jeho DN, které musí obsahovat
      * odpovídající OU.
      *
+     * Př.:
      * CN=Novák Josef,OU=Trida-A,OU=Rocnik-1,OU=Zaci,OU=Uzivatele,OU=Skola,DC=skola,DC=local
      * => 1
      *
@@ -326,8 +299,9 @@ public class BakaUtils {
      * Písmeno třídy žáka na základě jeho DN, které musí obsahovat
      * odpovídající OU.
      *
+     * Př.:
      * CN=Novák Josef,OU=Trida-A,OU=Rocnik-1,OU=Zaci,OU=Uzivatele,OU=Skola,DC=skola,DC=local
-     * => A
+     * => 'A'
      *
      * @param dn plné DN objektu žáka
      * @return písmeno třídy
@@ -352,7 +326,7 @@ public class BakaUtils {
      * a celé bázové cesty.
      *
      * @param dn plné DN objektu
-     * @return pole řetězců [3] {název (cn), jméno nejbližší OU, bázová cesta}
+     * @return pole řetězců [3] {název (CN), jméno nejbližší OU, bázová cesta}
      */
     private static String[] parseDN(String dn) {
         String[] result = new String[3];
