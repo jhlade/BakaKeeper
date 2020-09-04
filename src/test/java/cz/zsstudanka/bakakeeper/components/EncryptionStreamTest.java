@@ -8,6 +8,8 @@ import org.junit.Test;
 import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 import static org.junit.Assert.assertEquals;
 
@@ -31,24 +33,63 @@ public class EncryptionStreamTest {
     }
 
     @Test
-    public void streamEncryptionTest() throws Exception {
+    public void objectStreamEncryptionTest() throws Exception {
 
-        File tempFile = File.createTempFile("streamEncryptionTest", ".dat");
+        File tempFile = File.createTempFile("objectStreamEncryptionTest", ".dat");
 
         // ---
 
         OutputStream ods;
-        ods = new EncryptionOutputStream( new FileOutputStream(tempFile.getAbsolutePath()) , password);
+        ods = new EncryptionOutputStream(new FileOutputStream(tempFile.getAbsolutePath()), password);
+        ObjectOutputStream outFile = new ObjectOutputStream( new GZIPOutputStream( ods ));
 
-        ods.write(message.getBytes());
-        ods.close();
+        outFile.writeObject(message);
+        outFile.close();
 
         // ---
 
-        String inputData;
+        String inputData = new String();
 
         InputStream ids;
-        ids = new EncryptionInputStream( new FileInputStream(tempFile.getAbsolutePath()), password);
+        ids = ( new EncryptionInputStream(new FileInputStream(tempFile.getAbsolutePath()), password) );
+        ObjectInputStream inStream = new ObjectInputStream(new GZIPInputStream( ids ));
+
+        inputData = (String) inStream.readObject();
+        inStream.close();
+
+        ids.close();
+
+        tempFile.delete();
+        // ---
+        assertEquals(message, inputData);
+    }
+
+    @Test
+    public void gzipStreamEncryptionTest() throws Exception {
+
+        File tempFile = File.createTempFile("gzipStreamEncryptionTest", ".dat");
+
+        // ---
+
+        OutputStream ods;
+        ods = new EncryptionOutputStream(new FileOutputStream(tempFile.getAbsolutePath()), password);
+        OutputStream outFile = new GZIPOutputStream( ods );
+
+        outFile.write(this.message.getBytes());
+        outFile.close();
+
+        // ---
+
+        String inputData = new String();
+
+        InputStream ids;
+        ids = ( new EncryptionInputStream(new FileInputStream(tempFile.getAbsolutePath()), password) );
+
+        try {
+            ids = new GZIPInputStream((ids));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         StringBuilder textBuilder = new StringBuilder();
         try (Reader reader = new BufferedReader(new InputStreamReader
@@ -63,7 +104,6 @@ public class EncryptionStreamTest {
         ids.close();
 
         tempFile.delete();
-
         // ---
         assertEquals(message, inputData);
     }
