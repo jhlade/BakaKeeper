@@ -1,14 +1,11 @@
 package cz.zsstudanka.skola.bakakeeper.settings;
 
+import cz.zsstudanka.skola.bakakeeper.components.EncryptionInputStream;
+import cz.zsstudanka.skola.bakakeeper.components.EncryptionOutputStream;
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 
-import javax.crypto.*;
-import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.PBEKeySpec;
-import javax.crypto.spec.SecretKeySpec;
 import java.io.*;
-import java.security.spec.KeySpec;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -48,24 +45,6 @@ public class Settings {
 
     /** nastavení jsou platná */
     private Boolean valid;
-
-    /** velikost šifrovacího klíče */
-    private final int keySize = 256;
-    /** transformace AES/CBC/PKCS5Padding */
-    private final String transformation = "AES/CBC/PKCS5Padding";
-    /** šifrovací algoritmus AES-256 */
-    private final String algorithm = "AES";
-
-    // TODO zde je možné/nutné provést změny
-    /** inicializační vektor šifrování */
-    private final byte[] IV = { 0x26, 0x33, 0x6a, 0x15,
-                                0x10, 0x12, 0x69, 0x7b,
-                                0x1e, 0x01, 0x0c, 0x36,
-                                0x11, 0x0e, 0x73, 0x3e};
-    /** šifrovací klíč */
-    private SecretKey key = null;
-    /** šifra */
-    private Cipher cipher = null;
 
     /** nastavení ve formátu tabulky */
     private Map<String, String> settings_data;
@@ -182,8 +161,7 @@ public class Settings {
 
                     InputStream dataInputStream;
                     if (this.useEncryption()) {
-                        this.cipher.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec(IV));
-                        dataInputStream = new CipherInputStream(new FileInputStream(filename), this.cipher);
+                        dataInputStream = new EncryptionInputStream(new FileInputStream(filename), PASSPHRASE);
                     } else {
                         dataInputStream = new FileInputStream(filename);
                     }
@@ -243,8 +221,7 @@ public class Settings {
 
                 OutputStream outputDataStream;
                 if (useEncryption()) {
-                    this.cipher.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(IV));
-                    outputDataStream = new CipherOutputStream(new FileOutputStream(filename), this.cipher);
+                    outputDataStream = new EncryptionOutputStream(new FileOutputStream(filename), PASSPHRASE);
                 } else {
                     outputDataStream = new FileOutputStream(filename);
                 }
@@ -735,20 +712,6 @@ public class Settings {
      */
     public void setPassphrase(String passphrase) {
         this.PASSPHRASE = passphrase;
-
-        try {
-
-            SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-            KeySpec spec = new PBEKeySpec(this.PASSPHRASE.toCharArray(), Version.getInstance().getName().getBytes(), 65536, this.keySize);
-            SecretKey tmp = factory.generateSecret(spec);
-            key = new SecretKeySpec(tmp.getEncoded(), algorithm);
-
-            cipher = Cipher.getInstance(transformation);
-
-        } catch (Exception e) {
-            ReportManager.log(EBakaLogType.LOG_ERR, "Inicializace šifrovacího mechanismu se nezdařila.");
-            this.PASSPHRASE = null;
-        }
     }
 
     /**

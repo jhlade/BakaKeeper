@@ -9,9 +9,9 @@ získaných v evidenci Bakalářů (jména, zařazení do ročníku/třídy
 v OU a skupinách včetně povýšení školního roku, tvorba nového
 přihlašovacího jména, e-mailu a počátečního hesla, vyřazení
 účtů po ukončení vzdělávání). Jednovláknově, atomicky, transakčně.
-* Automatická definice přístupů k webové aplikaci pro žáky
+* ~~Automatická definice přístupů k webové aplikaci pro žáky
 a jejich zákonné zástupce (metoda vyžádání nového hesla
-na základě ověřené e-mailové adresy).
+na základě ověřené e-mailové adresy).~~
 * Tvorba anonymizovaných distribučních skupin s kontakty
 na zákonné zástupce žáků třídy/ročníku/stupně/školy.
 * Navrženo pro periodický běh pomocí UNIXového cronu.
@@ -42,10 +42,9 @@ V případě jeho absence bude vytvořen soubor `settings.conf`
 s čitelnými údaji. Idea za šifrováním nastavení je taková,
 že nástroj spolu s nastavením může být uložen na sdíleném
 prostředku a není žádoucí, aby údaje použitého správcovského
-účtu byly veřejně dostupné. Aby bylo šifrování skutečně účinné,
-před sestavením balíčku je třeba změnit inicializační vektor
-(`Settings.java`: pole `IV`) a nástroj následně spouštět z
-důvěryhodného účtu (např. lokální BSD/linuxový uživatel).<br>
+účtu byly veřejně dostupné. Nástroj pak může být spouštěn
+z důveryhodného stroje automaticky pomocí plánovače
+(např. `cron`).<br>
 V rámci inicializace bude také získán důvěryhodný certifikát
 AD serveru a zapsán v úložišti `ssl.jks`.
 
