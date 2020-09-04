@@ -23,7 +23,7 @@ import java.util.Base64;
 public class EncryptionManager {
 
     /** velikost jednoho paketu [B] - hypoteticky může být už od 1 B */
-    protected static final int CHUNK_SIZE = 4096;
+    protected static final int CHUNK_SIZE = 1024;
 
     /** AES transformace Galois/Counter */
     private static final String ENC_TRANSFORMATION = "AES/GCM/NoPadding";
