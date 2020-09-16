@@ -26,16 +26,16 @@ public class BakaKerberosCallback implements CallbackHandler {
 
             if (callbacks[i] instanceof NameCallback) {
 
-                if (Settings.getInstance().beVerbose()) {
-                    ReportManager.log("Kerberos: probíhá ověření uživatelského jména.");
+                if (Settings.getInstance().debugMode()) {
+                    ReportManager.log(EBakaLogType.LOG_DEBUG,"Kerberos: probíhá ověření uživatelského jména.");
                 }
 
                 NameCallback usernameCallback = (NameCallback) callbacks[i];
                 usernameCallback.setName(Settings.getInstance().getKrb_user());
             } else if (callbacks[i] instanceof PasswordCallback) {
 
-                if (Settings.getInstance().beVerbose()) {
-                    ReportManager.log("Kerberos: probíhá ověření hesla.");
+                if (Settings.getInstance().debugMode()) {
+                    ReportManager.log(EBakaLogType.LOG_DEBUG,"Kerberos: probíhá ověření hesla.");
                 }
 
                 PasswordCallback passwordCallback = (PasswordCallback) callbacks[i];
