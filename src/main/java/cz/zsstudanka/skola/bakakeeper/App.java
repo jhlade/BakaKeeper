@@ -63,7 +63,7 @@ public class App {
                 continue;
             }
 
-            // argumenty s jednou pomlčkou - mohou vázat sugargumenty
+            // argumenty s jednou pomlčkou - mohou vázat subargumenty
             if (a.charAt(0) == '-') {
 
                 if (a.length() < 2) {
@@ -175,12 +175,12 @@ public class App {
                 return;
             }
 
-            // vývojářský režim - propagace do nastavení
+            // vývojářský režim - propagace do globálního nastavení
             Settings.getInstance().setDevelMode(FLAG_DEVEL);
 
             /* jednotlivé rutiny */
 
-            // CSV export tabulky žáků
+            // CSV export tabulky všech žáků
             if (params.containsKey("export")) {
                 if (params.containsKey("o")) {
 
@@ -199,10 +199,11 @@ public class App {
 
             //  kontrola současného stavu
             if (params.containsKey("status")) {
+                Sync.actionCheckSync();
                 return;
             }
 
-            // kontrola synchronizace
+            // kontrola synchronizace TODO bude nahrazeno jako "status"
             if (params.containsKey("checksync")) {
                 Sync.actionCheckSync();
                 return;
@@ -214,13 +215,13 @@ public class App {
                 return;
             } // sync
 
-            // bezpečnostní audit
+            // bezpečnostní audit?
             if (params.containsKey("audit")) {
                 // TODO kontrola assert security group list, OU, proxy(?)
                 return;
             } // audit
 
-            // kontrola nastavení
+            // kontrola nastavení přístupu ke službám
             if (params.containsKey("check")) {
                 actionCheck();
                 return;
@@ -454,8 +455,8 @@ public class App {
      */
     public static void actionResetPassword(String login) {
         // TODO - SAM/UPN/mail?
-        // 1) objekt musí být aktivní žák (existuje v AD a v Bakalářích), možná vyučující?
-        // 2) provede se nastavení hesla do původní podoby (PrJm.1234)
+        // 1) objekt musí být aktivní žák (existuje v AD a v Bakalářích), TODO možná i personál/pouze učitelé?
+        // 2) provede se nastavení hesla do původní podoby (Pr.Jm.XX)
         // 3) nastaví se flag nutnosti změny hesla při dalším přihlášení
         // 4) dost možná vyrobit akci + hint v --help
     }

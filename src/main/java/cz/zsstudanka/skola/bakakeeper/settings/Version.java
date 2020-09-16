@@ -13,7 +13,7 @@ public class Version {
     private final String purpose      = "Synchronizační nástroj evidence žáků v programu Bakaláři s uživatelskými účty vedenými v Active Directory.";
     private final String author       = "Jan Hladěna <jan.hladena@zs-studanka.cz>";
     private final String organization = "ZŠ Pardubice - Studánka";
-    private final String version      = "1.0.0";
+    private final String version      = "1.0.0-dev";
     private final String year         = "2020";
 
     /**
@@ -104,11 +104,12 @@ public class Version {
             info.append(" - " + purpose);
         }
         info.append("\n");
-        info.append("Copyright (C) " + year + " " + author + ", " + organization + "\n");
+        info.append("Copyright (c) " + year + " " + author + ", " + organization + "\n");
 
         if (fullLicense) {
             info.append("\n");
 
+            // GPL 3.0 cz
             info.append("Tento program je svobodný software: můžete jej šířit a upravovat\n"
                       + "podle ustanovení Obecné veřejné licence GNU (GNU General Public\n"
                       + "Licence), vydávané Free Software Foundation a to buď podle 3. verze\n"
