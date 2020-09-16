@@ -858,10 +858,18 @@ public class Sync {
                         ReportManager.log(EBakaLogType.LOG_OK, "Kontrola údajů zákonného zástupce žáka proběhla v pořádku.");
                     }
                 } else {
-                    ReportManager.log(EBakaLogType.LOG_ERR, "Nebylo možné provést synchronizaci záznamu zákonného zástupce žáka (" +
-                            catalog.get(studentID).get(EBakaSQL.F_STU_CLASS.basename()) + ") " +
-                            catalog.get(studentID).get(EBakaSQL.F_STU_SURNAME.basename()) + " " +
-                            catalog.get(studentID).get(EBakaSQL.F_STU_GIVENNAME.basename()) + ".");
+
+                    if (attemptRepair) {
+                        ReportManager.log(EBakaLogType.LOG_ERR, "Nebylo možné provést synchronizaci záznamu zákonného zástupce žáka (" +
+                                catalog.get(studentID).get(EBakaSQL.F_STU_CLASS.basename()) + ") " +
+                                catalog.get(studentID).get(EBakaSQL.F_STU_SURNAME.basename()) + " " +
+                                catalog.get(studentID).get(EBakaSQL.F_STU_GIVENNAME.basename()) + ".");
+                    } else {
+                        ReportManager.log(EBakaLogType.LOG_ERR, "Je nutné provést synchronizaci záznamu zákonného zástupce žáka (" +
+                                catalog.get(studentID).get(EBakaSQL.F_STU_CLASS.basename()) + ") " +
+                                catalog.get(studentID).get(EBakaSQL.F_STU_SURNAME.basename()) + " " +
+                                catalog.get(studentID).get(EBakaSQL.F_STU_GIVENNAME.basename()) + ", avšak oprava nebyla vyžádána.");
+                    }
                 }
 
             } else {
