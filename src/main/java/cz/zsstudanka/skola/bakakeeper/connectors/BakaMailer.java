@@ -5,8 +5,6 @@ import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.settings.Version;
 import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
 
-import java.util.Date;
-import java.util.Properties;
 import javax.activation.DataHandler;
 import javax.activation.DataSource;
 import javax.activation.FileDataSource;
@@ -15,10 +13,12 @@ import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
+import java.util.Date;
+import java.util.Properties;
 
 /**
  * E-mailový konektor a klient.
- * Komponuje reporty a odesílá je na adresu IT oddělení.
+ * Komponuje reporty a odesílá je na požadované adresy.
  *
  * Očekává se použití Office 365, nebo obdobné nastavení lokálního Microsoft Exchange serveru.
  *
