@@ -65,6 +65,6 @@ a případně zašle hlášení e-mailem.
 * `javax.mail` >= 1.6.2
 * `mssql-jdbc` >= 8.2.0
 * `jtds` >= 1.3.1
-* (`junit` >= 4.12)
+* (`junit` >= 4.13.1)
 
 2019-2020 [ZŠ Pardubice - Studánka](https://www.zs-studanka.cz/)
