@@ -7,10 +7,7 @@ import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 
 import java.io.*;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -888,6 +885,49 @@ public class Settings {
      */
     public Boolean sql_Kerberos() {
         return (getSQLConnectionMethod().equals("kerberos")) ? true : false;
+    }
+
+    /**
+     * Seznam ročníků žáků, kteří si nemohou samostatně změnit své heslo.
+     *
+     * @return pole čísel ročníků
+     */
+    public ArrayList<Integer> pwdNoChange() {
+        ArrayList<Integer> noChageList = new ArrayList<>();
+
+        if (this.settings_data.get("pwd_nochange").length() > 0) {
+            String[] parts = this.settings_data.get("pwd_nochange").replace(" ", "").split("\\,");
+
+            if (parts.length > 0) {
+                for (String part : parts) {
+                    noChageList.add(Integer.parseInt(part));
+                }
+            }
+        }
+
+        // this.settings_data.get("sql_con").toLowerCase()
+        return noChageList;
+    }
+
+    /**
+     * Seznam ročníků žáků, kterým heslo nikdy nevyprší.
+     *
+     * @return pole číslek ročníků
+     */
+    public ArrayList<Integer> pwdNoExpire() {
+        ArrayList<Integer> noExpireList = new ArrayList<>();
+
+        if (this.settings_data.get("pwd_noexpire").length() > 0) {
+            String[] parts = this.settings_data.get("pwd_noexpire").replace(" ", "").split("\\,");
+
+            if (parts.length > 0) {
+                for (String part : parts) {
+                    noExpireList.add(Integer.parseInt(part));
+                }
+            }
+        }
+
+        return noExpireList;
     }
 
     /**

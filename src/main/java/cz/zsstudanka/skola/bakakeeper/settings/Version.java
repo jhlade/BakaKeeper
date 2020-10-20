@@ -13,7 +13,7 @@ public class Version {
     private final String purpose      = "Synchronizační nástroj evidence žáků v programu Bakaláři s uživatelskými účty vedenými v Active Directory.";
     private final String author       = "Jan Hladěna <jan.hladena@zs-studanka.cz>";
     private final String organization = "ZŠ Pardubice - Studánka";
-    private final String version      = "1.0.0-dev";
+    private final String version      = "1.1.0-dev";
     private final String year         = "2020";
 
     /**
