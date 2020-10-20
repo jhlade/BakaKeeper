@@ -47,11 +47,39 @@ public enum EBakaUAC {
      * @return příznak byl nalezen
      */
     public boolean checkFlag(Integer userAccountControls) {
-        return ( (userAccountControls&this.value) != 0 ) ? true : false;
+        return ( (userAccountControls & this.value) != 0 ) ? true : false;
     }
 
     public boolean checkFlag(String userAccountControls) {
         return checkFlag(Integer.parseInt(userAccountControls));
+    }
+
+    /**
+     * Provede nastavení příznaku k předaným informacím o stavu účtu.
+     *
+     * @param userAccountControls stávající informace
+     * @return informace s nastaveným příznakem
+     */
+    public Integer setFlag(Integer userAccountControls) {
+        return (userAccountControls | this.value);
+    }
+
+    public Integer setFlag(String userAccountControls) {
+        return setFlag(Integer.parseInt(userAccountControls));
+    }
+
+    /**
+     * Provede odebrání příznaku od předaných informací o stavu účtu.
+     *
+     * @param userAccountControls stávající informace
+     * @return informace se odebraným příznakem
+     */
+    public Integer clearFlag(Integer userAccountControls) {
+        return (userAccountControls & ~this.value);
+    }
+
+    public Integer clearFlag(String userAccountControls) {
+        return clearFlag(Integer.parseInt(userAccountControls));
     }
 
     /**

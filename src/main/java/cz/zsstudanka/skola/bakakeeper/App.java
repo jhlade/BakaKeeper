@@ -249,7 +249,7 @@ public class App {
             // vývojový test
             if (params.containsKey("test")) {
                 System.out.println("====== [ TEST ] ======");
-                Test.test_10();
+                Test.test_11();
                 System.out.println("====== [ /TEST ] ======");
                 return;
             } // test

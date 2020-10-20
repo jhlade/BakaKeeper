@@ -8,6 +8,7 @@ import cz.zsstudanka.skola.bakakeeper.constants.EBakaSQL;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaUAC;
 import cz.zsstudanka.skola.bakakeeper.model.interfaces.IRecordLDAP;
 import cz.zsstudanka.skola.bakakeeper.model.interfaces.IRecordSQL;
+import cz.zsstudanka.skola.bakakeeper.model.interfaces.IUser;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
 
@@ -21,7 +22,7 @@ import java.util.Date;
  *
  * @author Jan Hladěna
  */
-public class Student implements IRecordLDAP, IRecordSQL {
+public class Student implements IRecordLDAP, IRecordSQL, IUser {
 
     /** maximální počet pokusů o vytvoření nového účtu */
     private static final int MAX_LIMIT = 10;
@@ -61,6 +62,8 @@ public class Student implements IRecordLDAP, IRecordSQL {
     /**
      * Resetování žákovského hesla do původního tvaru
      * Pr.Jm.##
+     *
+     * TODO -- Pr.Jm.##yy
      *
      * @return úspěch operace
      */
@@ -298,6 +301,10 @@ public class Student implements IRecordLDAP, IRecordSQL {
 
         } else {
 
+            // TODO do budoucnosti - subrutina
+            //  uložení starého záznamu jako sekundárního proxyAddresses
+            //  vygenerování nového jako primárního
+
             if (Settings.getInstance().beVerbose()) {
                 ReportManager.logResult(EBakaLogType.LOG_ERR_VERBOSE);
             }
@@ -383,6 +390,89 @@ public class Student implements IRecordLDAP, IRecordSQL {
                 result = false;
             }
 
+        }
+
+        // TODO - komplexní subrutina; přesun pod podrobný audit
+        // UAC
+        result &= checkUAC(repair);
+
+        return result;
+    }
+
+    /**
+     * Subrutina - kontrola a oprava UAC žákovského účtu.
+     *
+     * @param repair provedení opravy v případě neshody.
+     * @return výsledek operace
+     */
+    public Boolean checkUAC(Boolean repair) {
+
+        // TODO
+        if (Settings.getInstance().beVerbose()) {
+            ReportManager.log(EBakaLogType.LOG_TEST, "UAC uživatelského účtu");
+        }
+
+        boolean result = true;
+
+        // 1) heslo nikdy nevyprší
+        // (nonekvivalence)
+        Boolean pwdNoExpire = !(Settings.getInstance().pwdNoExpire().contains(BakaUtils.classYearFromDn(this.getDN())) ^ EBakaUAC.DONT_EXPIRE_PASSWORD.checkFlag(this.getUAC()));
+
+        if (!pwdNoExpire) {
+
+            if (Settings.getInstance().debugMode()) {
+                ReportManager.log(EBakaLogType.LOG_ERR_DEBUG, Settings.getInstance().pwdNoExpire().contains(BakaUtils.classYearFromDn(this.getDN())) ? "Očekáván příznak [ DONT_EXPIRE_PASSWORD ]." : "Očekáván prázdný příznak [ DONT_EXPIRE_PASSWORD ].");
+            }
+
+            // TODO
+            if (repair) { // || true) {
+
+                if (Settings.getInstance().debugMode()) {
+                    ReportManager.logWait(EBakaLogType.LOG_DEBUG, "Proběhne pokus o opravu");
+                }
+
+                boolean repNoExpire = BakaADAuthenticator.getInstance().replaceAttribute(
+                        this.getDN(),
+                        EBakaLDAPAttributes.UAC,
+                        String.format("%d",
+                                Settings.getInstance().pwdNoExpire().contains(BakaUtils.classYearFromDn(this.getDN()))
+                                ? EBakaUAC.DONT_EXPIRE_PASSWORD.setFlag(this.getUAC()) : EBakaUAC.DONT_EXPIRE_PASSWORD.clearFlag(this.getUAC())
+                        )
+                );
+
+                if (Settings.getInstance().debugMode()) {
+                    if (repNoExpire) {
+                        ReportManager.logResult(EBakaLogType.LOG_OK);
+                    } else {
+                        ReportManager.logResult(EBakaLogType.LOG_ERR_DEBUG);
+                    }
+                }
+
+                result &= repNoExpire;
+
+            } else {
+                // TODO vyažadována oprava
+                ReportManager.log(EBakaLogType.LOG_WARN, "UAC není ve shodě s nastavením, ale oprava nebyla vyžádána.");
+            }
+
+        } else {
+            // TODO OK
+
+        }
+
+
+        // TODO AD ACE DACL
+        // 2) uživatel nemůže měnit heslo
+
+
+        if (result) {
+            if (Settings.getInstance().beVerbose()) {
+                ReportManager.logResult(EBakaLogType.LOG_OK);
+            }
+        } else {
+            if (Settings.getInstance().beVerbose()) {
+                ReportManager.logResult(EBakaLogType.LOG_ERR_VERBOSE);
+            }
         }
 
         return result;
@@ -504,6 +594,20 @@ public class Student implements IRecordLDAP, IRecordSQL {
             }
         }
         return this.dataLDAP.get(EBakaLDAPAttributes.DN.attribute()).toString();
+    }
+
+    /**
+     * Získání UAC žákovského účtu.
+     *
+     * @return UAC žákovského účtu
+     */
+    public String getUAC() {
+        if (this.partial) {
+            if (this.dataLDAP == null) {
+                return null;
+            }
+        }
+        return this.dataLDAP.get(EBakaLDAPAttributes.UAC.attribute()).toString();
     }
 
     @Override

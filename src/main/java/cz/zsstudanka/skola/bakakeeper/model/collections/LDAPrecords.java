@@ -66,7 +66,7 @@ public class LDAPrecords implements IRecords {
 
         // hledaná data
         String[] retAttributes = new String[]{
-                EBakaLDAPAttributes.DN.attribute(), // minumum = DN
+                EBakaLDAPAttributes.DN.attribute(), // minimum = DN
         };
 
         // pro kontakty
@@ -96,6 +96,7 @@ public class LDAPrecords implements IRecords {
         if (recordType.equals(EBakaLDAPAttributes.OC_USER)) {
             retAttributes = new String[]{
                     EBakaLDAPAttributes.DN.attribute(),
+                    EBakaLDAPAttributes.UAC.attribute(),
 
                     EBakaLDAPAttributes.UPN.attribute(),
                     EBakaLDAPAttributes.LOGIN.attribute(),

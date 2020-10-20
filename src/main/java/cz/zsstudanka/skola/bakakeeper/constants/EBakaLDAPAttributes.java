@@ -71,6 +71,8 @@ public enum EBakaLDAPAttributes {
     GT_DISTRIBUTION ("groupType", "8"), // univerzální distribuční skupina
     GT_SECURITY ("groupType", "-2147483646"), // globální skupina se zabezpečením
 
+    NT_SECURITY_DESCRIPTOR("nTSecurityDescriptor", null), // NT security descriptor
+
     DN ("distinguishedName", null); // plné jméno objektu s cestou
 
     private final String attribute;

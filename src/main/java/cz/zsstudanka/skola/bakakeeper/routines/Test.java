@@ -21,6 +21,28 @@ import java.util.*;
 
 public class Test {
 
+    // 2020-10-20 UAC
+    public static void test_11() {
+        System.out.println("====== [ TEST 2020-10-20 kontrola a oprava UAC ] ======");
+
+        System.out.println("NoChange ("+Settings.getInstance().pwdNoChange().size()+"): " + Settings.getInstance().pwdNoChange());
+        System.out.println("NoExpire ("+Settings.getInstance().pwdNoExpire().size()+"): " + Settings.getInstance().pwdNoExpire());
+
+        String ročník = "1";
+        String třída = "E";
+
+        Sync uacSync = new Sync();
+        //uacSync.actionInit(false);
+        //uacSync.actionCheck(false);
+        //uacSync.checkData(false);
+
+        uacSync.actionInit(true);
+        uacSync.actionCheck(true);
+        uacSync.checkData(true);
+
+        System.out.println("====== [ / TEST 2020-10-20 kontrola a oprava UAC ] ======");
+    }
+
     // 2020-09-02 synchronziace třídních učitelů
     public static void test_10() {
         System.out.println("====== [ TEST 2020-09-02 synchronizace skupin třídních učitelů ] ======");
