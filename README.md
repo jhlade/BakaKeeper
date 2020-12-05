@@ -8,17 +8,19 @@ se celoškolní použití Office365, ale není to nezbytně nutné.
 získaných v evidenci Bakalářů (jména, zařazení do ročníku/třídy
 v OU a skupinách včetně povýšení školního roku, tvorba nového
 přihlašovacího jména, e-mailu a počátečního hesla, vyřazení
-účtů po ukončení vzdělávání). Jednovláknově, atomicky, transakčně.
+účtů po ukončení vzdělávání, správa účtu podle stanovených
+  politik). Jednovláknově, atomicky, transakčně.
 * ~~Automatická definice přístupů k webové aplikaci pro žáky
 a jejich zákonné zástupce (metoda vyžádání nového hesla
-na základě ověřené e-mailové adresy).~~
+na základě ověřené e-mailové adresy).~~ (odloženo z legislativních
+  důvodů)
 * Tvorba anonymizovaných distribučních skupin s kontakty
 na zákonné zástupce žáků třídy/ročníku/stupně/školy.
 * Navrženo pro periodický běh pomocí UNIXového cronu.
 
 ### Prerekvizity
-* Server Active Directory s rozšířenými atributy
-Microsoft Exchange (správce s oprávněním skupiny Schema
+* LDAP server (Microsoft Active Directory) s rozšířenými
+  atributy Microsoft Exchange (správce s oprávněním skupiny Schema
 Admins je snadno nainstaluje na AD z balíčku pro Exchange Server).
 * Microsoft SQL Server (nebo MS SQL kompatibilní server)
 s daty aplikace Bakaláři s doménovým ověřováním uživatele.
@@ -49,7 +51,7 @@ V rámci inicializace bude také získán důvěryhodný certifikát
 AD serveru a zapsán v úložišti `ssl.jks`.
 
 2) Kontrola synchronziace:<br>
-`% java -jar BakaKeeper.jar --checksync [-passphrase He$lo*321]`<br>
+`% java -jar BakaKeeper.jar --status [-passphrase He$lo*321]`<br>
 zkontroluje současný stav a vytvoří hlášení.
 
 3) Provedení synchronziace:<br>
@@ -60,11 +62,14 @@ a případně zašle hlášení e-mailem.
 4) Více viz<br>
 `% java -jar BakaKeeper.jar --help`
 
-### Závislosti použité pro sestavení
-(ve výchozím stavu jsou vyžadovány v externím adresáři `./lib/`)
-* `javax.mail` >= 1.6.2
-* `mssql-jdbc` >= 8.2.0
-* `jtds` >= 1.3.1
+### Závislosti použité pro rychlé sestavení
+(ve výchozím stavu jsou vyžadovány v externím adresáři `./lib/`,
+ale je možné odkomentovat assembly plugin a sestavit archiv
+i se závislostmi)
+* `com.sun.mail.javax.mail` >= 1.6.2
+* `com.microsoft.sqlserver.mssql-jdbc` >= 8.2.0
+* `net.sourceforge.jtds.jtds` >= 1.3.1
+* `net.tirasa.adsddl` >= 1.9 (+`slf4j-api`, `activation`)
 * (`junit` >= 4.13.1)
 
 2019-2020 [ZŠ Pardubice - Studánka](https://www.zs-studanka.cz/)
