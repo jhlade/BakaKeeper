@@ -33,7 +33,7 @@ public class HelpManager {
         helpMessage.append("\n");
 
         helpMessage.append("\n");
-        helpMessage.append("--checksync\tProvede pravidelnou kontrolu stavu synchronizace.");
+        helpMessage.append("--status\tProvede pravidelnou kontrolu stavu synchronizace.");
         helpMessage.append("\n");
         helpMessage.append("\t\t[-passphrase heslo ke konfiguraci]");
         helpMessage.append("\n");
