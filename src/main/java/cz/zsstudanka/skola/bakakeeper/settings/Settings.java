@@ -568,6 +568,16 @@ public class Settings {
     }
 
     /**
+     * Typ LDAP serveru je Microsoft Active Directory 2016 nebo novější.
+     * Používá se pro práci s binárními ACE v ntSecurity deskriptoru.
+     *
+     * @return Boolean server je MS AD
+     */
+    public Boolean isLDAP_MSAD() {
+        return (this.settings_data.get("ad_srv").toLowerCase().equals("MSAD2016")) ? true : false;
+    }
+
+    /**
      * Lokální doména AD,
      * například zsstu.local
      *
