@@ -21,6 +21,20 @@ import java.util.*;
 
 public class Test {
 
+    public static void test_12() {
+        System.out.println("====== [ TEST 2021-03-14 Informace o LDAP serveru ] ======");
+
+        Map<String, String> data = BakaADAuthenticator.getInstance().getServerInfo();
+
+        System.out.println(EBakaLDAPAttributes.SRV_VENDOR.attribute() + " : " + ((data.containsKey(EBakaLDAPAttributes.SRV_VENDOR.attribute())) ? data.get(EBakaLDAPAttributes.SRV_VENDOR.attribute()).toString() : "---"));
+        System.out.println(EBakaLDAPAttributes.SRV_VERSION.attribute() + " : " + ((data.containsKey(EBakaLDAPAttributes.SRV_VERSION.attribute())) ? data.get(EBakaLDAPAttributes.SRV_VERSION.attribute()) : "---"));
+        System.out.println(EBakaLDAPAttributes.SRV_AD_CATALOG_READY.attribute() + " : " + ((data.containsKey(EBakaLDAPAttributes.SRV_AD_CATALOG_READY.attribute())) ? data.get(EBakaLDAPAttributes.SRV_AD_CATALOG_READY.attribute()) : "---"));
+        System.out.println(EBakaLDAPAttributes.SRV_AD_DOMAIN_LEVEL.attribute() + " : " + ((data.containsKey(EBakaLDAPAttributes.SRV_AD_DOMAIN_LEVEL.attribute())) ? data.get(EBakaLDAPAttributes.SRV_AD_DOMAIN_LEVEL.attribute()) : "---"));
+        System.out.println(EBakaLDAPAttributes.SRV_AD_FOREST_LEVEL.attribute() + " : " + ((data.containsKey(EBakaLDAPAttributes.SRV_AD_FOREST_LEVEL.attribute())) ? data.get(EBakaLDAPAttributes.SRV_AD_FOREST_LEVEL.attribute()) : "---"));
+
+        System.out.println("====== [ / TEST 2021-03-14 Informace o LDAP serveru ] ======");
+    }
+
     // 2020-10-20 UAC
     public static void test_11() {
         System.out.println("====== [ TEST 2020-10-20 kontrola a oprava UAC ] ======");

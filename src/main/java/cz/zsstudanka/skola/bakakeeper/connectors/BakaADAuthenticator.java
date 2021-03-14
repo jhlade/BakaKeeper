@@ -209,18 +209,21 @@ public class BakaADAuthenticator {
         }
 
         findAND.append(")");
-
         if (!isAuthenticated()) return null;
 
         // výsledek
-        HashMap<Integer, Map> userInfo = new HashMap();
+        HashMap<Integer, Map> objInfo = new HashMap();
         Integer resNum = 0;
 
         // kontext
-        LdapContext ctxGC = null;
+        DirContext ctxGC = null;
 
         try {
-            ctxGC = new InitialLdapContext(env, null);
+            if (baseOU.equals(EBakaLDAPAttributes.BK_SYMBOL_ROOTDSE.attribute())) {
+                ctxGC = new InitialDirContext(env);
+            } else {
+                ctxGC = new InitialLdapContext(env, null);
+            }
 
             // LDAP výsledky a dotaz
             String returnedAtts[] = retAttributes;
@@ -229,16 +232,16 @@ public class BakaADAuthenticator {
             // řízení
             SearchControls searchCtls = new SearchControls();
             searchCtls.setReturningAttributes(returnedAtts);
-            searchCtls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+            searchCtls.setSearchScope((baseOU.equals(EBakaLDAPAttributes.BK_SYMBOL_ROOTDSE.attribute())) ? SearchControls.OBJECT_SCOPE : SearchControls.SUBTREE_SCOPE);
 
             // provedení dotazu
-            NamingEnumeration answer = ctxGC.search(baseOU, searchFilter, searchCtls);
+            NamingEnumeration answer = ctxGC.search((baseOU.equals(EBakaLDAPAttributes.BK_SYMBOL_ROOTDSE.attribute())) ? "" : baseOU, searchFilter, searchCtls);
             while (answer.hasMoreElements()) {
 
                 SearchResult result = (SearchResult) answer.next();
                 Attributes attrs = result.getAttributes();
 
-                Map userDetails = new HashMap<String, Object>();
+                Map objDetails = new HashMap<String, Object>();
 
                 if (attrs != null) {
                     NamingEnumeration ne = attrs.getAll();
@@ -250,7 +253,7 @@ public class BakaADAuthenticator {
 
                         // jeden atribut
                         if (attr.size() == 1) {
-                            userDetails.put(attr.getID().toString(), attr.get());
+                            objDetails.put(attr.getID().toString(), attr.get());
                         } else {
                             // pole atributů
                             ArrayList<Object> retData = new ArrayList<>();
@@ -258,14 +261,14 @@ public class BakaADAuthenticator {
                                 retData.add(attr.get(ats));
                             }
 
-                            userDetails.put(attr.getID().toString(), retData);
+                            objDetails.put(attr.getID().toString(), retData);
                         }
                     }
 
                     ne.close();
                 }
 
-                userInfo.put(resNum, userDetails);
+                objInfo.put(resNum, objDetails);
 
                 resNum++;
             }
@@ -277,7 +280,30 @@ public class BakaADAuthenticator {
             return null;
         }
 
-        return userInfo;
+        return objInfo;
+    }
+
+    /**
+     * Informace o LDAP serveru z RootDSE.
+     *
+     * @return Název, verze, AD funkcionalita.
+     */
+    public Map<String, String> getServerInfo() {
+
+        // dotaz
+        HashMap<String, String> ldapQ = new HashMap<String, String>();
+        ldapQ.put(EBakaLDAPAttributes.OC_GENERAL.attribute(), "*");
+
+        // požadované atributy
+        String[] retAttributes = {
+                EBakaLDAPAttributes.SRV_VENDOR.attribute(),
+                EBakaLDAPAttributes.SRV_VERSION.attribute(),
+                EBakaLDAPAttributes.SRV_AD_CATALOG_READY.attribute(),
+                EBakaLDAPAttributes.SRV_AD_DOMAIN_LEVEL.attribute(),
+                EBakaLDAPAttributes.SRV_AD_FOREST_LEVEL.attribute()
+        };
+
+        return (Map<String, String>) getObjectInfo(EBakaLDAPAttributes.BK_SYMBOL_ROOTDSE.attribute(), ldapQ, retAttributes).get(0);
     }
 
     /**

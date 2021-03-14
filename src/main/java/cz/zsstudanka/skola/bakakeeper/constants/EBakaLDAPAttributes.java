@@ -11,6 +11,8 @@ public enum EBakaLDAPAttributes {
     BK_FLAG_TRUE("baka_flag", "1"),
     BK_FLAG_FALSE("baka_flag", "0"),
 
+    BK_SYMBOL_ROOTDSE("RootDSE", null), // pomocný literál "RootDSE"
+
     BK_LITERAL_TRUE("boolean_literal", "TRUE"),
     BK_LITERAL_FALSE("boolean_literal", "FALSE"),
 
@@ -23,6 +25,12 @@ public enum EBakaLDAPAttributes {
     UAC ("userAccountControl", null), // řídící atributy účtu
     MEMBER_OF ("memberOf", null), // seznam skupin, kterých je objekt členem
     MEMBER ("member", null), // člen skupiny
+
+    SRV_VENDOR("vendorName", null),
+    SRV_VERSION("vendorVersion", null),
+    SRV_AD_CATALOG_READY("isGlobalCatalogReady", BK_LITERAL_TRUE.value),
+    SRV_AD_DOMAIN_LEVEL("domainFunctionality", "7"), // MS AD 2016 = 7
+    SRV_AD_FOREST_LEVEL("forestFunctionality", "7"), // MS AD 2016 = 7
 
     MAIL ("mail", null), // primární e-mail
     PROXY_ADDR("proxyAddresses", null), // seznam proxy-adres
