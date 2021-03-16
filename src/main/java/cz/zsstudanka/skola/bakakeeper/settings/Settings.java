@@ -574,6 +574,7 @@ public class Settings {
      * @return Boolean server je MS AD
      */
     public Boolean isLDAP_MSAD() {
+        // TODO detekce by měla probíhat automaticky kontrolou dat v RootDSE
         return (this.settings_data.get("ad_srv").toLowerCase().equals("MSAD2016")) ? true : false;
     }
 

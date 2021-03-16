@@ -16,7 +16,7 @@ public enum EBakaUAC {
     HOMEDIR_REQUIRED (0x0008),
     LOCKOUT (0x0010),
     PASSWD_NOTREQD (0x0020),
-    PASSWD_CANT_CHANGE (0x0040), // uživatel nemůže změnit heslo
+    PASSWD_CANT_CHANGE (0x0040), // uživatel nemůže změnit heslo (ro; v MS AD lze upravit pouze změnou ACE v ntSecurityDescriptoru)
     ENCRYPTED_TEXT_PWD_ALLOWED (0x0080),
     TEMP_DUPLICATE_ACCOUNT (0x0100),
     NORMAL_ACCOUNT (0x0200),
