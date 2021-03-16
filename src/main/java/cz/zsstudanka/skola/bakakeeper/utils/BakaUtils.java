@@ -1,6 +1,8 @@
 package cz.zsstudanka.skola.bakakeeper.utils;
 
 import java.text.Normalizer;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 
 /**
  * Pomocné statické nástroje pro úpravu a validaci dat.
@@ -219,26 +221,68 @@ public class BakaUtils {
     }
 
     /**
-     * Vytvoření počáteční heslo žáka na základě jeho příjmení, jména a čísla v třídním výkazu
-     * ve formátu 'Pr.Jm.##'.
+     * Vytvorření počátečního hesla v prvním pokusu.
      *
      * @param surname příjmení žáka
      * @param givenName jméno žáka
+     * @param classYear ročník žáka
      * @param classID číslo v třídním výkazu
      * @return počáteční heslo
      */
-    public static String createInitialPassword(String surname, String givenName, Integer classID) {
+    public static String createInitialPassword(String surname, String givenName, Integer classYear, Integer classID) {
+
+        return nextPassword(
+                surname,
+                givenName,
+                classYear,
+                classID, 0);
+    }
+
+
+    /**
+     * Vytvoření počáteční heslo žáka na základě jeho příjmení, jména a čísla v třídním výkazu
+     * ve formátu 'Pr.Jm.##yy', kde ## je číslo v třídním výkazu XOR ročník žáka a 'yy' začátek školního roku.
+     *
+     * Aktualizováno podle nastavených pravidel 2020/2021.
+     *
+     * @param surname příjmení žáka
+     * @param givenName jméno žáka
+     * @param classYear ročník žáka
+     * @param classID číslo v třídním výkazu
+     * @param attempt číslo pokusu
+     * @return heslo vytvořené v daném pokusu
+     */
+    public static String nextPassword(String surname, String givenName, Integer classYear, Integer classID, Integer attempt) {
         return BakaUtils.removeAccents(surname
                 .replace("-", " ")
                 .replaceAll("\\s+", " ")
                 .replaceAll("^(d|D)(a|e|i) ", "")
                 .replaceAll("(v|V)(a|o)n ", "")
                 .replaceAll("(a|A)l ", "")
-                .substring(0, 2))
+                .substring(0, 2)) // příjmení
                 + "."
-                + BakaUtils.removeAccents(givenName.substring(0, 2))
+                + BakaUtils.removeAccents(givenName.substring(0, 2)) // jméno
                 + "."
-                + String.format("%02d", classID);
+                + String.format("%02d", classID ^ (classYear + attempt)) // číslo v tř. výkazu XOR ročník žáka + číslo pokusu
+                + ""
+                + String.format("%02d", getCurrentClassYear());
+    }
+
+    /**
+     * Začátek aktuálního školního roku.
+     *
+     * @return počáteční kalendářní rok aktuálního školního roku
+     */
+    public static int getCurrentClassYear() {
+        int year = ZonedDateTime.now(ZoneId.of("Europe/Prague" )).getYear();
+        int month = ZonedDateTime.now(ZoneId.of("Europe/Prague" )).getMonthValue();
+
+        // 2. pololetí
+        if (month >= 1 && month <= 8) {
+            year--;
+        }
+
+        return year;
     }
 
     /**

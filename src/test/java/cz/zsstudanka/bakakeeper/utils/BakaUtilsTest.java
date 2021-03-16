@@ -83,10 +83,22 @@ public class BakaUtilsTest {
 
     @Test
     public void createInitialPassword() {
-        assertEquals("No.Ja.01", BakaUtils.createInitialPassword("Novák", "Jakub", 1));
-        assertEquals("Pr.Sa.27", BakaUtils.createInitialPassword("Příkopová", "Šárka Sofie", 27));
-        assertEquals("Pi.Vo.11", BakaUtils.createInitialPassword("Pivoňka", "Vojtěch", 11));
-        assertEquals("Vi.Le.03", BakaUtils.createInitialPassword("Da Vinci", "Leonardo", 3));
+
+        int year = BakaUtils.getCurrentClassYear();
+
+        assertEquals("No.Ja.03" + String.format("%02d", year), BakaUtils.createInitialPassword("Novák", "Jakub", 2, 1));
+        assertEquals("Pr.Sa.24" + String.format("%02d", year), BakaUtils.createInitialPassword("Příkopová", "Šárka Sofie", 3, 27));
+        assertEquals("Pi.Vo.02" + String.format("%02d", year), BakaUtils.createInitialPassword("Pivoňka", "Vojtěch", 9, 11));
+        assertEquals("Vi.Le.11" + String.format("%02d", year), BakaUtils.createInitialPassword("Da Vinci", "Leonardo", 8, 3));
+    }
+
+    @Test
+    public void nextPassword() {
+
+        int year = BakaUtils.getCurrentClassYear();
+
+        assertEquals("No.Ja.03" + String.format("%02d", year), BakaUtils.nextPassword("Novák", "Jakub", 2, 1, 0));
+        assertEquals("Pi.Vo.07" + String.format("%02d", year), BakaUtils.nextPassword("Pivoňka", "Vojtěch", 9, 11, 3));
     }
 
     @Test

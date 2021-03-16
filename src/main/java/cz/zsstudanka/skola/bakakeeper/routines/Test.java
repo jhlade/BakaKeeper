@@ -187,7 +187,7 @@ public class Test {
                     String příjmení = žák.get(EBakaSQL.F_STU_SURNAME.basename());
                     String jméno = žák.get(EBakaSQL.F_STU_GIVENNAME.basename());
                     String upn = žák.get(EBakaSQL.F_STU_MAIL.basename());
-                    String heslo = BakaUtils.createInitialPassword(příjmení, jméno, číslo);
+                    String heslo = "";//BakaUtils.createInitialPassword(příjmení, jméno, číslo);
 
                     // práce na heslech
                     System.out.println("[ " + žák.get(EBakaSQL.F_STU_ID.basename()) + " ] " + příjmení + " " + jméno);
@@ -451,7 +451,7 @@ public class Test {
                     String příjmení = žák.get(EBakaSQL.F_STU_SURNAME.basename());
                     String jméno = žák.get(EBakaSQL.F_STU_GIVENNAME.basename());
                     String upn = žák.get(EBakaSQL.F_STU_MAIL.basename());
-                    String heslo = BakaUtils.createInitialPassword(příjmení, jméno, číslo);
+                    String heslo = "";//BakaUtils.createInitialPassword(příjmení, jméno, číslo);
 
                     // práce na heslech
                     System.out.println("[ " + žák.get(EBakaSQL.F_STU_ID.basename()) + " ] " + příjmení + " " + jméno);
@@ -937,7 +937,7 @@ public class Test {
                 Integer čísloVýkazu = Integer.parseInt(nezpracovanýZáznam.get(EBakaSQL.F_STU_CLASS_ID.basename()));
                 System.out.println("Číslo výkazu: " + čísloVýkazu);
 
-                String heslo = BakaUtils.createInitialPassword(příjmení, jméno, čísloVýkazu);
+                String heslo = ""; //BakaUtils.createInitialPassword(příjmení, jméno, čísloVýkazu);
                 System.out.println("Heslo: " + heslo);
                 nováData.put(EBakaLDAPAttributes.PW_UNICODE.attribute(), heslo);
                 nováData.put(EBakaLDAPAttributes.UAC.attribute(), EBakaUAC.NORMAL_ACCOUNT.toString());

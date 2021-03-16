@@ -64,6 +64,7 @@ public class Student implements IRecordLDAP, IRecordSQL, IUser {
      * Pr.Jm.##
      *
      * TODO -- Pr.Jm.##yy
+     * TODO 2020: Pr.Jm.##YYYY
      *
      * @return úspěch operace
      */
@@ -77,6 +78,7 @@ public class Student implements IRecordLDAP, IRecordSQL, IUser {
         String newPassword = BakaUtils.createInitialPassword(
                 this.dataSQL.get(EBakaSQL.F_GUA_SURNAME.basename()),
                 this.dataSQL.get(EBakaSQL.F_GUA_GIVENNAME.basename()),
+                Integer.parseInt(this.dataSQL.get(EBakaSQL.F_STU_BK_CLASSYEAR.basename())),
                 Integer.parseInt(this.dataSQL.get(EBakaSQL.F_STU_CLASS_ID.basename()))
                 );
 
@@ -250,7 +252,7 @@ public class Student implements IRecordLDAP, IRecordSQL, IUser {
         ));
 
         newData.put(EBakaLDAPAttributes.UAC.attribute(), EBakaUAC.NORMAL_ACCOUNT.toString());
-        newData.put(EBakaLDAPAttributes.PW_UNICODE.attribute(), BakaUtils.createInitialPassword(this.dataSQL.get(EBakaSQL.F_STU_SURNAME.basename()), this.dataSQL.get(EBakaSQL.F_STU_GIVENNAME.basename()), Integer.parseInt(this.dataSQL.get(EBakaSQL.F_STU_CLASS_ID.basename()))));
+        newData.put(EBakaLDAPAttributes.PW_UNICODE.attribute(), BakaUtils.createInitialPassword(this.dataSQL.get(EBakaSQL.F_STU_SURNAME.basename()), this.dataSQL.get(EBakaSQL.F_STU_GIVENNAME.basename()), Integer.parseInt(this.dataSQL.get(EBakaSQL.F_STU_BK_CLASSYEAR.basename())), Integer.parseInt(this.dataSQL.get(EBakaSQL.F_STU_CLASS_ID.basename()))));
 
         BakaADAuthenticator.getInstance().createNewUser(cn, targetOU, newData);
 
