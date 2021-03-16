@@ -12,6 +12,7 @@ public enum EBakaLDAPAttributes {
     BK_FLAG_FALSE("baka_flag", "0"),
 
     BK_SYMBOL_ROOTDSE("RootDSE", null), // pomocný literál "RootDSE"
+    BK_SYMBOL_ANY_VALUE(null, "*"), // pomocný literál "*"
 
     BK_LITERAL_TRUE("boolean_literal", "TRUE"),
     BK_LITERAL_FALSE("boolean_literal", "FALSE"),
