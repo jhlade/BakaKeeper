@@ -73,7 +73,7 @@ public class BakaUtils {
      * Např. Novák Josef - novajo.
      *
      * @param displayName zobrazované jméno (ve formátu Příjmení Jméno; př. Novák Josef, Svobodová Nováková Jana Kateřina)
-     * @return login 4+2 (Novák Josef = novajo)
+     * @return login 4+2 (Novák Josef = novajo, Svobodová Nováková Jana Kateřina = svobja)
      */
     public static String create4p2(String displayName) {
         StringBuilder login = new StringBuilder();
@@ -163,7 +163,7 @@ public class BakaUtils {
      */
     public static String createSAMloginFromName(String surname, String givenName, Integer attempt) {
 
-        // maximální limit délky řetězce hodnoty atributu sAMAccountName v AD - 20 znaků
+        // maximální limit délky řetězce hodnoty atributu sAMAccountName v AD - výchozí je 20 znaků
         final int MAX_SAM_LIMIT = 20;
 
         String[] snParts = surname.replace("-", " ")
@@ -221,7 +221,7 @@ public class BakaUtils {
     }
 
     /**
-     * Vytvorření počátečního hesla v prvním pokusu.
+     * Vytvoření počátečního hesla v prvním pokusu.
      *
      * @param surname příjmení žáka
      * @param givenName jméno žáka
@@ -230,20 +230,16 @@ public class BakaUtils {
      * @return počáteční heslo
      */
     public static String createInitialPassword(String surname, String givenName, Integer classYear, Integer classID) {
-
-        return nextPassword(
-                surname,
-                givenName,
-                classYear,
-                classID, 0);
+        return nextPassword(surname, givenName, classYear, classID, 0);
     }
 
 
     /**
-     * Vytvoření počáteční heslo žáka na základě jeho příjmení, jména a čísla v třídním výkazu
-     * ve formátu 'Pr.Jm.##yy', kde ## je číslo v třídním výkazu XOR ročník žáka a 'yy' začátek školního roku.
+     * Vytvoření nebo reset výchozího heslo žáka na základě jeho příjmení, jména a čísla v třídním výkazu
+     * ve formátu 'Pr.Jm.##yy', kde ## je číslo v třídním výkazu XOR ročník žáka a 'yy' začátek současného
+     * školního roku.
      *
-     * Aktualizováno podle nastavených pravidel 2020/2021.
+     * Aktualizováno podle navržených pravidel 2020/2021.
      *
      * @param surname příjmení žáka
      * @param givenName jméno žáka
@@ -274,8 +270,8 @@ public class BakaUtils {
      * @return počáteční kalendářní rok aktuálního školního roku
      */
     public static int getCurrentClassYear() {
-        int year = ZonedDateTime.now(ZoneId.of("Europe/Prague" )).getYear();
-        int month = ZonedDateTime.now(ZoneId.of("Europe/Prague" )).getMonthValue();
+        int year = ZonedDateTime.now(ZoneId.of("Europe/Prague")).getYear();
+        int month = ZonedDateTime.now(ZoneId.of("Europe/Prague")).getMonthValue();
 
         // 2. pololetí
         if (month >= 1 && month <= 8) {
@@ -392,22 +388,22 @@ public class BakaUtils {
         result[1] = split[ou].split("=")[1];
 
         // báze
-        StringBuilder baseBulder = new StringBuilder();
+        StringBuilder baseBuilder = new StringBuilder();
         for(int s = 1; s < split.length; s++) {
-            baseBulder.append(split[s]);
+            baseBuilder.append(split[s]);
 
             if (s < split.length - 1) {
-                baseBulder.append(",");
+                baseBuilder.append(",");
             }
         }
 
-        result[2] = baseBulder.toString();
+        result[2] = baseBuilder.toString();
 
         return result;
     }
 
     /**
-     * Zparcování názvu (CN) objektu z jeho DN.
+     * Zpracování názvu (CN) objektu z jeho DN.
      *
      * @param dn plné DN objektu
      * @return CN objektu
@@ -437,7 +433,7 @@ public class BakaUtils {
     }
 
     /**
-     * Vytvoření následujícího číselného označení LDAP objektu
+     * Vytvoření následujícího číselného DN označení LDAP objektu
      * na dvě místa.
      *
      * @param dn vstupní DN objektu
