@@ -61,10 +61,6 @@ public class Student implements IRecordLDAP, IRecordSQL, IUser {
 
     /**
      * Resetování žákovského hesla do původního tvaru
-     * Pr.Jm.##
-     *
-     * TODO -- Pr.Jm.##yy
-     * TODO 2020: Pr.Jm.##YYYY
      *
      * @return úspěch operace
      */
@@ -75,14 +71,28 @@ public class Student implements IRecordLDAP, IRecordSQL, IUser {
             return false;
         }
 
-        String newPassword = BakaUtils.createInitialPassword(
-                this.dataSQL.get(EBakaSQL.F_GUA_SURNAME.basename()),
-                this.dataSQL.get(EBakaSQL.F_GUA_GIVENNAME.basename()),
-                Integer.parseInt(this.dataSQL.get(EBakaSQL.F_STU_BK_CLASSYEAR.basename())),
-                Integer.parseInt(this.dataSQL.get(EBakaSQL.F_STU_CLASS_ID.basename()))
-                );
+        int attempt = 0;
+        boolean passwordSet = false;
 
-        return setPassword(newPassword, true);
+        while (!passwordSet) {
+
+            // TODO prokolovat změnu hesla -> výstup v případě jiných než prvních pokusů
+
+            String newPassword = BakaUtils.nextPassword(
+                    this.dataSQL.get(EBakaSQL.F_GUA_SURNAME.basename()),
+                    this.dataSQL.get(EBakaSQL.F_GUA_GIVENNAME.basename()),
+                    Integer.parseInt(this.dataSQL.get(EBakaSQL.F_STU_BK_CLASSYEAR.basename())),
+                    Integer.parseInt(this.dataSQL.get(EBakaSQL.F_STU_CLASS_ID.basename())),
+                    attempt
+            );
+
+            // TODO koronavirus + politika 2021 -- možná nebude vhodné vyžadovat okamžitou změnu hesla
+            //passwordSet = setPassword(newPassword, true);
+            passwordSet = setPassword(newPassword, false);
+            attempt++;
+        }
+
+        return passwordSet;
     }
 
     /**
@@ -99,16 +109,29 @@ public class Student implements IRecordLDAP, IRecordSQL, IUser {
             return false;
         }
 
+        boolean set = true;
+
+        set &= BakaADAuthenticator.getInstance().replaceAttribute(this.getDN(),
+                EBakaLDAPAttributes.PW_UNICODE,
+                newPassword
+        );
+
+        // heslo nebylo možné nastavit
+        if (!set) {
+            return false;
+        }
+
         if (forceChange) {
-            return BakaADAuthenticator.getInstance().replaceAttribute(this.getDN(),
+            set &=  BakaADAuthenticator.getInstance().replaceAttribute(this.getDN(),
                     EBakaLDAPAttributes.PW_LASTSET,
                     EBakaLDAPAttributes.PW_REQCHANGE.value());
         } else {
-            return BakaADAuthenticator.getInstance().replaceAttribute(this.getDN(),
+            set &=  BakaADAuthenticator.getInstance().replaceAttribute(this.getDN(),
                     EBakaLDAPAttributes.PW_LASTSET,
                     EBakaLDAPAttributes.PW_LASTSET.value());
         }
 
+        return set;
     }
 
     /**
