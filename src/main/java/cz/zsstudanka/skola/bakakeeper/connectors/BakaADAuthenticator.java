@@ -4,14 +4,26 @@ import cz.zsstudanka.skola.bakakeeper.components.KeyStoreManager;
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaUAC;
 import cz.zsstudanka.skola.bakakeeper.model.entities.DataLDAP;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
+import net.tirasa.adsddl.ntsd.ACE;
+import net.tirasa.adsddl.ntsd.SDDL;
+import net.tirasa.adsddl.ntsd.SID;
+import net.tirasa.adsddl.ntsd.controls.SDFlagsControl;
+import net.tirasa.adsddl.ntsd.data.AceObjectFlags;
+import net.tirasa.adsddl.ntsd.data.AceRights;
+import net.tirasa.adsddl.ntsd.data.AceType;
+import net.tirasa.adsddl.ntsd.utils.GUID;
+import net.tirasa.adsddl.ntsd.utils.NumberFacility;
+import net.tirasa.adsddl.ntsd.utils.SDDLHelper;
 
 import javax.naming.Context;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.*;
+import javax.naming.ldap.Control;
 import javax.naming.ldap.InitialLdapContext;
 import javax.naming.ldap.LdapContext;
 import java.util.*;
@@ -24,7 +36,7 @@ import java.util.*;
 public class BakaADAuthenticator {
 
     /** maximální limit pro přejmenování objektu během přesunu */
-    private static int MOVE_LIMIT = 99;
+    private final int MOVE_LIMIT = 99;
 
     /** singleton připojení k AD */
     private static BakaADAuthenticator instance = null;
@@ -175,7 +187,7 @@ public class BakaADAuthenticator {
     /**
      * Informace o systémovém účtu
      *
-     * @return uživatelksý účet použitý pro přihlášení
+     * @return uživatelský účet použitý pro přihlášení
      */
     public Map authUserInfo() {
         if (!isAuthenticated()) return null;
@@ -292,7 +304,7 @@ public class BakaADAuthenticator {
 
         // dotaz
         HashMap<String, String> ldapQ = new HashMap<String, String>();
-        ldapQ.put(EBakaLDAPAttributes.OC_GENERAL.attribute(), "*");
+        ldapQ.put(EBakaLDAPAttributes.OC_GENERAL.attribute(), EBakaLDAPAttributes.BK_SYMBOL_ANY_VALUE.value());
 
         // požadované atributy
         String[] retAttributes = {
@@ -760,7 +772,7 @@ public class BakaADAuthenticator {
 
             ModificationItem mod[] = new ModificationItem[1];
 
-            // heslo
+            // heslo v Microsoft Active Directory
             if (attribute.equals(EBakaLDAPAttributes.PW_UNICODE)) {
                 String password = "\"" + value + "\"";
                 try {
@@ -769,6 +781,117 @@ public class BakaADAuthenticator {
                 } catch (Exception e) {
                     ReportManager.handleException("Nebylo možné nastavit heslo.", e);
                 }
+                // změna UAC na Microsoft Active Directory
+            } else if (attribute.equals(EBakaLDAPAttributes.UAC) && Settings.getInstance().isLDAP_MSAD()) {
+                // původní data v UAC
+                HashMap<String, String> queryOrig = new HashMap<String, String>();
+                queryOrig.put(EBakaLDAPAttributes.OC_USER.attribute(), EBakaLDAPAttributes.OC_USER.value());
+                queryOrig.put(EBakaLDAPAttributes.CN.attribute(), BakaUtils.parseCN(dn));
+
+                String[] origAttributes = {
+                        EBakaLDAPAttributes.UAC.attribute()
+                };
+
+                Map<Integer, Map<String, String>> origData = getObjectInfo(BakaUtils.parseBase(dn), queryOrig, origAttributes);
+
+                boolean uacOrig = EBakaUAC.PASSWD_CANT_CHANGE.checkFlag(origData.get(0).get(EBakaLDAPAttributes.UAC.attribute()));
+                boolean uacNew = EBakaUAC.PASSWD_CANT_CHANGE.checkFlag(value);
+
+                // požadována změna oprávnění uživatelské změny hesla?
+                if (uacOrig != uacNew) {
+
+                    bakaContext.setRequestControls(new Control[] { new SDFlagsControl(0x00000004) });
+
+                    // data objektu
+                    Map<Integer, Map<String, Object>> ntsdOrigResult = getObjectInfo(
+                            BakaUtils.parseBase(dn), queryOrig,
+                            new String[] { EBakaLDAPAttributes.NT_SECURITY_DESCRIPTOR.attribute() }
+                    );
+
+                    // binární data NT Security Descriptoru
+                    byte[] ntsdOrig = (byte[]) ntsdOrigResult.get(0).get(EBakaLDAPAttributes.NT_SECURITY_DESCRIPTOR.attribute());
+
+                    // inicializace
+                    SDDL sddl = new SDDL(ntsdOrig);
+                    // pole přístupových záznamů
+                    final List<ACE> changeAces = new ArrayList<>();
+
+                    // přidání odpovídajících přístupových záznamů do pole pro změny
+                    for (ACE ace : sddl.getDacl().getAces()) {
+
+                        // existující ACE je allow/deny (A, D)
+                        if ((ace.getType() == AceType.ACCESS_ALLOWED_OBJECT_ACE_TYPE
+                             || ace.getType() == AceType.ACCESS_DENIED_OBJECT_ACE_TYPE)
+                            && ace.getObjectFlags().getFlags().contains(AceObjectFlags.Flag.ACE_OBJECT_TYPE_PRESENT)
+                        ) {
+
+                            if (GUID.getGuidAsString(ace.getObjectType()).equals(SDDLHelper.UCP_OBJECT_GUID)) {
+
+                                // identifikace vlastníka objektu
+                                final SID sid = ace.getSid();
+                                if (
+                                        sid.getSubAuthorities().size() == 1
+                                                && ((Arrays.equals(sid.getIdentifierAuthority(),
+                                                    new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 })
+                                                    && Arrays.equals(sid.getSubAuthorities().get(0),
+                                                    new byte[] { 0x00, 0x00, 0x00, 0x00 }) // objekt sám
+                                                ) || (Arrays.equals(sid.getIdentifierAuthority(), //
+                                                     new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x05 })
+                                                     && Arrays.equals(sid.getSubAuthorities().get(0),
+                                                     new byte[] { 0x00, 0x00, 0x00, 0x0a }))
+                                                )
+                                ) {
+                                    // přidání ACE pro následnou modifikaci
+                                    changeAces.add(ace);
+                                }
+
+                            } // UCP OBJECT GUID
+
+                        }
+                    } // for - prohledání
+
+                    // vytvoření nových ACE
+                    if (changeAces.isEmpty()) {
+                        // objekt sám
+                        ACE self = ACE.newInstance(uacNew ? AceType.ACCESS_DENIED_OBJECT_ACE_TYPE : AceType.ACCESS_ALLOWED_ACE_TYPE);
+                        self.setObjectFlags(new AceObjectFlags(AceObjectFlags.Flag.ACE_OBJECT_TYPE_PRESENT));
+                        self.setObjectType(GUID.getGuidAsByteArray(SDDLHelper.UCP_OBJECT_GUID));
+                        self.setRights(new AceRights().addOjectRight(AceRights.ObjectRight.CR));
+
+                        SID sd = SID.newInstance(NumberFacility.getBytes(0x000000000001));
+                        sd.addSubAuthority(NumberFacility.getBytes(0));
+                        self.setSid(sd);
+
+                        // ostatní -- TODO prověření typu
+                        ACE everyone = ACE.newInstance(uacNew ? AceType.ACCESS_DENIED_OBJECT_ACE_TYPE : AceType.ACCESS_ALLOWED_ACE_TYPE);
+                        everyone.setObjectFlags(new AceObjectFlags(AceObjectFlags.Flag.ACE_OBJECT_TYPE_PRESENT));
+                        everyone.setObjectType(GUID.getGuidAsByteArray(SDDLHelper.UCP_OBJECT_GUID));
+                        everyone.setRights(new AceRights().addOjectRight(AceRights.ObjectRight.CR));
+
+                        sd = SID.newInstance(NumberFacility.getBytes(0x000000000005));
+                        sd.addSubAuthority(NumberFacility.getBytes(0x0a));
+                        everyone.setSid(sd);
+
+                        // data k zápisu
+                        sddl.getDacl().getAces().add(self);
+                        sddl.getDacl().getAces().add(everyone);
+                    } else {
+                        for (ACE ace : changeAces) {
+                            ace.setType(uacNew ? AceType.ACCESS_DENIED_OBJECT_ACE_TYPE : AceType.ACCESS_ALLOWED_ACE_TYPE);
+                        }
+                    }
+
+                    // změna atributu - práce s ntSecurityDescriptorem namísto UAC
+                    mod[0] = new ModificationItem(
+                            DirContext.REPLACE_ATTRIBUTE,
+                            new BasicAttribute(EBakaLDAPAttributes.NT_SECURITY_DESCRIPTOR.attribute(), sddl.toByteArray())
+                    );
+
+                } else {
+                    // fallback, proběhne změna na jiném místě UAC než v oprávnění pro změnu hesla
+                    mod[0] = new ModificationItem(modOp, new BasicAttribute(attribute.attribute(), value));
+                }
+
             } else {
                 // vše ostatní
                 mod[0] = new ModificationItem(modOp, new BasicAttribute(attribute.attribute(), value));
