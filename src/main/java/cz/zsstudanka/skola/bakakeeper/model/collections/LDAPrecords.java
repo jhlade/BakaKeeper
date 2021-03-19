@@ -102,6 +102,7 @@ public class LDAPrecords implements IRecords {
                     EBakaLDAPAttributes.LOGIN.attribute(),
                     EBakaLDAPAttributes.MAIL.attribute(),
                     EBakaLDAPAttributes.PROXY_ADDR.attribute(),
+                    EBakaLDAPAttributes.MSXCH_REQ_AUTH.attribute(),
 
                     EBakaLDAPAttributes.NAME_FIRST.attribute(),
                     EBakaLDAPAttributes.NAME_LAST.attribute(),

@@ -172,6 +172,8 @@ public class Student implements IRecordLDAP, IRecordSQL, IUser {
         // konečný přesun do OU
         result &= BakaADAuthenticator.getInstance().moveObject(this.getDN(), newClassOU, false);
 
+        // TODO kontrola UAC a nastavení mailu
+
         return result;
     }
 
@@ -273,6 +275,10 @@ public class Student implements IRecordLDAP, IRecordSQL, IUser {
                 this.dataSQL.get(EBakaSQL.F_STU_GIVENNAME.basename()),
                 this.dataSQL.get(EBakaSQL.F_STU_MAIL.basename())
         ));
+
+        if (!Settings.getInstance().getExtMailAllowed().contains(Integer.parseInt(this.dataSQL.get(EBakaSQL.F_STU_BK_CLASSYEAR.basename())))) {
+            newData.put(EBakaLDAPAttributes.MSXCH_REQ_AUTH.attribute(), EBakaLDAPAttributes.BK_LITERAL_TRUE.value());
+        }
 
         newData.put(EBakaLDAPAttributes.UAC.attribute(), EBakaUAC.NORMAL_ACCOUNT.toString());
         newData.put(EBakaLDAPAttributes.PW_UNICODE.attribute(), BakaUtils.createInitialPassword(this.dataSQL.get(EBakaSQL.F_STU_SURNAME.basename()), this.dataSQL.get(EBakaSQL.F_STU_GIVENNAME.basename()), Integer.parseInt(this.dataSQL.get(EBakaSQL.F_STU_BK_CLASSYEAR.basename())), Integer.parseInt(this.dataSQL.get(EBakaSQL.F_STU_CLASS_ID.basename()))));
@@ -417,9 +423,60 @@ public class Student implements IRecordLDAP, IRecordSQL, IUser {
 
         }
 
-        // TODO - komplexní subrutina; přesun pod podrobný audit
+        // TODO - komplexní subrutina?; přesun pod podrobný audit
+        // external mail
+        result &= checkExternalMail(repair);
         // UAC
         result &= checkUAC(repair);
+
+        return result;
+    }
+
+    /**
+     * Kontrola a oprava možnosti příjmu pošty z externích adres.
+     *
+     * @param repair provedení opravy v případě neshody
+     * @return výsledek operace
+     */
+    public Boolean checkExternalMail(Boolean repair) {
+
+        if (Settings.getInstance().beVerbose()) {
+            ReportManager.logWait(EBakaLogType.LOG_TEST, "GDPR - externí pošta");
+        }
+
+        Boolean result = true;
+        // vyžadovat interní doménu?
+        String expected = (!Settings.getInstance().getExtMailAllowed().contains(Integer.parseInt(getSQLdata(EBakaSQL.F_STU_BK_CLASSYEAR)))) ? EBakaLDAPAttributes.BK_LITERAL_TRUE.value() : EBakaLDAPAttributes.BK_LITERAL_FALSE.value();
+
+        if (!expected.equals(getLDAPdata(EBakaLDAPAttributes.MSXCH_REQ_AUTH))) {
+
+            if (Settings.getInstance().beVerbose()) {
+                ReportManager.logResult(EBakaLogType.LOG_ERR_VERBOSE);
+            }
+
+            if (Settings.getInstance().debugMode()) {
+                ReportManager.log(EBakaLogType.LOG_ERR_DEBUG, "Očekáváno [" + expected + "], získaná hodnota [" + getLDAPdata(EBakaLDAPAttributes.MSXCH_REQ_AUTH) + "].");
+            }
+
+            if (repair) {
+
+                if (Settings.getInstance().beVerbose()) {
+                    ReportManager.log(EBakaLogType.LOG_INFO, "Proběhne pokus o opravu oprávnění příjmu externí pošty.");
+                }
+
+                result &= setLDAPdata(EBakaLDAPAttributes.MSXCH_REQ_AUTH, expected);
+
+            } else {
+                // chyba
+                result = false;
+            }
+
+        } else {
+            // OK
+            if (Settings.getInstance().beVerbose()) {
+                ReportManager.logResult(EBakaLogType.LOG_OK);
+            }
+        }
 
         return result;
     }
@@ -441,12 +498,12 @@ public class Student implements IRecordLDAP, IRecordSQL, IUser {
 
         // 1) heslo nikdy nevyprší
         // (nonekvivalence)
-        Boolean pwdNoExpire = !(Settings.getInstance().pwdNoExpire().contains(BakaUtils.classYearFromDn(this.getDN())) ^ EBakaUAC.DONT_EXPIRE_PASSWORD.checkFlag(this.getUAC()));
+        Boolean pwdNoExpire = !(Settings.getInstance().getPwdNoExpire().contains(BakaUtils.classYearFromDn(this.getDN())) ^ EBakaUAC.DONT_EXPIRE_PASSWORD.checkFlag(this.getUAC()));
 
         if (!pwdNoExpire) {
 
             if (Settings.getInstance().debugMode()) {
-                ReportManager.log(EBakaLogType.LOG_ERR_DEBUG, Settings.getInstance().pwdNoExpire().contains(BakaUtils.classYearFromDn(this.getDN())) ? "Očekáván příznak [ DONT_EXPIRE_PASSWORD ]." : "Očekáván prázdný příznak [ DONT_EXPIRE_PASSWORD ].");
+                ReportManager.log(EBakaLogType.LOG_ERR_DEBUG, Settings.getInstance().getPwdNoExpire().contains(BakaUtils.classYearFromDn(this.getDN())) ? "Očekáván příznak [ DONT_EXPIRE_PASSWORD ]." : "Očekáván prázdný příznak [ DONT_EXPIRE_PASSWORD ].");
             }
 
             // TODO
@@ -460,7 +517,7 @@ public class Student implements IRecordLDAP, IRecordSQL, IUser {
                         this.getDN(),
                         EBakaLDAPAttributes.UAC,
                         String.format("%d",
-                                Settings.getInstance().pwdNoExpire().contains(BakaUtils.classYearFromDn(this.getDN()))
+                                Settings.getInstance().getPwdNoExpire().contains(BakaUtils.classYearFromDn(this.getDN()))
                                 ? EBakaUAC.DONT_EXPIRE_PASSWORD.setFlag(this.getUAC()) : EBakaUAC.DONT_EXPIRE_PASSWORD.clearFlag(this.getUAC())
                         )
                 );

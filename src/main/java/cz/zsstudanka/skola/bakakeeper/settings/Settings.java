@@ -904,7 +904,7 @@ public class Settings {
      *
      * @return pole čísel ročníků
      */
-    public ArrayList<Integer> pwdNoChange() {
+    public ArrayList<Integer> getPwdNoChange() {
         ArrayList<Integer> noChageList = new ArrayList<>();
 
         if (this.settings_data.get("pwd_nochange").length() > 0) {
@@ -926,7 +926,7 @@ public class Settings {
      *
      * @return pole číslel ročníků
      */
-    public ArrayList<Integer> pwdNoExpire() {
+    public ArrayList<Integer> getPwdNoExpire() {
         ArrayList<Integer> noExpireList = new ArrayList<>();
 
         if (this.settings_data.get("pwd_noexpire").length() > 0) {
@@ -947,7 +947,7 @@ public class Settings {
      *
      * @return pole čísel ročníků
      */
-    public ArrayList<Integer> extMailAllowed() {
+    public ArrayList<Integer> getExtMailAllowed() {
         ArrayList<Integer> extMailList = new ArrayList<>();
 
         if (this.settings_data.get("ext_mail").length() > 0) {
