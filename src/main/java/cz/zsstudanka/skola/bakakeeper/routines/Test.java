@@ -39,8 +39,8 @@ public class Test {
     public static void test_11() {
         System.out.println("====== [ TEST 2020-10-20 kontrola a oprava UAC ] ======");
 
-        System.out.println("NoChange ("+Settings.getInstance().pwdNoChange().size()+"): " + Settings.getInstance().pwdNoChange());
-        System.out.println("NoExpire ("+Settings.getInstance().pwdNoExpire().size()+"): " + Settings.getInstance().pwdNoExpire());
+        System.out.println("NoChange ("+Settings.getInstance().getPwdNoChange().size()+"): " + Settings.getInstance().getPwdNoChange());
+        System.out.println("NoExpire ("+Settings.getInstance().getPwdNoExpire().size()+"): " + Settings.getInstance().getPwdNoExpire());
 
         String ročník = "1";
         String třída = "E";
