@@ -29,6 +29,11 @@ právy Domain Admin v AD, právy ke čtení i zápisu v SQL databázi
 s Bakaláři.
 * JVM kompatibilní s Java 8 se síťovým přístupem k
 serverům AD a SQL.
+* Nepovinně - v případě použití O365 je možné nastavit poštovní
+filtrovací pravidlo na základě hodnoty `CustomAttribute2:TRUE`
+a odesílatele v doméně mimo organizaci. Na AD se lokálně ukládá
+do atributu `ExtensionAttribute2` a má význam podobný jako
+`msExchRequireAuthToSendTo`.  
 * Nepovinně - `cron` pro periodické spouštění.
 * Nepovinně - pro ověřování přístupu k SQL Serveru pomocí
 protokolu Kerberos namísto integrovaného NTLM musí být
@@ -72,4 +77,4 @@ i se závislostmi)
 * `net.tirasa.adsddl` >= 1.9 (+`slf4j-api`, `activation`)
 * (`junit` >= 4.13.1)
 
-2019-2020 [ZŠ Pardubice - Studánka](https://www.zs-studanka.cz/)
+2019-2021 [ZŠ Pardubice - Studánka](https://www.zs-studanka.cz/)
