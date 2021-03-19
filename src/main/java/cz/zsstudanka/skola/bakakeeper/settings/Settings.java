@@ -924,7 +924,7 @@ public class Settings {
     /**
      * Seznam ročníků žáků, kterým heslo nikdy nevyprší.
      *
-     * @return pole číslek ročníků
+     * @return pole číslel ročníků
      */
     public ArrayList<Integer> pwdNoExpire() {
         ArrayList<Integer> noExpireList = new ArrayList<>();
@@ -940,6 +940,27 @@ public class Settings {
         }
 
         return noExpireList;
+    }
+
+    /**
+     * Seznam ročníků žáků, kteří mohou přijímat poštu z externích adres.
+     *
+     * @return pole čísel ročníků
+     */
+    public ArrayList<Integer> extMailAllowed() {
+        ArrayList<Integer> extMailList = new ArrayList<>();
+
+        if (this.settings_data.get("ext_mail").length() > 0) {
+            String[] parts = this.settings_data.get("ext_mail").replace(" ", "").split("\\,");
+
+            if (parts.length > 0) {
+                for (String part : parts) {
+                    extMailList.add(Integer.parseInt(part));
+                }
+            }
+        }
+
+        return extMailList;
     }
 
     /**
