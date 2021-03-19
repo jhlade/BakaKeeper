@@ -448,14 +448,14 @@ public class Student implements IRecordLDAP, IRecordSQL, IUser {
         // vyžadovat interní doménu?
         String expected = (!Settings.getInstance().getExtMailAllowed().contains(Integer.parseInt(getSQLdata(EBakaSQL.F_STU_BK_CLASSYEAR)))) ? EBakaLDAPAttributes.BK_LITERAL_TRUE.value() : EBakaLDAPAttributes.BK_LITERAL_FALSE.value();
 
-        if (!expected.equals(getLDAPdata(EBakaLDAPAttributes.MSXCH_REQ_AUTH))) {
+        if (!expected.equals(getLDAPdata(EBakaLDAPAttributes.EXT02))) {
 
             if (Settings.getInstance().beVerbose()) {
                 ReportManager.logResult(EBakaLogType.LOG_ERR_VERBOSE);
             }
 
             if (Settings.getInstance().debugMode()) {
-                ReportManager.log(EBakaLogType.LOG_ERR_DEBUG, "Očekáváno [" + expected + "], získaná hodnota [" + getLDAPdata(EBakaLDAPAttributes.MSXCH_REQ_AUTH) + "].");
+                ReportManager.log(EBakaLogType.LOG_ERR_DEBUG, "Očekáváno [" + expected + "], získaná hodnota [" + getLDAPdata(EBakaLDAPAttributes.EXT02) + "].");
             }
 
             if (repair) {
@@ -464,7 +464,7 @@ public class Student implements IRecordLDAP, IRecordSQL, IUser {
                     ReportManager.log(EBakaLogType.LOG_INFO, "Proběhne pokus o opravu oprávnění příjmu externí pošty.");
                 }
 
-                result &= setLDAPdata(EBakaLDAPAttributes.MSXCH_REQ_AUTH, expected);
+                result &= setLDAPdata(EBakaLDAPAttributes.EXT02, expected);
 
             } else {
                 // chyba

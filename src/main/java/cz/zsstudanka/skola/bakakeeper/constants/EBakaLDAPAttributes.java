@@ -48,8 +48,8 @@ public enum EBakaLDAPAttributes {
     MSXCH_GAL_HIDDEN("msExchHideFromAddressLists", "TRUE"), // skrytí kontaktu v GAL
     MSXCH_REQ_AUTH ("msExchRequireAuthToSendTo", "TRUE"), // maily pro skupiny pouze z domény
 
-    EXT01 ("extensionAttribute1", null), // rozšířený atribut 1
-    EXT02 ("extensionAttribute2", null), // rozšířený atribut 2
+    EXT01 ("extensionAttribute1", null), // rozšířený atribut 1 = ID uživatele v evidenci Bakaláři
+    EXT02 ("extensionAttribute2", null), // rozšířený atribut 2 = lit. TRUE/FALSE pošta pouze uvnitř organizace
     EXT03 ("extensionAttribute3", null), // rozšířený atribut 3
     EXT04 ("extensionAttribute4", null), // rozšířený atribut 4
     EXT05 ("extensionAttribute5", null), // rozšířený atribut 5
