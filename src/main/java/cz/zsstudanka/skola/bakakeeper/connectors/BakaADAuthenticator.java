@@ -11,7 +11,6 @@ import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
 import net.tirasa.adsddl.ntsd.SDDL;
 import net.tirasa.adsddl.ntsd.controls.SDFlagsControl;
-import net.tirasa.adsddl.ntsd.utils.SDDLHelper;
 
 import javax.naming.Context;
 import javax.naming.NamingEnumeration;
@@ -290,7 +289,7 @@ public class BakaADAuthenticator {
                                 // uživatel nemůže měnit heslo
                                 if (BakaSDDLHelper.isUserCannotChangePassword(sddl)) {
                                     // nastavení flagu do UAC; ve výchozím stavu MS AS vždy uvádí 0
-                                    data = String.format("%d", Integer.parseInt( (String) data ) | EBakaUAC.PASSWD_CANT_CHANGE.value() );
+                                    data = String.format("%d", EBakaUAC.PASSWD_CANT_CHANGE.setFlag((String) data));
                                 }
                             } // UAC
 
@@ -825,11 +824,11 @@ public class BakaADAuthenticator {
 
                 Map<Integer, Map<String, String>> origData = getObjectInfo(BakaUtils.parseBase(dn), queryOrig, origAttributes);
 
-                boolean uacOrig = EBakaUAC.PASSWD_CANT_CHANGE.checkFlag(origData.get(0).get(EBakaLDAPAttributes.UAC.attribute()));
-                boolean uacNew = EBakaUAC.PASSWD_CANT_CHANGE.checkFlag(value);
+                boolean uacPNXOrig = EBakaUAC.PASSWD_CANT_CHANGE.checkFlag(origData.get(0).get(EBakaLDAPAttributes.UAC.attribute()));
+                boolean uacPNXNew = EBakaUAC.PASSWD_CANT_CHANGE.checkFlag(value);
 
                 // požadována změna oprávnění uživatelské změny hesla?
-                if (uacOrig != uacNew) {
+                if (uacPNXOrig != uacPNXNew) {
 
                     bakaContext.setRequestControls(new Control[] { new SDFlagsControl(0x04) }); // DACL
 
@@ -844,7 +843,7 @@ public class BakaADAuthenticator {
                     // inicializace SDDL
                     SDDL sddl = new SDDL(ntsdOrig);
                     // nová hodnota
-                    byte[] newSddlData = SDDLHelper.userCannotChangePassword(sddl, uacNew).toByteArray();
+                    byte[] newSddlData = BakaSDDLHelper.userCannotChangePassword(sddl, uacPNXNew).toByteArray();
 
                     // změna atributu - práce s ntSecurityDescriptorem namísto UAC
                     mod[0] = new ModificationItem(
