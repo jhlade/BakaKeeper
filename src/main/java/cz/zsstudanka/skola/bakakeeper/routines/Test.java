@@ -22,22 +22,34 @@ import java.util.*;
 public class Test {
 
     public static void test_13() {
-        System.out.println("====== [ TEST 2021-04-03 UAC ACE ] ======");
+        System.out.println("====== [ TEST 2021-04-04 UAC ACE ] ======");
 
-        Map<Integer, Map<String, String>> školáček = BakaADAuthenticator.getInstance().getUserInfo("skolacek.maly1@zs-studanka.cz", Settings.getInstance().getLDAP_baseStudents());
-        //Map<Integer, Map<String, String>> školáček = BakaADAuthenticator.getInstance().getUserInfo("novy.aaadam2@zs-studanka.cz", Settings.getInstance().getLDAP_baseStudents());
-        //Map<Integer, Map<String, String>> školáček = BakaADAuthenticator.getInstance().getUserInfo("expirovany.aaadam1@zs-studanka.cz", Settings.getInstance().getLDAP_baseStudents());
+        ArrayList<Map<Integer, Map<String, String>>> účty = new ArrayList<>();
+        účty.add(BakaADAuthenticator.getInstance().getUserInfo("skolacek.maly1@zs-studanka.cz", Settings.getInstance().getLDAP_baseStudents()));
+        účty.add(BakaADAuthenticator.getInstance().getUserInfo("novy.aaadam2@zs-studanka.cz", Settings.getInstance().getLDAP_baseStudents()));
+        účty.add(BakaADAuthenticator.getInstance().getUserInfo("expirovany.aaadam1@zs-studanka.cz", Settings.getInstance().getLDAP_baseStudents()));
 
-        System.out.println("\nRAW: " + školáček + "\n");
+        for (Map<Integer, Map<String, String>> účet : účty) {
 
-        System.out.println("UAC = " + školáček.get(0).get(EBakaLDAPAttributes.UAC.attribute()) + " (0x" + String.format("%08x", Integer.parseInt(školáček.get(0).get(EBakaLDAPAttributes.UAC.attribute()))) + ")");
-        System.out.println("User cannot change password (UAC & 0x0040): " + EBakaUAC.PASSWD_CANT_CHANGE.checkFlag(školáček.get(0).get(EBakaLDAPAttributes.UAC.attribute())));
+            System.out.println("\nRAW: " + účet + "\n");
 
-        System.out.println();
+            System.out.println("UAC = " + účet.get(0).get(EBakaLDAPAttributes.UAC.attribute()) + " (0x" + String.format("%08x", Integer.parseInt(účet.get(0).get(EBakaLDAPAttributes.UAC.attribute()))) + ")");
+            System.out.println("User cannot change password (UAC & 0x0040): " + EBakaUAC.PASSWD_CANT_CHANGE.checkFlag(účet.get(0).get(EBakaLDAPAttributes.UAC.attribute())));
+
+            System.out.println();
+        }
+
+        for (Map<Integer, Map<String, String>> účet : účty) {
+            BakaADAuthenticator.getInstance().replaceAttribute(
+                    účet.get(0).get(EBakaLDAPAttributes.DN.attribute()),
+                    EBakaLDAPAttributes.UAC,
+                    String.format("%d", EBakaUAC.PASSWD_CANT_CHANGE.setFlag(účet.get(0).get(EBakaLDAPAttributes.UAC.attribute())) )
+                    //String.format("%d", EBakaUAC.PASSWD_CANT_CHANGE.clearFlag(účet.get(0).get(EBakaLDAPAttributes.UAC.attribute())) )
+            );
+        }
 
 
-
-        System.out.println("====== [ TEST 2021-04-03 UAC ACE ] ======");
+        System.out.println("====== [ TEST 2021-04-04 UAC ACE ] ======");
     }
 
     public static void test_12() {
