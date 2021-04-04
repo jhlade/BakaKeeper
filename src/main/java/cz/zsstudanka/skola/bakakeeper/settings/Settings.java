@@ -575,6 +575,9 @@ public class Settings {
      */
     public Boolean isLDAP_MSAD() {
         // TODO detekce by měla probíhat automaticky kontrolou dat v RootDSE
+        // isGlobalCatalogReady !null & true
+        // forestFunctionality !null & >= 7
+        // domainFunctionality !null & >= 7
         return true; // dočasně
         //return (this.settings_data.get("ad_srv").toLowerCase().equals("MSAD2016")) ? true : false;
     }
