@@ -21,6 +21,25 @@ import java.util.*;
 
 public class Test {
 
+    public static void test_13() {
+        System.out.println("====== [ TEST 2021-04-03 UAC ACE ] ======");
+
+        Map<Integer, Map<String, String>> školáček = BakaADAuthenticator.getInstance().getUserInfo("skolacek.maly1@zs-studanka.cz", Settings.getInstance().getLDAP_baseStudents());
+        //Map<Integer, Map<String, String>> školáček = BakaADAuthenticator.getInstance().getUserInfo("novy.aaadam2@zs-studanka.cz", Settings.getInstance().getLDAP_baseStudents());
+        //Map<Integer, Map<String, String>> školáček = BakaADAuthenticator.getInstance().getUserInfo("expirovany.aaadam1@zs-studanka.cz", Settings.getInstance().getLDAP_baseStudents());
+
+        System.out.println("\nRAW: " + školáček + "\n");
+
+        System.out.println("UAC = " + školáček.get(0).get(EBakaLDAPAttributes.UAC.attribute()) + " (0x" + String.format("%08x", Integer.parseInt(školáček.get(0).get(EBakaLDAPAttributes.UAC.attribute()))) + ")");
+        System.out.println("User cannot change password (UAC & 0x0040): " + EBakaUAC.PASSWD_CANT_CHANGE.checkFlag(školáček.get(0).get(EBakaLDAPAttributes.UAC.attribute())));
+
+        System.out.println();
+
+
+
+        System.out.println("====== [ TEST 2021-04-03 UAC ACE ] ======");
+    }
+
     public static void test_12() {
         System.out.println("====== [ TEST 2021-03-14 Informace o LDAP serveru ] ======");
 

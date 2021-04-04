@@ -247,9 +247,9 @@ public class App {
 
 
             // vývojový test
-            if (params.containsKey("test")) {
+            if (params.containsKey("test") && FLAG_DEVEL) {
                 System.out.println("====== [ TEST ] ======");
-                Test.test_12();
+                Test.test_13();
                 System.out.println("====== [ /TEST ] ======");
                 return;
             } // test
