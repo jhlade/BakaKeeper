@@ -9,15 +9,8 @@ import cz.zsstudanka.skola.bakakeeper.constants.EBakaUAC;
 import cz.zsstudanka.skola.bakakeeper.model.entities.DataLDAP;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
-import net.tirasa.adsddl.ntsd.ACE;
 import net.tirasa.adsddl.ntsd.SDDL;
-import net.tirasa.adsddl.ntsd.SID;
 import net.tirasa.adsddl.ntsd.controls.SDFlagsControl;
-import net.tirasa.adsddl.ntsd.data.AceObjectFlags;
-import net.tirasa.adsddl.ntsd.data.AceRights;
-import net.tirasa.adsddl.ntsd.data.AceType;
-import net.tirasa.adsddl.ntsd.utils.GUID;
-import net.tirasa.adsddl.ntsd.utils.NumberFacility;
 import net.tirasa.adsddl.ntsd.utils.SDDLHelper;
 
 import javax.naming.Context;
@@ -841,88 +834,22 @@ public class BakaADAuthenticator {
                     bakaContext.setRequestControls(new Control[] { new SDFlagsControl(0x04) }); // DACL
 
                     // data objektu
-                    Map<Integer, Map<String, String>> ntsdOrigResult = getObjectInfo(
+                    Map<Integer, Map<String, Object>> ntsdOrigResult = getObjectInfo(
                             BakaUtils.parseBase(dn), queryOrig,
                             new String[] { EBakaLDAPAttributes.NT_SECURITY_DESCRIPTOR.attribute() }
                     );
 
                     // binární data NT Security Descriptoru
-                    byte[] ntsdOrig = (byte[]) ntsdOrigResult.get(0).get(EBakaLDAPAttributes.NT_SECURITY_DESCRIPTOR.attribute()).getBytes();
-
-                    // inicializace
+                    byte[] ntsdOrig = (byte[]) ntsdOrigResult.get(0).get(EBakaLDAPAttributes.NT_SECURITY_DESCRIPTOR.attribute());
+                    // inicializace SDDL
                     SDDL sddl = new SDDL(ntsdOrig);
-                    // pole přístupových záznamů
-                    final List<ACE> changeAces = new ArrayList<>();
-
-                    // přidání odpovídajících přístupových záznamů do pole pro změny
-                    for (ACE ace : sddl.getDacl().getAces()) {
-
-                        // existující ACE je allow/deny (A, D)
-                        if ((ace.getType() == AceType.ACCESS_ALLOWED_OBJECT_ACE_TYPE
-                             || ace.getType() == AceType.ACCESS_DENIED_OBJECT_ACE_TYPE)
-                            && ace.getObjectFlags().getFlags().contains(AceObjectFlags.Flag.ACE_OBJECT_TYPE_PRESENT)
-                        ) {
-
-                            if (GUID.getGuidAsString(ace.getObjectType()).equals(SDDLHelper.UCP_OBJECT_GUID)) {
-
-                                // identifikace vlastníka objektu
-                                final SID sid = ace.getSid();
-                                if (
-                                        sid.getSubAuthorities().size() == 1
-                                                && ((Arrays.equals(sid.getIdentifierAuthority(),
-                                                    new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 })
-                                                    && Arrays.equals(sid.getSubAuthorities().get(0),
-                                                    new byte[] { 0x00, 0x00, 0x00, 0x00 }) // EVERYONE S-1-1-0
-                                                ) || (Arrays.equals(sid.getIdentifierAuthority(),
-                                                     new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x05 })
-                                                     && Arrays.equals(sid.getSubAuthorities().get(0),
-                                                     new byte[] { 0x00, 0x00, 0x00, 0x0a })) // SELF S-1-5-10
-                                                )
-                                ) {
-                                    // přidání ACE pro následnou modifikaci
-                                    changeAces.add(ace);
-                                }
-
-                            } // UCP OBJECT GUID
-
-                        }
-                    } // for - prohledání
-
-                    // vytvoření nových ACE
-                    if (changeAces.isEmpty()) {
-                        // SELF
-                        ACE self = ACE.newInstance(uacNew ? AceType.ACCESS_DENIED_OBJECT_ACE_TYPE : AceType.ACCESS_ALLOWED_OBJECT_ACE_TYPE);
-                        self.setObjectFlags(new AceObjectFlags(AceObjectFlags.Flag.ACE_OBJECT_TYPE_PRESENT));
-                        self.setObjectType(GUID.getGuidAsByteArray(SDDLHelper.UCP_OBJECT_GUID));
-                        self.setRights(new AceRights().addOjectRight(AceRights.ObjectRight.CR));
-
-                        SID sd = SID.newInstance(NumberFacility.getBytes(0x000000000005));
-                        sd.addSubAuthority(NumberFacility.getBytes(0x0a));
-                        self.setSid(sd);
-
-                        // EVERYONE
-                        ACE everyone = ACE.newInstance(uacNew ? AceType.ACCESS_DENIED_OBJECT_ACE_TYPE : AceType.ACCESS_ALLOWED_OBJECT_ACE_TYPE);
-                        everyone.setObjectFlags(new AceObjectFlags(AceObjectFlags.Flag.ACE_OBJECT_TYPE_PRESENT));
-                        everyone.setObjectType(GUID.getGuidAsByteArray(SDDLHelper.UCP_OBJECT_GUID));
-                        everyone.setRights(new AceRights().addOjectRight(AceRights.ObjectRight.CR));
-
-                        sd = SID.newInstance(NumberFacility.getBytes(0x000000000001));
-                        sd.addSubAuthority(NumberFacility.getBytes(0));
-                        everyone.setSid(sd);
-
-                        // data k zápisu
-                        sddl.getDacl().getAces().add(self);
-                        sddl.getDacl().getAces().add(everyone);
-                    } else {
-                        for (ACE ace : changeAces) {
-                            ace.setType(uacNew ? AceType.ACCESS_DENIED_OBJECT_ACE_TYPE : AceType.ACCESS_ALLOWED_ACE_TYPE);
-                        }
-                    }
+                    // nová hodnota
+                    byte[] newSddlData = SDDLHelper.userCannotChangePassword(sddl, uacNew).toByteArray();
 
                     // změna atributu - práce s ntSecurityDescriptorem namísto UAC
                     mod[0] = new ModificationItem(
                             DirContext.REPLACE_ATTRIBUTE,
-                            new BasicAttribute(EBakaLDAPAttributes.NT_SECURITY_DESCRIPTOR.attribute(), sddl.toByteArray())
+                            new BasicAttribute(EBakaLDAPAttributes.NT_SECURITY_DESCRIPTOR.attribute(), newSddlData)
                     );
 
                 } else {
