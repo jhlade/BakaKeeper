@@ -195,10 +195,12 @@ public class BakaADAuthenticator {
      *
      * @param baseOU základní OU pro prohledávání
      * @param findAttributes pole dotazů atribut/hodnota
-     * @param retAttributes mapa záskaných atributů
+     * @param retAttributes seznam čtených atributů
      * @return mapa získaných dat
      */
-    public Map getObjectInfo(String baseOU, HashMap<String, String> findAttributes, String[] retAttributes) {
+    public Map getObjectInfo(String baseOU, HashMap<String, String> findAttributes, final String[] retAttributes) {
+
+        if (!isAuthenticated()) return null;
 
         StringBuilder findAND = new StringBuilder();
         findAND.append("(&");
@@ -217,32 +219,42 @@ public class BakaADAuthenticator {
         }
 
         findAND.append(")");
-        if (!isAuthenticated()) return null;
 
         // výsledek
         HashMap<Integer, Map> objInfo = new HashMap();
+        // počet výsledků
         Integer resNum = 0;
 
-        // kontext
+        // obecný kontext
         DirContext ctxGC = null;
 
         try {
+
+            // LDAP dotaz a výsledky
+            String searchFilter = findAND.toString();
+            String[] returnedAtts = retAttributes;
+
             if (baseOU.equals(EBakaLDAPAttributes.BK_SYMBOL_ROOTDSE.attribute())) {
                 ctxGC = new InitialDirContext(env);
             } else {
                 ctxGC = new InitialLdapContext(env, null);
 
-                if (Settings.getInstance().isLDAP_MSAD()) {
+                // LDAP je MS AD a požaduje se UAC -> bude se číst i NTSD
+                if (Settings.getInstance().isLDAP_MSAD() && Arrays.stream(retAttributes).anyMatch(EBakaLDAPAttributes.UAC.attribute()::equals)) {
+
+                    returnedAtts = new String[retAttributes.length + 1];
+                    int rA;
+                    for (rA = 0; rA < retAttributes.length; rA++) {
+                        returnedAtts[rA] = retAttributes[rA];
+                    }
+                    returnedAtts[retAttributes.length] = EBakaLDAPAttributes.NT_SECURITY_DESCRIPTOR.attribute();
+
                     // LDAP_SERVER_SD_FLAGS_OID = DACL (0x4)
                     ((InitialLdapContext) ctxGC).setRequestControls(new Control[]{new SDFlagsControl(0x04)});
                 }
             }
 
-            // LDAP výsledky a dotaz
-            String returnedAtts[] = retAttributes;
-            String searchFilter = findAND.toString();
-
-            // řízení
+            // řízení proledávání
             SearchControls searchCtls = new SearchControls();
             searchCtls.setReturningAttributes(returnedAtts);
             searchCtls.setSearchScope((baseOU.equals(EBakaLDAPAttributes.BK_SYMBOL_ROOTDSE.attribute())) ? SearchControls.OBJECT_SCOPE : SearchControls.SUBTREE_SCOPE);
@@ -255,6 +267,7 @@ public class BakaADAuthenticator {
                 SearchResult result = answer.next();
                 Attributes attrs = result.getAttributes();
 
+                // jeden objekt
                 Map objDetails = new HashMap<String, Object>();
 
                 // atributy výsledku
@@ -268,33 +281,8 @@ public class BakaADAuthenticator {
 
                         // jeden prvek atributu
                         if (attr.size() == 1) {
-
-                            Object data = attr.get(); // původní data
-
-                            // pracuje se s UAC a server je MS AD, je tedy nutná kontrola ACE a patřičná úprava UAC
-                            if (attr.getID().equals(EBakaLDAPAttributes.UAC.attribute()) && Settings.getInstance().isLDAP_MSAD()) {
-
-                                // získání NTSecurityDescriptoru uživatele
-                                Map<Integer, Map<String, Object>> ntsdResult = getObjectInfo(
-                                        baseOU, findAttributes,
-                                        new String[] { EBakaLDAPAttributes.NT_SECURITY_DESCRIPTOR.attribute() }
-                                );
-
-                                // data NTSD
-                                byte[] ntsdOrig = (byte[]) ntsdResult.get(0).get(EBakaLDAPAttributes.NT_SECURITY_DESCRIPTOR.attribute());
-
-                                // inicializace SDDL
-                                SDDL sddl = new SDDL(ntsdOrig);
-
-                                // uživatel nemůže měnit heslo
-                                if (BakaSDDLHelper.isUserCannotChangePassword(sddl)) {
-                                    // nastavení flagu do UAC; ve výchozím stavu MS AS vždy uvádí 0
-                                    data = String.format("%d", EBakaUAC.PASSWD_CANT_CHANGE.setFlag((String) data));
-                                }
-                            } // UAC
-
                             // vložení výsledku
-                            objDetails.put(attr.getID().toString(), data);
+                            objDetails.put(attr.getID().toString(), (Object) attr.get());
                         } else {
                             // pole prvků atributu (skupiny, ...)
                             ArrayList<Object> retData = new ArrayList<>();
@@ -305,13 +293,20 @@ public class BakaADAuthenticator {
                             // vložení pole výsledků
                             objDetails.put(attr.getID().toString(), retData);
                         }
+                    } // jednotlivé atributy
+
+                    // modifikace UAC
+                    if (Settings.getInstance().isLDAP_MSAD() && Arrays.stream(retAttributes).anyMatch(EBakaLDAPAttributes.UAC.attribute()::equals)) {
+                        if (BakaSDDLHelper.isUserCannotChangePassword(new SDDL((byte[]) objDetails.get(EBakaLDAPAttributes.NT_SECURITY_DESCRIPTOR.attribute())))) {
+                            // nastavení flagu do UAC; ve výchozím stavu MS AS vždy uvádí 0
+                            objDetails.replace(EBakaLDAPAttributes.UAC.attribute(), String.format("%d", EBakaUAC.PASSWD_CANT_CHANGE.setFlag((String) objDetails.get(EBakaLDAPAttributes.UAC.attribute()).toString())));
+                        }
                     }
 
                     enumeration.close();
                 }
 
                 objInfo.put(resNum, objDetails);
-
                 resNum++;
             }
 
