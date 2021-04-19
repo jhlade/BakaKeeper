@@ -45,7 +45,11 @@ public class BakaTrustManager implements X509TrustManager {
         try {
             FileInputStream bakaJKS = new FileInputStream(Settings.getInstance().DEFAULT_JKS_FILE);
             KeyStore bakaTS = KeyStore.getInstance(KeyStore.getDefaultType());
-            bakaTS.load(bakaJKS, App.PASSPHRASE.toCharArray());
+
+            // jks neobsahuje žádné tajné informace, pouze veřejný certifikát LDAP serveru
+            // použití globálního hesla představuje riziko, jks je náchylnější na prolomení hrubou silou
+            String jks_passphrase = new String("BakaKeeper");
+            bakaTS.load(bakaJKS, jks_passphrase.toCharArray());
             bakaJKS.close();
 
             try {
