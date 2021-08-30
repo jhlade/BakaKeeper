@@ -7,7 +7,7 @@ package cz.zsstudanka.skola.bakakeeper.constants;
  */
 public enum EBakaLogType {
     LOG_STDOUT("", false), // prázdné stdout
-    LOG_STDERR("", false), // prázdné stderr
+    LOG_STDERR("", true), // prázdné stderr
     LOG_OK("[ OK ]", false),
     LOG_TEST("[ TEST ]", false),
     LOG_INFO("[ INFO ]", false),

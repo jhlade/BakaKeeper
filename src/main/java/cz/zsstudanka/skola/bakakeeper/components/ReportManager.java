@@ -62,7 +62,7 @@ public class ReportManager {
 
         StringBuilder messageBuilder = new StringBuilder();
         messageBuilder.append(type.tag());
-        if (!type.tag().equals(EBakaLogType.LOG_STDOUT) && !type.tag().equals(EBakaLogType.LOG_STDERR)) {
+        if (!type.equals(EBakaLogType.LOG_STDOUT) && !type.equals(EBakaLogType.LOG_STDERR)) {
             messageBuilder.append(" ");
         }
         messageBuilder.append(message);
