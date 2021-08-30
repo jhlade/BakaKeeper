@@ -62,7 +62,9 @@ public class ReportManager {
 
         StringBuilder messageBuilder = new StringBuilder();
         messageBuilder.append(type.tag());
-        messageBuilder.append(" ");
+        if (!type.tag().equals(EBakaLogType.LOG_STDOUT) && !type.tag().equals(EBakaLogType.LOG_STDERR)) {
+            messageBuilder.append(" ");
+        }
         messageBuilder.append(message);
 
         // výpis na standardní výstupy
