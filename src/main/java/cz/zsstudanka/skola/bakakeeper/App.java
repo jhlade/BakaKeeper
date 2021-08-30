@@ -17,6 +17,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Nástroj pro synchronizaci záznamů z Bakalářů a informacemi v Active Directory.
@@ -45,6 +47,8 @@ public class App {
      * @param args argumenty viz --help
      */
     public static void main(String[] args) {
+
+        Logger.getLogger("net.tirasa.adsddl.ntsd.SDDL").setLevel(Level.OFF);
 
         if (FLAG_DEVEL) {
             ReportManager.log(EBakaLogType.LOG_DEVEL, "Je aktivní vývojářský režim. Nebude se zapisovat do ostrých dat.");
@@ -245,7 +249,6 @@ public class App {
                 }
             }
 
-
             // vývojový test
             if (params.containsKey("test") && FLAG_DEVEL) {
                 System.out.println("====== [ TEST ] ======");
@@ -442,23 +445,27 @@ public class App {
     /**
      * TODO Identifikace účtu v SQL/AD.
      *
+     * @param login UPN účtu
+     *
      */
     public static void actionIdentify(String login) {
+        Export.identify(login);
         // TODO - údaj SAM/UPN/mail
         // vyhledat v AD, určit typ, pokud žák - údaje z Bakalářů (+existenci kontaktu na ZZ)
     }
 
     /**
-     * TODO Reset hesla žáka
+     * TODO Reset hesla jednoho žáka
      *
      * @param login
      */
     public static void actionResetPassword(String login) {
-        // TODO - SAM/UPN/mail?
+        // TODO - SAM/UPN/mail? --> UPN
         // 1) objekt musí být aktivní žák (existuje v AD a v Bakalářích), TODO možná i personál/pouze učitelé?
-        // 2) provede se nastavení hesla do původní podoby (Pr.Jm.XX)
-        // 3) nastaví se flag nutnosti změny hesla při dalším přihlášení
-        // 4) dost možná vyrobit akci + hint v --help
+        // 2) provede se nastavení hesla do původní podoby (Pr.Jm.##yy)
+        // 3) nastaví se flag nutnosti změny hesla při dalším přihlášení(? - spíš ne)
+        // 4) reportovat - sestava třídnímu
+        // 5) dost možná vyrobit akci + hint v --help
     }
 
     /**
