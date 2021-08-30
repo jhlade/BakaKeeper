@@ -398,6 +398,7 @@ public class BakaADAuthenticator {
                 EBakaLDAPAttributes.LOGIN.attribute(),
                 EBakaLDAPAttributes.MAIL.attribute(),
 
+                EBakaLDAPAttributes.LAST_LOGON.attribute(),
                 EBakaLDAPAttributes.PW_LASTSET.attribute(),
                 EBakaLDAPAttributes.UAC.attribute(),
 

@@ -41,6 +41,8 @@ public enum EBakaLDAPAttributes {
     DESCRIPTION ("description", null), // popisek
     TITLE ("title", null), // pracovní pozice - zobrazuje se v O365
 
+    LAST_LOGON("lastLogon", null), // poslední přihlášení
+
     PW_UNICODE ("unicodePwd", null), // Active Directory heslo
     PW_LASTSET ("pwdLastSet", "-1"), // žádný příznak
     PW_REQCHANGE ("pwdLastSet", "0"), // uživatel si musí změnit heslo
