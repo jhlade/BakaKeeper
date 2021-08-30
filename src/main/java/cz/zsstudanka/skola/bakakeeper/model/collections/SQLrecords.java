@@ -19,6 +19,9 @@ public class SQLrecords implements IRecords {
 
     private EBakaSQL sql_table;
 
+    /** seznam obsahuje učitele */
+    private boolean teachers = false;
+
     /**
      * Pole žáka a s ním spjatého primárního zákonného zůástupce.
      */
@@ -94,6 +97,8 @@ public class SQLrecords implements IRecords {
      * @param classTeachersOnly je-li PRAVDA, konstruují se pouze učitelé s aktuálním třídnictvím
      */
     public SQLrecords(boolean classTeachersOnly) {
+
+        this.teachers = true;
 
         // tabulka učitele
         this.sql_table = EBakaSQL.TBL_FAC;
@@ -622,18 +627,37 @@ public class SQLrecords implements IRecords {
             print.append("Seznam obsahuje celkem " + this.data.size() + " položek.\n");
 
             for (Map.Entry<String, DataSQL> recEntry : data.entrySet()) {
-                print.append(recEntry.getKey());
-                print.append(" : ");
 
-                print.append(recEntry.getValue().get(EBakaSQL.F_STU_CLASS.basename()).toString());
-                print.append(" : ");
+                // data učitelů
+                if (this.teachers) {
 
-                print.append(String.format("%02d", Integer.parseInt(recEntry.getValue().get(EBakaSQL.F_STU_CLASS_ID.basename()))));
-                print.append(" : ");
+                    print.append(recEntry.getKey());
+                    print.append(" : ");
 
-                print.append(recEntry.getValue().get(EBakaSQL.F_STU_SURNAME.basename()).toString());
-                print.append(" ");
-                print.append(recEntry.getValue().get(EBakaSQL.F_STU_GIVENNAME.basename()).toString());
+                    print.append(recEntry.getValue().get(EBakaSQL.F_CLASS_LABEL.basename()).toString());
+                    print.append(" : ");
+
+                    print.append(recEntry.getValue().get(EBakaSQL.F_FAC_SURNAME.basename()).toString());
+                    print.append(" ");
+                    print.append(recEntry.getValue().get(EBakaSQL.F_FAC_GIVENNAME.basename()).toString());
+
+                } else {
+                    // data žáků
+
+                    print.append(recEntry.getKey());
+                    print.append(" : ");
+
+                    print.append(recEntry.getValue().get(EBakaSQL.F_STU_CLASS.basename()).toString());
+                    print.append(" : ");
+
+                    print.append(String.format("%02d", Integer.parseInt(recEntry.getValue().get(EBakaSQL.F_STU_CLASS_ID.basename()))));
+                    print.append(" : ");
+
+                    print.append(recEntry.getValue().get(EBakaSQL.F_STU_SURNAME.basename()).toString());
+                    print.append(" ");
+                    print.append(recEntry.getValue().get(EBakaSQL.F_STU_GIVENNAME.basename()).toString());
+
+                }
 
                 print.append("\n");
             }
