@@ -84,7 +84,7 @@ public class BakaUtilsTest {
     @Test
     public void createInitialPassword() {
 
-        int year = BakaUtils.getCurrentClassYear();
+        int year = BakaUtils.getCurrentClassYear() % 100;
 
         assertEquals("No.Ja.03" + String.format("%02d", year), BakaUtils.createInitialPassword("Novák", "Jakub", 2, 1));
         assertEquals("Pr.Sa.24" + String.format("%02d", year), BakaUtils.createInitialPassword("Příkopová", "Šárka Sofie", 3, 27));
@@ -95,7 +95,7 @@ public class BakaUtilsTest {
     @Test
     public void nextPassword() {
 
-        int year = BakaUtils.getCurrentClassYear();
+        int year = BakaUtils.getCurrentClassYear() % 100;
 
         assertEquals("No.Ja.03" + String.format("%02d", year), BakaUtils.nextPassword("Novák", "Jakub", 2, 1, 0));
         assertEquals("Pi.Vo.07" + String.format("%02d", year), BakaUtils.nextPassword("Pivoňka", "Vojtěch", 9, 11, 3));

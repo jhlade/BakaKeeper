@@ -261,7 +261,7 @@ public class BakaUtils {
                 + "."
                 + String.format("%02d", classID ^ (classYear + attempt)) // číslo v tř. výkazu XOR ročník žáka + číslo pokusu
                 + ""
-                + String.format("%02d", getCurrentClassYear());
+                + String.format("%02d", getCurrentClassYear() % 100);
     }
 
     /**
