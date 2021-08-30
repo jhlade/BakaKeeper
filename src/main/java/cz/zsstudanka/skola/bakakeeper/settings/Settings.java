@@ -632,6 +632,16 @@ public class Settings {
     }
 
     /**
+     * Základní řetězec organizační struktury pro učitele, například
+     * OU=Ucitele,OU=Zamestnanci,OU=Uzivatele,OU=Skola,DC=zsstu,DC=local
+     *
+     * @return String základní LDAP řetězec pro učitele
+     */
+    public String getLDAP_baseTeachers() {
+        return this.settings_data.get("ad_base_ucitele");
+    }
+
+    /**
      * Základní řetězec organizační struktury pro vyřazené žáky, například
      * OU=StudiumUkonceno,OU=Zaci,OU=Uzivatele,OU=Skola,DC=zsstu,DC=local
      *
