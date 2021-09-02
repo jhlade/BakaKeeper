@@ -24,9 +24,12 @@ public class KeyStoreManager {
 
     public static Boolean initialize() {
 
+        final String jks_passphrase = new String("BakaKeeper");
+
         try {
             KeyStore jks = KeyStore.getInstance(KeyStore.getDefaultType());
-            jks.load(null, App.PASSPHRASE.toCharArray());
+
+            jks.load(null, jks_passphrase.toCharArray());
             FileOutputStream jksOutputStream = new FileOutputStream(Settings.getInstance().DEFAULT_JKS_FILE);
 
             SocketFactory factory = BakaSSLSocketFactory.getDefault();
@@ -53,7 +56,7 @@ public class KeyStoreManager {
                 return false;
             }
 
-            jks.store(jksOutputStream, App.PASSPHRASE.toCharArray());
+            jks.store(jksOutputStream, jks_passphrase.toCharArray());
             jksOutputStream.close();
 
         } catch (Exception e) {
