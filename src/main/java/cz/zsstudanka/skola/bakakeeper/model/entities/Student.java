@@ -39,7 +39,7 @@ public class Student implements IRecordLDAP, IRecordSQL, IUser {
      * @param dataSQL hrubá data z evidence
      * @param dataLDAP hrubá data z adresáře
      */
-    protected Student(DataSQL dataSQL, DataLDAP dataLDAP) {
+    public Student(DataSQL dataSQL, DataLDAP dataLDAP) {
 
         // parciální konstrukce pro pozdější zpracování
         if (dataSQL == null  || dataLDAP == null) {
