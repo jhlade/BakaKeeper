@@ -28,7 +28,7 @@ import java.util.logging.Logger;
 public class App {
 
     // TODO vývojářský režim - nebude se zapisovat do ostrých dat
-    /** příznak vývoajářského režimu - neprobíhá zápis do ostrých dat */
+    /** příznak vývoajářského režimu - neprobíhá zápis do ostrých dat evidence */
     public static Boolean FLAG_DEVEL = true;
 
     /** příznak inicializace */
@@ -51,7 +51,7 @@ public class App {
         Logger.getLogger("net.tirasa.adsddl.ntsd.SDDL").setLevel(Level.OFF);
 
         if (FLAG_DEVEL) {
-            ReportManager.log(EBakaLogType.LOG_DEVEL, "Je aktivní vývojářský režim. Nebude se zapisovat do ostrých dat.");
+            ReportManager.log(EBakaLogType.LOG_DEVEL, "Je aktivní vývojářský režim. Nebude se zapisovat do ostrých dat evidence.");
         }
 
         // argumenty programu
@@ -249,10 +249,10 @@ public class App {
                 }
             }
 
-            // vývojový test
+            // TODO vývojový test
             if (params.containsKey("test") && FLAG_DEVEL) {
                 System.out.println("====== [ TEST ] ======");
-                Test.test_13();
+                Test.test_16();
                 System.out.println("====== [ /TEST ] ======");
                 return;
             } // test
