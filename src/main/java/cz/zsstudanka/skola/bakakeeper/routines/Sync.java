@@ -85,6 +85,10 @@ public class Sync {
         this.directory = new LDAPrecords(Settings.getInstance().getLDAP_baseStudents(), EBakaLDAPAttributes.OC_USER);
     }
 
+    public LDAPrecords getDirectoryStudents() {
+        return this.directory;
+    }
+
     /**
      * Načtení vyřazených žákovských účtů z adresáře.
      */
@@ -1000,7 +1004,7 @@ public class Sync {
                 DataSQL classTeacher = this.faculty.getBy(EBakaSQL.F_CLASS_LABEL, classLabel);
 
                 // v evidenci je prázdný výsledek = neexistující třída
-                // bez třídního, distribuční sesznam musí být prázdný
+                // bez třídního, distribuční seznam musí být prázdný
                 if (classTeacher == null) {
 
                     // požadavek - zcela prázdný distribuční seznam
