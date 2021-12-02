@@ -16,9 +16,8 @@ import javax.naming.Context;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.*;
-import javax.naming.ldap.Control;
-import javax.naming.ldap.InitialLdapContext;
-import javax.naming.ldap.LdapContext;
+import javax.naming.ldap.*;
+import java.io.IOException;
 import java.util.*;
 
 /**
@@ -30,6 +29,9 @@ public class BakaADAuthenticator {
 
     /** maximální limit pro přejmenování objektu během přesunu */
     private final int MOVE_LIMIT = 99;
+
+    /** stránkování výsledků */
+    private final int PAGE_SIZE = 250;
 
     /** singleton připojení k AD */
     private static BakaADAuthenticator instance = null;
@@ -96,13 +98,14 @@ public class BakaADAuthenticator {
         }
 
         env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
+        env.put("com.sun.jndi.ldap.connect.pool", "true");
         if (Settings.getInstance().useSSL()) {
             env.put(Context.SECURITY_PROTOCOL, "ssl");
             // ověřování certifikátu ve vlasním úložišti klíčů
             env.put("java.naming.ldap.factory.socket", "cz.zsstudanka.skola.bakakeeper.components.BakaSSLSocketFactory");
-            env.put(Context.PROVIDER_URL, "ldaps://" + fqdn + ":636/");
+            env.put(Context.PROVIDER_URL, "ldaps://" + fqdn + ":636/"); // 3269 pro AD GC
         } else {
-            env.put(Context.PROVIDER_URL, "ldap://" + fqdn + "/");
+            env.put(Context.PROVIDER_URL, "ldap://" + fqdn + "/"); // :3268 pro AD GC
         }
         env.put(Context.SECURITY_AUTHENTICATION, "simple");
         env.put(Context.SECURITY_PRINCIPAL, user + "@" + domain);
@@ -229,6 +232,7 @@ public class BakaADAuthenticator {
         DirContext ctxGC = null;
 
         try {
+            byte[] cookie = null;
 
             // LDAP dotaz a výsledky
             String searchFilter = findAND.toString();
@@ -238,6 +242,11 @@ public class BakaADAuthenticator {
                 ctxGC = new InitialDirContext(env);
             } else {
                 ctxGC = new InitialLdapContext(env, null);
+
+                // použití stránkování pro výsledky
+                if (PAGE_SIZE > 0 && !baseOU.equals(EBakaLDAPAttributes.BK_SYMBOL_ROOTDSE.attribute())) {
+                    ((InitialLdapContext) ctxGC).setRequestControls(new Control[]{ new PagedResultsControl(PAGE_SIZE, Control.NONCRITICAL) });
+                }
 
                 // LDAP je MS AD a požaduje se UAC -> bude se číst i NTSD
                 if (Settings.getInstance().isLDAP_MSAD() && Arrays.stream(retAttributes).anyMatch(EBakaLDAPAttributes.UAC.attribute()::equals)) {
@@ -259,61 +268,86 @@ public class BakaADAuthenticator {
             searchCtls.setReturningAttributes(returnedAtts);
             searchCtls.setSearchScope((baseOU.equals(EBakaLDAPAttributes.BK_SYMBOL_ROOTDSE.attribute())) ? SearchControls.OBJECT_SCOPE : SearchControls.SUBTREE_SCOPE);
 
-            // provedení dotazu + výsledky
-            NamingEnumeration<SearchResult> answer = ctxGC.search((baseOU.equals(EBakaLDAPAttributes.BK_SYMBOL_ROOTDSE.attribute())) ? "" : baseOU, searchFilter, searchCtls);
-            while (answer.hasMoreElements()) {
+            // každá stránka
+            do {
+                // provedení dotazu + výsledky
+                NamingEnumeration<SearchResult> answer = ctxGC.search((baseOU.equals(EBakaLDAPAttributes.BK_SYMBOL_ROOTDSE.attribute())) ? "" : baseOU, searchFilter, searchCtls);
+                while (answer.hasMoreElements()) {
 
-                //SearchResult result = (SearchResult) answer.next();
-                SearchResult result = answer.next();
-                Attributes attrs = result.getAttributes();
+                    //SearchResult result = (SearchResult) answer.next();
+                    SearchResult result = answer.next();
+                    Attributes attrs = result.getAttributes();
 
-                // jeden objekt
-                Map objDetails = new HashMap<String, Object>();
+                    // jeden objekt
+                    Map objDetails = new HashMap<String, Object>();
 
-                // atributy výsledku
-                if (attrs != null) {
-                    NamingEnumeration<? extends Attribute> enumeration = attrs.getAll();
+                    // atributy výsledku
+                    if (attrs != null) {
+                        NamingEnumeration<? extends Attribute> enumeration = attrs.getAll();
 
-                    while (enumeration.hasMore()) {
+                        while (enumeration.hasMore()) {
 
-                        // konstrukce atributu
-                        Attribute attr = (Attribute) enumeration.next();
+                            // konstrukce atributu
+                            Attribute attr = (Attribute) enumeration.next();
 
-                        // jeden prvek atributu
-                        if (attr.size() == 1) {
-                            // vložení výsledku
-                            objDetails.put(attr.getID().toString(), (Object) attr.get());
-                        } else {
-                            // pole prvků atributu (skupiny, ...)
-                            ArrayList<Object> retData = new ArrayList<>();
-                            for (int ats = 0; ats < attr.size(); ats++) {
-                                retData.add(attr.get(ats));
+                            // jeden prvek atributu
+                            if (attr.size() == 1) {
+                                // vložení výsledku
+                                objDetails.put(attr.getID().toString(), (Object) attr.get());
+                            } else {
+                                // pole prvků atributu (skupiny, ...)
+                                ArrayList<Object> retData = new ArrayList<>();
+                                for (int ats = 0; ats < attr.size(); ats++) {
+                                    retData.add(attr.get(ats));
+                                }
+
+                                // vložení pole výsledků
+                                objDetails.put(attr.getID().toString(), retData);
                             }
+                        } // jednotlivé atributy
 
-                            // vložení pole výsledků
-                            objDetails.put(attr.getID().toString(), retData);
+                        // modifikace UAC
+                        if (Settings.getInstance().isLDAP_MSAD() && Arrays.stream(retAttributes).anyMatch(EBakaLDAPAttributes.UAC.attribute()::equals)) {
+                            if (BakaSDDLHelper.isUserCannotChangePassword(new SDDL((byte[]) objDetails.get(EBakaLDAPAttributes.NT_SECURITY_DESCRIPTOR.attribute())))) {
+                                // nastavení flagu do UAC; ve výchozím stavu MS AS vždy uvádí 0
+                                objDetails.replace(EBakaLDAPAttributes.UAC.attribute(), String.format("%d", EBakaUAC.PASSWD_CANT_CHANGE.setFlag((String) objDetails.get(EBakaLDAPAttributes.UAC.attribute()).toString())));
+                            }
                         }
-                    } // jednotlivé atributy
 
-                    // modifikace UAC
-                    if (Settings.getInstance().isLDAP_MSAD() && Arrays.stream(retAttributes).anyMatch(EBakaLDAPAttributes.UAC.attribute()::equals)) {
-                        if (BakaSDDLHelper.isUserCannotChangePassword(new SDDL((byte[]) objDetails.get(EBakaLDAPAttributes.NT_SECURITY_DESCRIPTOR.attribute())))) {
-                            // nastavení flagu do UAC; ve výchozím stavu MS AS vždy uvádí 0
-                            objDetails.replace(EBakaLDAPAttributes.UAC.attribute(), String.format("%d", EBakaUAC.PASSWD_CANT_CHANGE.setFlag((String) objDetails.get(EBakaLDAPAttributes.UAC.attribute()).toString())));
-                        }
+                        enumeration.close();
                     }
 
-                    enumeration.close();
+                    objInfo.put(resNum, objDetails);
+                    resNum++;
                 }
 
-                objInfo.put(resNum, objDetails);
-                resNum++;
-            }
+                if (PAGE_SIZE > 0 && !baseOU.equals(EBakaLDAPAttributes.BK_SYMBOL_ROOTDSE.attribute())) {
+                    Control[] controls = ((InitialLdapContext) ctxGC).getResponseControls();
+                    if (controls != null) {
+                        for (Control control : controls) {
+                            // řízení stránkování
+                            if (control instanceof PagedResultsResponseControl) {
+                                // získání cookie další stránky
+                                cookie = ((PagedResultsResponseControl) control).getCookie();
+                            }
+                        }
+                    } // žádné řízení
+                }
+
+                // reaktivace stránkování s novým cookie
+                if (PAGE_SIZE > 0 && !baseOU.equals(EBakaLDAPAttributes.BK_SYMBOL_ROOTDSE.attribute())) {
+                    ((InitialLdapContext) ctxGC).setRequestControls(new Control[]{ new PagedResultsControl(PAGE_SIZE, cookie, Control.CRITICAL) });
+                }
+
+                // není žádná další stránka
+            } while (cookie != null);
 
         } catch (NamingException e) {
             ReportManager.handleException("Hledaný objekt nebylo možné nalézt.", e);
-
             // prázdný výsledek - objekt nenalezen
+            return null;
+        } catch (IOException e) {
+            ReportManager.handleException("Došlo k chybě během stránkování výsledků.", e);
             return null;
         }
 
