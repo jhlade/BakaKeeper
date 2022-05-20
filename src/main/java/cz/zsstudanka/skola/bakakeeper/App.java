@@ -7,12 +7,13 @@ import cz.zsstudanka.skola.bakakeeper.connectors.BakaADAuthenticator;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaSQL;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
+import cz.zsstudanka.skola.bakakeeper.gui.MainWindowFrame;
 import cz.zsstudanka.skola.bakakeeper.routines.Export;
 import cz.zsstudanka.skola.bakakeeper.routines.Sync;
-import cz.zsstudanka.skola.bakakeeper.routines.Test;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.settings.Version;
 
+import javax.swing.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -141,6 +142,12 @@ public class App {
                 return;
             }
 
+            // grafické prostředí
+            if (params.containsKey("gui")) {
+                actionLaunchGUI();
+                return;
+            }
+
             // inicializace nastavení
             if (params.containsKey("init")) {
 
@@ -252,11 +259,22 @@ public class App {
             // TODO vývojový test
             if (params.containsKey("test") && FLAG_DEVEL) {
                 System.out.println("====== [ TEST ] ======");
-                Test.test_16();
+                //Test.test_16();
                 System.out.println("====== [ /TEST ] ======");
                 return;
             } // test
         }
+    }
+
+    private static void actionLaunchGUI() {
+        SwingUtilities.invokeLater(new Runnable() {
+
+            @Override
+            public void run() {
+                new MainWindowFrame().show();
+            }
+
+        });
     }
 
 
