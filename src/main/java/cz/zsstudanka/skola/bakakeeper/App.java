@@ -30,7 +30,7 @@ public class App {
 
     // TODO vývojářský režim - nebude se zapisovat do ostrých dat
     /** příznak vývoajářského režimu - neprobíhá zápis do ostrých dat evidence */
-    public static Boolean FLAG_DEVEL = true;
+    public static Boolean FLAG_DEVEL = false;
 
     /** příznak inicializace */
     public static Boolean FLAG_INIT = false;
@@ -144,7 +144,11 @@ public class App {
 
             // grafické prostředí
             if (params.containsKey("gui")) {
-                actionLaunchGUI();
+                try {
+                    actionLaunchGUI();
+                } catch (Exception e) {
+                    // TODO
+                }
                 return;
             }
 
@@ -266,7 +270,14 @@ public class App {
         }
     }
 
-    private static void actionLaunchGUI() {
+    private static void actionLaunchGUI() throws UnsupportedLookAndFeelException, ClassNotFoundException, InstantiationException, IllegalAccessException {
+        // nativní menu bar na macOS
+        System.setProperty("apple.laf.useScreenMenuBar", "true");
+        System.setProperty("com.apple.mrj.application.apple.menu.about.name", Version.getInstance().getName());
+
+        // rozhraní systému
+        UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+
         SwingUtilities.invokeLater(new Runnable() {
 
             @Override
