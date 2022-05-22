@@ -4,6 +4,11 @@ import cz.zsstudanka.skola.bakakeeper.App;
 import cz.zsstudanka.skola.bakakeeper.gui.mvc.AbstractController;
 import cz.zsstudanka.skola.bakakeeper.gui.mvc.AbstractFrame;
 
+/**
+ * Controller hlavního okna.
+ *
+ * @author Jan Hladěna
+ */
 public class MainWindowController extends AbstractController {
 
     // TODO model hlavního okna

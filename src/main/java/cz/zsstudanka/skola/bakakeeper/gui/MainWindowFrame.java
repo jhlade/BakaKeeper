@@ -1,31 +1,45 @@
 package cz.zsstudanka.skola.bakakeeper.gui;
 
 import cz.zsstudanka.skola.bakakeeper.gui.mvc.AbstractFrame;
-import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.settings.Version;
 
 import javax.swing.*;
 
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
-import static cz.zsstudanka.skola.bakakeeper.gui.mvc.JCFactory.frame;
-import static cz.zsstudanka.skola.bakakeeper.gui.mvc.JCFactory.menuItem;
+import static cz.zsstudanka.skola.bakakeeper.gui.mvc.JavaComponentFactory.frame;
+import static cz.zsstudanka.skola.bakakeeper.gui.mvc.JavaComponentFactory.menuItem;
 
+/**
+ * Hlavní okno GUI.
+ *
+ * @author Jan Hladěna
+ */
 public class MainWindowFrame extends AbstractFrame {
 
     public MainWindowFrame() {
         super();
+
+        // stavový řádek
+        this.frame.add(getView(StatusBarView.class).getContentPane(), BorderLayout.SOUTH);
+        getController(StatusBarController.class).setMessage("Spuštěno: " + Version.getInstance().getName() + " " + Version.getInstance().getVersion());
+        getView(StatusBarView.class).showStatus();
     }
 
     @Override
     protected void registerViews() {
-
+        // stavový řádek
+        views.put(StatusBarView.class, new StatusBarView(this));
     }
 
     @Override
     protected void registerControllers() {
+        // hlavní okno
         controllers.put(MainWindowController.class, new MainWindowController(this));
+        // stavový řádek
+        controllers.put(StatusBarController.class, new StatusBarController(this));
     }
 
     @Override
