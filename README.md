@@ -3,6 +3,9 @@ Synchronizační nástroj evidence žáků v programu Bakaláři
 s uživatelskými účty vedenými v Active Directory. Předpokládá
 se celoškolní použití Office365, ale není to nezbytně nutné.
 
+### Větev GUI – 2022
+* experimentální pokus přinést grafické uživatelské rozhraní
+
 ### Vlastnosti
 * Automatická údržba účtů žáků v Active Directory podle dat
 získaných v evidenci Bakalářů (jména, zařazení do ročníku/třídy
