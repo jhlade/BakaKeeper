@@ -5,7 +5,6 @@ import java.awt.LayoutManager;
 import java.awt.event.ActionListener;
 
 import javax.swing.JButton;
-import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -13,21 +12,15 @@ import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 
-
 /**
- * "Java Component Factory"
- * Soubor statických továren (Factory pattern - kdo nahlas říká slovo "továrnička", nejspíš by zasloužil lopatou nebo cepem do palice)
- * na konkrétní komponenty. Slouží především ke zjednodušení práce s tvobrou GUI, ke zpřehlednění zbytečně zdlouhavého Swingového
- * kódu pro vykreslování a nastavování jednotlivých komponent.
- *
+ * Zjednodušená statická továrna na komponenty.
  *
  * @author Jan Hladěna
- *
  */
-public abstract class JCFactory {
+public abstract class JavaComponentFactory {
 
     /**
-     * Továrna na JFrame - budiž tím zamýšleno hlavní okno obsahující jiné pohledy. Šlo by využít v MDI ke tvorbě podoken.
+     * JFrame pro hlavní okno.
      *
      * @return JFrame
      */
@@ -54,7 +47,7 @@ public abstract class JCFactory {
     }
 
     /**
-     * Zobrazení předaného JFrame
+     * Zobrazení předaného JFrame.
      *
      * @param frame JFrame k zobrazení
      * @return JFrame
@@ -67,7 +60,7 @@ public abstract class JCFactory {
 
 
     /**
-     * Továrna na JPanel
+     * Továrna na JPanel.
      *
      * @param layoutManager Použitý správce rozložení
      * @return JPanel
@@ -83,12 +76,12 @@ public abstract class JCFactory {
     }
 
     /**
-     * Továrna na tlačítko (JButton). Přebírá textový popisek tlačítka a rovnou mapuje jeho actionListener, číhač na událost.
+     * Továrna na tlačítko (JButton). Přebírá textový popisek tlačítka a rovnou mapuje jeho actionListener.
      * Tento Listener může být předán i anonymní vnitřní třídou, nebo může být nulový - v takovém případě nebude vůbec
-     * použit a tlačítko nejspíš nebude dělat vůbec nic.
+     * použit.
      *
      * @param caption Popisek tlačítka
-     * @param actionListener Číhač na událost
+     * @param actionListener Listener tlačítka
      * @return JButton
      */
     public static JButton button(String caption, ActionListener actionListener) {
@@ -109,13 +102,13 @@ public abstract class JCFactory {
     }
 
     /**
-     * Továrna na položku nabídky. Přebírá ukazatel na nabídku, ve které má být umístěna, titulek, volitelnou bublinkovou
-     * nápovědu a volitelný Listener.
+     * Továrna na položku nabídky. Přebírá ukazatel na nabídku, ve které má být umístěna, titulek,
+     * volitelnou bublinkovou nápovědu a volitelný Listener.
      *
      * @param menu Nabídka, na které má být položka zavěšena
      * @param caption Titulek
      * @param tooltip Bublinková nápověda
-     * @param actionListener Číhač na událost
+     * @param actionListener Listener události
      * @return JMenuItem
      */
     public static JMenuItem menuItem(JMenu menu, String caption, String tooltip, ActionListener actionListener) {
@@ -135,7 +128,7 @@ public abstract class JCFactory {
     }
 
     /**
-     * Továrna na popisek
+     * Továrna na popisek.
      *
      * @param caption
      * @return JLabel
@@ -148,14 +141,5 @@ public abstract class JCFactory {
 
         return label;
     }
-
-    //@SuppressWarnings("rawtypes")
-    public static JComboBox comboBox(String[] values) {
-        //@SuppressWarnings({ "unchecked" })
-        JComboBox comboBox = new JComboBox(values);
-
-        return comboBox;
-    }
-
 
 }

@@ -5,7 +5,7 @@ import javax.swing.JFrame;
 import java.util.HashMap;
 import java.util.Map;
 
-import static cz.zsstudanka.skola.bakakeeper.gui.mvc.JCFactory.showFrame;
+import static cz.zsstudanka.skola.bakakeeper.gui.mvc.JavaComponentFactory.showFrame;
 
 /**
  * Generické okno.
@@ -17,7 +17,7 @@ public abstract class AbstractFrame {
     /** okno */
     protected final JFrame frame;
 
-    /** obsah */
+    /** obsah okna */
     protected JComponent cont;
 
     /** pohledy */
@@ -30,6 +30,7 @@ public abstract class AbstractFrame {
      * Generický konstruktor.
      */
     public AbstractFrame() {
+        // registrace řízení a zobrazení
         registerControllers();
         registerViews();
 
