@@ -101,7 +101,7 @@ public class Version {
 
         info.append(name + " " + version);
         if (fullLicense) {
-            info.append(" - " + purpose);
+            info.append("\n" + purpose);
         }
         info.append("\n");
         info.append("Copyright (c) " + year + " " + author + ", " + organization + "\n");
