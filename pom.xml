@@ -13,10 +13,17 @@
     <inceptionYear>2019</inceptionYear>
     <url>https://github.com/jhlade/BakaKeeper</url>
 
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.app.mainClass>cz.zsstudanka.skola.bakakeeper.App</project.app.mainClass>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+    </properties>
+
     <packaging>jar</packaging>
 
     <build>
-        <finalName>BakaKeeper</finalName>
+        <finalName>${project.name}</finalName>
 
         <plugins>
 
@@ -59,8 +66,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.8.1</version>
                 <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
+                    <source>${maven.compiler.source}</source>
+                    <target>${maven.compiler.target}</target>
                 </configuration>
             </plugin>
 
@@ -74,7 +81,7 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>cz.zsstudanka.skola.bakakeeper.App</mainClass>
+                            <mainClass>${project.app.mainClass}</mainClass>
                         </manifest>
                         <manifestEntries>
                             <Built-By>${user.name}</Built-By>
@@ -90,14 +97,7 @@
 
     </build>
 
-    <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
-    </properties>
-
     <dependencies>
-
         <dependency>
             <groupId>com.sun.mail</groupId>
             <artifactId>javax.mail</artifactId>
