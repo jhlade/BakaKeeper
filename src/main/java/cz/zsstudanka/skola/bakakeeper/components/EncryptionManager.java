@@ -41,7 +41,7 @@ public class EncryptionManager {
     private static final int AES_BITS = 256;
 
     /** počet iterací */
-    private static final int AES_ITER = 65536;
+    private static final int AES_ITER = 131072;
 
     /**
      * Poskytovaná šifra.
