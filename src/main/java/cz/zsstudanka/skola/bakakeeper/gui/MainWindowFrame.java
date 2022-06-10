@@ -62,8 +62,7 @@ public class MainWindowFrame extends AbstractFrame {
         JMenuItem menuHelpAbout = menuItem(menuHelp, "O programu", "Informace o programu", new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                // TODO vlastní ikona
-                JOptionPane.showMessageDialog(frame, Version.getInstance().getInfo(true), "O programu " + Version.getInstance().getName(), INFORMATION_MESSAGE, null);
+                JOptionPane.showMessageDialog(frame, Version.getInstance().getInfo(true), "O programu " + Version.getInstance().getName(), INFORMATION_MESSAGE, new ImageIcon(getClass().getResource("/gui/studanka.64x64.png")));
             }
         });
 
