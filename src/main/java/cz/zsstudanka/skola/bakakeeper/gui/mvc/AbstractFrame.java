@@ -18,7 +18,7 @@ public abstract class AbstractFrame {
     protected final JFrame frame;
 
     /** obsah okna */
-    protected JComponent cont;
+    protected JComponent content;
 
     /** pohledy */
     protected final Map<Class<? extends AbstractView<? extends JComponent>>, AbstractView<? extends JComponent>> views = new HashMap<Class<? extends AbstractView<? extends JComponent>>, AbstractView<? extends JComponent>>();
@@ -45,22 +45,57 @@ public abstract class AbstractFrame {
         showFrame(this.frame);
     }
 
+    /**
+     * Registrace pohledů. Implementuje se vložením do mapy "views".
+     */
     protected abstract void registerViews();
 
+    /**
+     * Registrace řadičů. Implementuje se vložením do mapy "controllers".
+     */
     protected abstract void registerControllers();
 
+    /**
+     * Provedení vykreslení okna.
+     *
+     * @return obsah okno
+     */
     protected abstract JFrame layout();
 
+    /**
+     * Získání konkrétního pohledu z registrovaných pohledů.
+     *
+     * @param viewClass třída pohledu
+     * @return pohled
+     * @param <View> instance pohledu
+     */
     public <View extends AbstractView<? extends JComponent>> View getView(Class<View> viewClass) {
         return (View) views.get(viewClass);
     }
 
+    /**
+     * Získání konkrétního řadiče z registrovaných řadičů.
+     *
+     * @param controllerClass třída řadiče
+     * @return řadič
+     * @param <Controller> instance řadiče
+     */
     public <Controller extends AbstractController> Controller getController(Class<Controller> controllerClass) {
         return (Controller) controllers.get(controllerClass);
     }
 
+    /**
+     * Získání obsahu hlavní komponenty okna.
+     *
+     * @return obsah okna
+     */
     public abstract JComponent getContent();
 
+    /**
+     * Nastavení obsahu hlavní komponenty okna.
+     *
+     * @param content obsah
+     */
     public abstract void setContent(JComponent content);
 
 }

@@ -1,7 +1,6 @@
 package cz.zsstudanka.skola.bakakeeper.gui.mvc;
 
-import java.awt.BorderLayout;
-import java.awt.LayoutManager;
+import java.awt.*;
 import java.awt.event.ActionListener;
 
 import javax.swing.JButton;
@@ -22,7 +21,7 @@ public abstract class JavaComponentFactory {
     /**
      * JFrame pro hlavní okno.
      *
-     * @return JFrame
+     * @return nová instance JFrame
      */
     public static JFrame frame(String title, JComponent contentPane) {
         // základní JFrame
@@ -50,7 +49,7 @@ public abstract class JavaComponentFactory {
      * Zobrazení předaného JFrame.
      *
      * @param frame JFrame k zobrazení
-     * @return JFrame
+     * @return zobrazené JFrame
      */
     public static JFrame showFrame(JFrame frame) {
         // zviditelnění
@@ -63,7 +62,7 @@ public abstract class JavaComponentFactory {
      * Továrna na JPanel.
      *
      * @param layoutManager Použitý správce rozložení
-     * @return JPanel
+     * @return nová instance JPanel
      */
     public static JPanel panel(LayoutManager layoutManager) {
         JPanel panel = new JPanel();
@@ -82,7 +81,7 @@ public abstract class JavaComponentFactory {
      *
      * @param caption Popisek tlačítka
      * @param actionListener Listener tlačítka
-     * @return JButton
+     * @return nová instance JButton
      */
     public static JButton button(String caption, ActionListener actionListener) {
         JButton button = new JButton();
@@ -109,7 +108,7 @@ public abstract class JavaComponentFactory {
      * @param caption Titulek
      * @param tooltip Bublinková nápověda
      * @param actionListener Listener události
-     * @return JMenuItem
+     * @return nová instance JMenuItem
      */
     public static JMenuItem menuItem(JMenu menu, String caption, String tooltip, ActionListener actionListener) {
         JMenuItem menuItem = new JMenuItem(caption);
@@ -130,16 +129,30 @@ public abstract class JavaComponentFactory {
     /**
      * Továrna na popisek.
      *
-     * @param caption
-     * @return JLabel
+     * @param caption popisek
+     * @param bold použití tučného písma
+     * @return nová instance JLabel
      */
-    public static JLabel label(String caption) {
+    public static JLabel label(String caption, boolean bold) {
         JLabel label = new JLabel();
 
         // popisek
         if (caption != null) label.setText(caption);
 
+        if (bold && caption != null) {
+            label.setFont(label.getFont().deriveFont(label.getFont().getStyle() | Font.BOLD));
+        }
+
         return label;
     }
 
+    /**
+     * Továrna na běžný popisek
+     *
+     * @param caption popisek
+     * @return
+     */
+    public static JLabel label(String caption) {
+        return label(caption, false);
+    }
 }
