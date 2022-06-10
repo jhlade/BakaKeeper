@@ -4,6 +4,7 @@ import cz.zsstudanka.skola.bakakeeper.App;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaEvents;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaVerbosityLevel;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 
 import java.io.FileWriter;
@@ -68,6 +69,12 @@ public class ReportManager {
         messageBuilder.append(message);
 
         // výpis na standardní výstupy
+        if (
+            type.verbosityLevel().equals(EBakaVerbosityLevel.NORMAL)
+        || (type.verbosityLevel().equals(EBakaVerbosityLevel.VERBOSE) && App.FLAG_VERBOSE)
+        || (type.verbosityLevel().equals(EBakaVerbosityLevel.DEBUG) && App.FLAG_DEBUG)
+        || (type.verbosityLevel().equals(EBakaVerbosityLevel.DEVEL) && App.FLAG_DEVEL)
+        )
         if (type.isError()) {
             System.err.print(messageBuilder.toString());
         } else {
