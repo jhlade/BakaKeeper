@@ -257,6 +257,9 @@ public class SQLrecords implements IRecords {
         populate();
     }
 
+    /**
+     * Naplnění vnitřních struktur daty pomocí předpřipraveného dotazu.
+     */
     private void populate() {
         // připojení k databázi
         BakaSQL.getInstance().connect();

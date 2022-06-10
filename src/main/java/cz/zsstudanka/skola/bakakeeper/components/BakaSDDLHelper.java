@@ -53,12 +53,10 @@ public class BakaSDDLHelper extends SDDLHelper {
                             && ace.getSid().getSubAuthorities().size() == 1 // jedna sub-autorita
             ) {
                 if (ace.getType().equals(AceType.ACCESS_ALLOWED_OBJECT_ACE_TYPE)) {
-                    // System.out.println("(OA): " + ace.getSid().toString());
                     currentObjectAllowAces.add(ace);
                 }
 
                 if (ace.getType().equals(AceType.ACCESS_DENIED_OBJECT_ACE_TYPE)) {
-                    // System.out.println("(OD): " + ace.getSid().toString());
                     currentObjectDenyAces.add(ace);
                 }
 
@@ -104,13 +102,11 @@ public class BakaSDDLHelper extends SDDLHelper {
             ) {
                 // Everyone
                 if (everyone == null && ace.getSid().toString().equals(SID_EVERYONE)) {
-                    // System.out.println("Everyone ACE: " + ace.toString());
                     everyone = ace;
                 }
 
                 // Self
                 if (self == null && ace.getSid().toString().equals(SID_SELF)) {
-                    // System.out.println("Self ACE: " + ace.toString());
                     self = ace;
                 }
 

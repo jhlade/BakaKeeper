@@ -3,6 +3,8 @@ package cz.zsstudanka.skola.bakakeeper.utils;
 import java.text.Normalizer;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Pomocné statické nástroje pro úpravu a validaci dat.
@@ -78,7 +80,7 @@ public class BakaUtils {
     public static String create4p2(String displayName) {
         StringBuilder login = new StringBuilder();
 
-        String[] parts = BakaUtils.removeAccents(displayName.toLowerCase()).split(" ");
+        String[] parts = removeAccents(displayName.toLowerCase()).split(" ");
 
         if (parts.length == 1 || parts[0].length() < 4 || displayName.contains("-")) {
             login.append(parts[0]);
@@ -116,6 +118,40 @@ public class BakaUtils {
     }
 
     /**
+     * Rozklad jména na strojově zpracovatelné části.
+     *
+     * @param surname příjmení
+     * @param givenName jméno
+     * @return jednotlivé části "sn" a "gn" + "snn" pro normalizované příjmení použitelné pro tvorbu hesla
+     */
+    private static Map<String, String[]> createBaseNameParts(String surname, String givenName) {
+        String[] snParts = surname.replace("-", " ")
+                .replaceAll("\\s+", " ")
+                .replaceFirst("^(v|V)(a|o)n ", "$1$2n")
+                .replaceFirst("^(d|D)(a|e|i) ", "$1$2")
+                .replaceFirst("^(a|A)l ", "$1l")
+                .split(" ");
+
+        String[] snNormalized = surname.replace("-", " ")
+                .replaceAll("\\s+", " ")
+                .replaceAll("^(d|D)(a|e|i) ", "")
+                .replaceAll("(v|V)(a|o)n ", "")
+                .replaceAll("(a|A)l ", "")
+                .split(" ");
+
+        String[] gnParts = givenName.replace("-", " ")
+                .replaceAll("\\s+", " ")
+                .split(" ");
+
+        HashMap<String, String[]> baseParts = new HashMap<>();
+        baseParts.put("sn", snParts);
+        baseParts.put("snn", snNormalized);
+        baseParts.put("gn", gnParts);
+
+        return baseParts;
+    }
+
+    /**
      * Vytvoření plného UPN pro zadané jméno, příjmení a číslo pokusu.
      *
      * @param surname příjmení
@@ -125,19 +161,8 @@ public class BakaUtils {
      * @return UPN v zadaném pokusu
      */
     public static String createUPNfromName(String surname, String givenName, String domain, Integer attempt) {
-
-        String[] snParts = surname.replace("-", " ")
-                .replaceAll("\\s+", " ")
-                .replaceFirst("^(v|V)(a|o)n ", "$1$2n")
-                .replaceFirst("^(d|D)(a|e|i) ", "$1$2")
-                .replaceFirst("^(a|A)l ", "$1l")
-                .split(" ");
-
-        String[] gnParts = givenName.replace("-", " ")
-                .replaceAll("\\s+", " ")
-                .split(" ");
-
-        return removeAccents(snParts[0]).toLowerCase() + "." + removeAccents(gnParts[0]).toLowerCase() + ((attempt == 0) ? "" : attempt.toString()) + "@" + domain;
+        Map<String, String[]> base = createBaseNameParts(surname, givenName);
+        return removeAccents(base.get("sn")[0]).toLowerCase() + "." + removeAccents(base.get("gn")[0]).toLowerCase() + ((attempt == 0) ? "" : attempt.toString()) + "@" + domain;
     }
 
     /**
@@ -166,18 +191,8 @@ public class BakaUtils {
         // maximální limit délky řetězce hodnoty atributu sAMAccountName v AD - výchozí je 20 znaků
         final int MAX_SAM_LIMIT = 20;
 
-        String[] snParts = surname.replace("-", " ")
-                .replaceAll("\\s+", " ")
-                .replaceFirst("^(v|V)(a|o)n ", "$1$2n")
-                .replaceFirst("^(d|D)(a|e|i) ", "$1$2")
-                .replaceFirst("^(a|A)l ", "$1l")
-                .split(" ");
-
-        String[] gnParts = givenName.replace("-", " ")
-                .replaceAll("\\s+", " ")
-                .split(" ");
-
-        String base = removeAccents(snParts[0]).toLowerCase() + "." + removeAccents(gnParts[0]).toLowerCase();
+        Map<String, String[]> baseData = createBaseNameParts(surname, givenName);
+        String base = removeAccents(baseData.get("sn")[0]).toLowerCase() + "." + removeAccents(baseData.get("gn")[0]).toLowerCase();
 
         if (base.length() <= MAX_SAM_LIMIT - ((attempt == 0) ? 0 : String.format("%d", attempt).length())) {
             return base + ((attempt == 0) ? "" : attempt.toString());
@@ -249,15 +264,12 @@ public class BakaUtils {
      * @return heslo vytvořené v daném pokusu
      */
     public static String nextPassword(String surname, String givenName, Integer classYear, Integer classID, Integer attempt) {
-        return BakaUtils.removeAccents(surname
-                .replace("-", " ")
-                .replaceAll("\\s+", " ")
-                .replaceAll("^(d|D)(a|e|i) ", "")
-                .replaceAll("(v|V)(a|o)n ", "")
-                .replaceAll("(a|A)l ", "")
-                .substring(0, 2)) // příjmení
+
+        Map<String, String[]> base = createBaseNameParts(surname, givenName);
+
+        return removeAccents(base.get("snn")[0].substring(0, 2))
                 + "."
-                + BakaUtils.removeAccents(givenName.substring(0, 2)) // jméno
+                + removeAccents(base.get("gn")[0].substring(0, 2))
                 + "."
                 + String.format("%02d", classID ^ (classYear + attempt)) // číslo v tř. výkazu XOR ročník žáka + číslo pokusu
                 + ""
