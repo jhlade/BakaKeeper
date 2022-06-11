@@ -42,6 +42,10 @@ public abstract class JavaComponentFactory {
         // velikost okna 980x650
         frame.setSize(980, 650);
 
+        // zarovnání okna na střed obrazovky
+        frame.setLocationRelativeTo(null);
+        frame.pack();
+
         return frame;
     }
 
