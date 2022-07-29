@@ -9,7 +9,6 @@ import cz.zsstudanka.skola.bakakeeper.connectors.BakaSQL;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.routines.Export;
 import cz.zsstudanka.skola.bakakeeper.routines.Sync;
-import cz.zsstudanka.skola.bakakeeper.routines.Test;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.settings.Version;
 
@@ -17,8 +16,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Nástroj pro synchronizaci záznamů z Bakalářů a informacemi v Active Directory.
@@ -27,9 +24,8 @@ import java.util.logging.Logger;
  */
 public class App {
 
-    // TODO vývojářský režim - nebude se zapisovat do ostrých dat
     /** příznak vývoajářského režimu - neprobíhá zápis do ostrých dat evidence */
-    public static Boolean FLAG_DEVEL = true;
+    public static Boolean FLAG_DEVEL = false;
 
     /** příznak inicializace */
     public static Boolean FLAG_INIT = false;
@@ -47,8 +43,6 @@ public class App {
      * @param args argumenty viz --help
      */
     public static void main(String[] args) {
-
-        Logger.getLogger("net.tirasa.adsddl.ntsd.SDDL").setLevel(Level.OFF);
 
         if (FLAG_DEVEL) {
             ReportManager.log(EBakaLogType.LOG_DEVEL, "Je aktivní vývojářský režim. Nebude se zapisovat do ostrých dat evidence.");
@@ -252,7 +246,7 @@ public class App {
             // TODO vývojový test
             if (params.containsKey("test") && FLAG_DEVEL) {
                 System.out.println("====== [ TEST ] ======");
-                Test.test_16();
+                //Test.test_16();
                 System.out.println("====== [ /TEST ] ======");
                 return;
             } // test
@@ -443,19 +437,17 @@ public class App {
     }
 
     /**
-     * TODO Identifikace účtu v SQL/AD.
+     * Identifikace účtu žáka.
      *
      * @param login UPN účtu
      *
      */
     public static void actionIdentify(String login) {
         Export.identify(login);
-        // TODO - údaj SAM/UPN/mail
-        // vyhledat v AD, určit typ, pokud žák - údaje z Bakalářů (+existenci kontaktu na ZZ)
     }
 
     /**
-     * TODO Reset hesla jednoho žáka
+     * TODO Reset hesla jednoho účtu
      *
      * @param login
      */
