@@ -147,7 +147,7 @@ public class App {
                 try {
                     actionLaunchGUI();
                 } catch (Exception e) {
-                    // TODO
+                    ReportManager.getInstance().handleException("Nebylo možné spustit grafické prostředí.", e);
                 }
                 return;
             }
