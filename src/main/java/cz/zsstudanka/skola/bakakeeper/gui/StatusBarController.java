@@ -13,6 +13,9 @@ public class StatusBarController extends AbstractController {
     /** zpráva stavu */
     private String message = "";
 
+    /** zámek nastavení */
+    private boolean statusLock = true;
+
     /**
      * Konstruktor obecného řadiče.
      *
@@ -38,5 +41,37 @@ public class StatusBarController extends AbstractController {
      */
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    /**
+     * Nastavení je zamčeno.
+     *
+     * @return příznak uzamčení
+     */
+    public boolean isLocked() {
+        return this.statusLock;
+    }
+
+    /**
+     * Uzamčení stavového zámku.
+     */
+    public void settingsLock() {
+        setStatusLock(true);
+    }
+
+    /**
+     * Odemčení stavového zámku.
+     */
+    public void settingsUnlock() {
+        setStatusLock(false);
+    }
+
+    /**
+     * Natsavení stavového zámku.
+     *
+     * @param lock příznak uzamčení
+     */
+    private void setStatusLock(boolean lock) {
+        this.statusLock = lock;
     }
 }

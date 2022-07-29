@@ -1,6 +1,7 @@
 package cz.zsstudanka.skola.bakakeeper.gui;
 
-import cz.zsstudanka.skola.bakakeeper.App;
+import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.gui.mvc.AbstractController;
 import cz.zsstudanka.skola.bakakeeper.gui.mvc.AbstractFrame;
 
@@ -11,10 +12,20 @@ import cz.zsstudanka.skola.bakakeeper.gui.mvc.AbstractFrame;
  */
 public class MainWindowController extends AbstractController {
 
-    // TODO model hlavního okna
-
     public MainWindowController(AbstractFrame mainFrame) {
         super(mainFrame);
+    }
+
+    /**
+     * Okamžité zobrazení zprávy ve stavovém řádku.
+     *
+     * @param message nová stavová zpráva
+     */
+    public void updateGlobalStatusMessage(String message) {
+        getMainFrame().getController(StatusBarController.class).setMessage(message);
+        getMainFrame().getView(StatusBarView.class).showStatus();
+
+        ReportManager.log(EBakaLogType.LOG_VERBOSE, "[ GUI ] Status: " + message);
     }
 
     /**
