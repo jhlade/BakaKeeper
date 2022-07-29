@@ -8,6 +8,7 @@ import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaSQL;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.routines.Export;
+import cz.zsstudanka.skola.bakakeeper.routines.Manipulation;
 import cz.zsstudanka.skola.bakakeeper.routines.Sync;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.settings.Version;
@@ -452,6 +453,17 @@ public class App {
      * @param login
      */
     public static void actionResetPassword(String login) {
+
+        ReportManager.logWait(EBakaLogType.LOG_STDOUT, "Probíhá pokus o reset hesla účtu " + login);
+
+        if (Manipulation.resetPassword(login)) {
+            ReportManager.logResult(EBakaLogType.LOG_OK);
+            // TODO + hlášení
+        } else {
+            ReportManager.logResult(EBakaLogType.LOG_ERR);
+        }
+
+
         // TODO - SAM/UPN/mail? --> UPN
         // 1) objekt musí být aktivní žák (existuje v AD a v Bakalářích), TODO možná i personál/pouze učitelé?
         // 2) provede se nastavení hesla do původní podoby (Pr.Jm.##yy)
