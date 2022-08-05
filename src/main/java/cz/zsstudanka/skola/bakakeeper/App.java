@@ -28,6 +28,9 @@ public class App {
     /** příznak vývoajářského režimu - neprobíhá zápis do ostrých dat evidence */
     public static Boolean FLAG_DEVEL = false;
 
+    /** příznak pro nezapisování žádných ostrých dat */
+    public static Boolean FLAG_DRYRUN = false;
+
     /** příznak inicializace */
     public static Boolean FLAG_INIT = false;
 
@@ -44,10 +47,6 @@ public class App {
      * @param args argumenty viz --help
      */
     public static void main(String[] args) {
-
-        if (FLAG_DEVEL) {
-            ReportManager.log(EBakaLogType.LOG_DEVEL, "Je aktivní vývojářský režim. Nebude se zapisovat do ostrých dat evidence.");
-        }
 
         // argumenty programu
         final Map<String, List<String>> params = new HashMap<>();
@@ -84,6 +83,19 @@ public class App {
         if (params.size() == 0) {
             actionPrintRun();
         } else {
+
+            // přepnutí do vývojového režimu
+            if (params.containsKey("develmode")) {
+                FLAG_DEVEL = true;
+                // TODO změna hlášení
+                ReportManager.log(EBakaLogType.LOG_DEVEL, "Je aktivní vývojový režim. Nebude se zapisovat do ostrých dat evidence.");
+            }
+
+            // TODO - nezapisování ostrých dat
+            if (params.containsKey("dryrun")) {
+                FLAG_DRYRUN = true;
+                // TODO - hlášení + implementace
+            }
 
             // společná nastavení - podrobný režim
             if (params.containsKey("verbose")) {
@@ -174,7 +186,7 @@ public class App {
                 return;
             }
 
-            // vývojářský režim - propagace do globálního nastavení
+            // vývojový režim - propagace do globálního nastavení
             Settings.getInstance().setDevelMode(FLAG_DEVEL);
 
             /* jednotlivé rutiny */
