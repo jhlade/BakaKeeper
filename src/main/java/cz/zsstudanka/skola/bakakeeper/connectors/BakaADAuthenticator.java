@@ -271,7 +271,7 @@ public class BakaADAuthenticator {
             // každá stránka
             do {
                 // provedení dotazu + výsledky
-                NamingEnumeration<SearchResult> answer = ctxGC.search((baseOU.equals(EBakaLDAPAttributes.BK_SYMBOL_ROOTDSE.attribute())) ? "" : baseOU, searchFilter, searchCtls);
+                final NamingEnumeration<SearchResult> answer = ctxGC.search((baseOU.equals(EBakaLDAPAttributes.BK_SYMBOL_ROOTDSE.attribute())) ? "" : baseOU, searchFilter, searchCtls);
                 while (answer.hasMoreElements()) {
 
                     //SearchResult result = (SearchResult) answer.next();
@@ -321,8 +321,9 @@ public class BakaADAuthenticator {
                     resNum++;
                 }
 
+                // řízení stránky
                 if (PAGE_SIZE > 0 && !baseOU.equals(EBakaLDAPAttributes.BK_SYMBOL_ROOTDSE.attribute())) {
-                    Control[] controls = ((InitialLdapContext) ctxGC).getResponseControls();
+                    final Control[] controls = ((InitialLdapContext) ctxGC).getResponseControls();
                     if (controls != null) {
                         for (Control control : controls) {
                             // řízení stránkování
@@ -341,6 +342,8 @@ public class BakaADAuthenticator {
 
                 // není žádná další stránka
             } while (cookie != null);
+
+            ctxGC.close();
 
         } catch (NamingException e) {
             ReportManager.handleException("Hledaný objekt nebylo možné nalézt.", e);
