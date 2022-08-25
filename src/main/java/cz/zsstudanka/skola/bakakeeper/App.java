@@ -214,12 +214,6 @@ public class App {
                 return;
             }
 
-            // kontrola synchronizace TODO bude nahrazeno jako "status"
-            if (params.containsKey("checksync")) {
-                Sync.actionCheckSync();
-                return;
-            } // checksync
-
             // synchronizace
             if (params.containsKey("sync")) {
                 Sync.actionSync();
@@ -253,6 +247,24 @@ public class App {
                     actionResetPassword(params.get("reset").get(0));
                 } else {
                     ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný argument -reset. (Použití: -reset novak.jan)");
+                }
+            }
+
+            // rychlá sestava
+            if (params.containsKey("report")) {
+                if (params.get("report").size() == 1) {
+                    Export.genericReport(params.get("report").get(0), false);
+                } else {
+                    ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný argument -report. (Použití: -report 1.A)");
+                }
+            }
+
+            // rychlá sestava s resetem hesel
+            if (params.containsKey("resetreport")) {
+                if (params.get("resetreport").size() == 1) {
+                    Export.genericReport(params.get("resetreport").get(0), true);
+                } else {
+                    ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný argument -resetreport. (Použití: -resetreport 1.A)");
                 }
             }
 

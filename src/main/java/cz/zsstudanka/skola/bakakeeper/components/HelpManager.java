@@ -56,6 +56,15 @@ public class HelpManager {
         helpMessage.append("\t\t[--verbose]\tladící informace");
         helpMessage.append("\n");
 
+        helpMessage.append("\n");
+        helpMessage.append("--report <čárkami oddělený seznam ročníků, tříd nebo uživatelských jmen>\n\t\tOdešle PDF" +
+                "sestavu o současném stavu přihlašovacích údajů\n\t\ttřídnímu učiteli a správci systému.");
+        helpMessage.append("\n");
+        helpMessage.append("\t\t[-passphrase heslo ke konfiguraci]");
+        helpMessage.append("\n");
+        helpMessage.append("\t\t[--verbose]\tladící informace");
+        helpMessage.append("\n");
+
         if (Settings.getInstance().beVerbose()) {
             helpMessage.append("\n");
             helpMessage.append("--id uzivatelske.jmeno\n\t\tIdentifikace účtu uživatele.");
@@ -67,6 +76,16 @@ public class HelpManager {
 
             helpMessage.append("\n");
             helpMessage.append("--reset uzivatelske.jmeno\n\t\tProvede reset hesla uživatele.");
+            helpMessage.append("\n");
+            helpMessage.append("\t\t[-passphrase heslo ke konfiguraci]");
+            helpMessage.append("\n");
+            helpMessage.append("\t\t[--verbose]\tladící informace");
+            helpMessage.append("\n");
+
+            helpMessage.append("\n");
+            helpMessage.append("--resetreport <čárkami oddělený seznam ročníků, tříd nebo uživatelských jmen>\n\t\tProvede" +
+                    "reset hesel zvolených uživatelů a odešle PDF" +
+                    "sestavu\n\t\to stavu přihlašovacích údajů třídnímu učiteli a správci systému.");
             helpMessage.append("\n");
             helpMessage.append("\t\t[-passphrase heslo ke konfiguraci]");
             helpMessage.append("\n");
