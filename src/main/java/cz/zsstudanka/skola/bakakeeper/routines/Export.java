@@ -2,15 +2,21 @@ package cz.zsstudanka.skola.bakakeeper.routines;
 
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaADAuthenticator;
+import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaSQL;
+import cz.zsstudanka.skola.bakakeeper.model.collections.LDAPrecords;
 import cz.zsstudanka.skola.bakakeeper.model.collections.SQLrecords;
+import cz.zsstudanka.skola.bakakeeper.model.entities.DataLDAP;
 import cz.zsstudanka.skola.bakakeeper.model.entities.DataSQL;
+import cz.zsstudanka.skola.bakakeeper.model.entities.Student;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
+import cz.zsstudanka.skola.bakakeeper.settings.Version;
 import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.text.SimpleDateFormat;
@@ -22,87 +28,6 @@ import java.util.*;
  * @author Jan Hladěna
  */
 public class Export {
-
-    /*
-    public static void exportStudentCSVdata(String outFile) {
-
-        Settings.getInstance().load();
-
-        StringBuilder outputBuffer = new StringBuilder();
-        // TODO (zkontrolovat) header
-        outputBuffer.append("INTERN_KOD;ROCNIK;TRIDA;C_TR_VYK;PRIJMENI;JMENO;AD_LOGIN;AD_EMAIL;AD_RPWD;EMAIL;ZZ_KOD;ZZ_JMENO;ZZ_PRIJMENI;ZZ_TELEFON;ZZ_EMAIL");
-        outputBuffer.append("\n");
-
-        // připojení k SQL serveru
-        BakaSQL.getInstance().connect();
-
-        for (int rocnik = 1; rocnik <= 9; rocnik++) {
-            for (char trida = 'A'; trida <= 'E'; trida++) {
-
-                // aktuální třída
-                Trida tmpTrida = new Trida(rocnik, trida);
-                tmpTrida.populate();
-
-                if (Settings.getInstance().beVerbose()) {
-                    System.err.println("[ INFO ] Exportuje se třída " + tmpTrida.getDisplayName() + ".");
-                }
-
-                // iterace
-                while (tmpTrida.getZaci().iterator().hasNext()) {
-
-                    Zak tmpZak = tmpTrida.getZaci().next();
-
-                    outputBuffer.append("\"" + tmpZak.getIntern_kod() + "\"");
-                    outputBuffer.append(";");
-                    outputBuffer.append("\"" + tmpZak.getRocnik() + "\"");
-                    outputBuffer.append(";");
-                    outputBuffer.append("\"" + tmpZak.getPismenoTridy() + "\"");
-                    outputBuffer.append(";");
-                    outputBuffer.append("\"" + tmpZak.getCTrVyk() + "\"");
-                    outputBuffer.append(";");
-                    outputBuffer.append("\"" + tmpZak.getPrijmeni() + "\"");
-                    outputBuffer.append(";");
-                    outputBuffer.append("\"" + tmpZak.getJmeno() + "\"");
-                    outputBuffer.append(";");
-
-                    if (tmpZak.findByData()) {
-                        // AD LOGIN
-                        outputBuffer.append("\"" + tmpZak.getADLogin() + "\"");
-                        outputBuffer.append(";");
-                        // AD EMAIL
-                        outputBuffer.append("\"" + tmpZak.getADEmail() + "\"");
-                        outputBuffer.append(";");
-                    } else {
-                        // AD LOGIN
-                        outputBuffer.append("\"" + "NULL" + "\"");
-                        outputBuffer.append(";");
-                        // AD EMAIL
-                        outputBuffer.append("\"" + "NULL" + "\"");
-                        outputBuffer.append(";");
-                    }
-
-                    outputBuffer.append("\"" + tmpZak.getRPwd() + "\"");
-                    outputBuffer.append(";");
-
-                    outputBuffer.append("\"" + tmpZak.getBakaEmail() + "\"");
-                    outputBuffer.append(";");
-                    outputBuffer.append("\"" + tmpZak.getZakonnyZastupce().getZZ_kod() + "\"");
-                    outputBuffer.append(";");
-                    outputBuffer.append("\"" + tmpZak.getZakonnyZastupce().getJmeno() + "\"");
-                    outputBuffer.append(";");
-                    outputBuffer.append("\"" + tmpZak.getZakonnyZastupce().getPrijmeni() + "\"");
-                    outputBuffer.append(";");
-                    outputBuffer.append("\"" + tmpZak.getZakonnyZastupce().getTelefon() + "\"");
-                    outputBuffer.append(";");
-                    outputBuffer.append("\"" + tmpZak.getZakonnyZastupce().getEmail() + "\"");
-                    outputBuffer.append("\n");
-                }
-            }
-        }
-
-
-
-    }*/
 
     /**
      * Export žákovských informací ve formě CSV.
@@ -248,6 +173,280 @@ public class Export {
         } else {
             ReportManager.log(EBakaLogType.LOG_ERR, "Uživatel se zadaným UPN nebyl nalezen.");
         }
+    }
+
+    /**
+     * Odešle LuaLaTeXem generované PDF se současným stavem dat.
+     *
+     * @param query dotazované objekty (ročník, třída, UPN žáka - seznam oddělený čárkami)
+     * @param resetPassword provede okamžitý reset hesla nad danými objekty
+     */
+    public static void genericReport(String query, boolean resetPassword) {
+
+        // zpracovávané celé třídy
+        ArrayList<String> classes = new ArrayList<>();
+
+        // samostatní žáci
+        ArrayList<String> students = new ArrayList<>();
+
+        // zpracování dotazu
+        String[] queries = query.split(",");
+
+        for (String q : queries) {
+
+            // vše
+            if (q.length() == 1 && q.equals("*")) {
+                for (int yr = 1; yr <= 9; yr++) {
+                    for (char letter = 'A'; letter <= 'E'; letter++) {
+                        if (!classes.contains(yr + "." + letter)) {
+                            classes.add(yr + "." + letter);
+                        }
+                    }
+                }
+                break;
+            }
+
+            // ročník
+            if (q.length() == 1 && q.matches("[1-9]")) {
+                for (char letter = 'A'; letter <= 'E'; letter++) {
+                    classes.add(q + "." + letter);
+                }
+            }
+
+            // třída
+            if (q.length() == 3 && q.matches("[1-9]\\.[a-eA-E]") ) {
+                if (!classes.contains(q.toUpperCase())) {
+                    classes.add(q.toUpperCase());
+                }
+            }
+
+            // jeden žák
+            if (q.length() > 3 && q.contains(".")) {
+                if (!students.contains(q.toLowerCase())) {
+                    students.add(q.toLowerCase());
+                }
+            }
+        }
+
+        // abecední seřazení seznamů
+        Collections.sort(classes);
+        Collections.sort(students);
+
+        // sestavy <třída, TeX data>
+        Map<String, String> reports = new HashMap<>();
+        // třídní učitelé
+        SQLrecords classTeachers = new SQLrecords(true);
+
+        // celé třídy
+        for (int mYr = 1; mYr <= 9; mYr++) {
+            for (char mLetter = 'A'; mLetter <= 'E'; mLetter++) {
+
+                // generovaná třída není na seznamu požadavků
+                if (!classes.contains(mYr + "." + mLetter)) {
+                    continue;
+                }
+
+                // třída v evidenci neexistuje
+                if (classTeachers.getBy(EBakaSQL.F_CLASS_LABEL, mYr + "." + mLetter) == null) {
+                    continue;
+                }
+
+
+                // SQL data třídy
+                SQLrecords classData = new SQLrecords(mYr, String.valueOf(mLetter));
+                // LDAP data třídy
+                LDAPrecords dataAD = new LDAPrecords("OU=Trida-"+String.valueOf(mLetter)+",OU=Rocnik-"+String.valueOf(mYr)+"," + Settings.getInstance().getLDAP_baseStudents(), EBakaLDAPAttributes.OC_USER);
+
+                // identifikace třídního učitele - jméno
+                String classTeacher = classTeachers.getBy(EBakaSQL.F_CLASS_LABEL, mYr + "." + mLetter).get(EBakaSQL.F_FAC_GIVENNAME.basename()) + " " + classTeachers.getBy(EBakaSQL.F_CLASS_LABEL, mYr + "." + mLetter).get(EBakaSQL.F_FAC_SURNAME.basename());
+
+                StringBuilder classReportData = new StringBuilder();
+                String template = "__CLASS_ID__ & __SURNAME__ & __GIVENNAME__ & \\texttt{__UPN__} & \\texttt{__PWD__} \\\\ \\hline\n";
+
+                // získání dat žáků ze třídy - iterace nad evidencí
+                while (classData.iterator().hasNext()) {
+
+                    Map<String, String> classStudent = classData.get(classData.iterator().next());
+
+                    // data
+                    String bakaID = classStudent.get(EBakaSQL.F_STU_ID.basename());
+                    Integer classNum = Integer.parseInt(classStudent.get(EBakaSQL.F_STU_CLASS_ID.basename()));
+                    String studentSurname = classStudent.get(EBakaSQL.F_STU_SURNAME.basename());
+                    String studentName = classStudent.get(EBakaSQL.F_STU_GIVENNAME.basename());
+                    String studentUPN = classStudent.get(EBakaSQL.F_STU_MAIL.basename());
+
+                    DataSQL sqlStudent = classData.get(bakaID);
+                    DataLDAP ldapStudent = dataAD.get(studentUPN);
+                    Student studentObject = new Student(sqlStudent, ldapStudent);
+
+                    // výchozí heslo žáka
+                    String newPassword = BakaUtils.createInitialPassword(
+                            studentSurname, // příjmení
+                            studentName, // jméno
+                            mYr, // ročník
+                            classNum // číslo v třídním výkazu
+                    );
+
+                    // resetování hesla
+                    if (resetPassword) {
+
+                        int attempt = 0;
+                        boolean passwordSet = false;
+
+                        while (!passwordSet || attempt < Manipulation.MAX_PASSWORD_ATTEMPTS) {
+
+                            newPassword = BakaUtils.nextPassword(
+                                    studentSurname, // příjmení
+                                    studentName, // jméno
+                                    mYr, // ročník
+                                    classNum, // číslo v třídním výkazu
+                                    attempt // pokus
+                            );
+
+                            passwordSet = studentObject.setPassword(newPassword, false);
+                            attempt++;
+                        }
+
+                        // TODO
+                        /*
+                        if (passwordSet) {
+                            System.out.println("Heslo bylo úspěšně změněno na " + newPassword);
+                        } else {
+                            System.out.println("Heslo nebylo možné změnit ani po " + attempt + " pokusech.");
+                        }*/
+                    }
+
+                    // zápis do tabulky v sestavě
+                    classReportData.append(template
+                            .replace("__CLASS_ID__", classNum.toString())
+                            .replace("__SURNAME__", studentSurname)
+                            .replace("__GIVENNAME__", studentName)
+                            .replace("__UPN__", studentUPN)
+                            .replace("__PWD__", newPassword)
+                    );
+                }
+
+                // vytvoření TeX sestavy
+                reports.put(mYr + "." + mLetter, Export.latexReportTemplate(mYr + "." + mLetter, classTeacher, classReportData.toString()));
+
+            } // celá třída
+
+        } // ročník
+
+        // TODO jednotliví žáci zvlášť
+        //
+        //
+
+
+        // uložení, vytvoření a odeslání sestav
+        Iterator<String> tex = reports.keySet().iterator();
+        while (tex.hasNext()) {
+
+            String classN = tex.next();
+
+            SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
+            Date date = new Date();
+
+            String reportFile = "./reports/" + formatter.format(date)
+                    + "_" + classN.toLowerCase().replace(".", "")
+                    + ".tex";
+
+            try (PrintStream out = new PrintStream(new FileOutputStream(reportFile))) {
+                out.print(reports.get(classN));
+            } catch (FileNotFoundException e) {
+                // TODO
+                ReportManager.handleException("Nebylo možné vytvořit sestavu.", e);
+            }
+
+            // pdf lualatex
+            try {
+                Process p = Runtime.getRuntime().exec("/usr/bin/lualatex " + reportFile);
+                p.waitFor();
+            } catch (Exception x) {
+                ReportManager.handleException("Proces LuaLaTeX nebyl spuštěn.", x);
+            }
+
+
+            String message = "V příloze naleznete sestavu s novými přístupovými údaji žáků " +
+                    classN + " pro použití v prostředí Office365. Všichni žáci mají přiřazené " +
+                    "odpovídající žákovské licence, mohou tedy ihned plně používat všechny cloudové služby O365.\n\n" +
+                    "Tuto sestavu považujte za důvěrnou a distribuci " +
+                    "hesel, pokud to bude možné, provádějte jednotlivě.\n\n";
+
+            // identifiakce třídního učitele - e-mail
+            String classTeacherEmail = classTeachers.getBy(EBakaSQL.F_CLASS_LABEL, classN).get(EBakaSQL.F_FAC_EMAIL.basename());
+
+            // e-mail pro třídního a správce
+            BakaMailer.getInstance().mail(new String[]{classTeacherEmail, Settings.getInstance().getAdminMail()},
+                    //BakaMailer.getInstance().mail(new String[]{Settings.getInstance().getAdminMail()}, // pouze správce
+                    "Přístupové údaje žáků " + classN, message,
+                    new String[]{"./" + BakaUtils.fileBaseName(reportFile.replace(".tex", ".pdf"))});
+
+            // úklid
+            File pdf = new File("./" + BakaUtils.fileBaseName(reportFile.replace(".tex", ".pdf")));
+            File aux = new File("./" + BakaUtils.fileBaseName(reportFile.replace(".tex", ".aux")));
+            File log = new File("./" + BakaUtils.fileBaseName(reportFile.replace(".tex", ".log")));
+            pdf.delete();
+            aux.delete();
+            log.delete();
+            File texfile = new File("./reports/" + BakaUtils.fileBaseName(reportFile));
+            texfile.delete();
+        }
+
+    }
+
+    /**
+     * TODO - LaTeXová šablona sestavy
+     *
+     * @param classID třída
+     * @param classTeacherName jméno třídního učitele
+     * @param internalData vnitřní data - tabulka s žáky
+     * @return TeX - sestava
+     */
+    public static String latexReportTemplate(String classID, String classTeacherName, String internalData) {
+
+        // tvorba sestavy
+        StringBuilder report = new StringBuilder();
+        report.append("\\documentclass[10pt]{article}\n\n");
+        report.append("\\usepackage[czech]{babel}\n");
+        report.append("\\usepackage[utf8]{inputenc}\n");
+        report.append("\\usepackage{tabularx}\n\n");
+        report.append("\\usepackage{geometry}\n");
+        report.append("\\geometry{a4paper,total={170mm,257mm},left=20mm,top=20mm}\n");
+        report.append("\\def\\arraystretch{1.5}%\n\n");
+        report.append("\\usepackage{fancyhdr}\n");
+        report.append("\\pagestyle{fancy}\n\n");
+        report.append("\\begin{document}");
+
+        report.append("\\fancyhf{}\n");
+        report.append("\\lhead{" + classID + "}\n");
+        report.append("\\rhead{" + classTeacherName + "}\n");
+        report.append("\\lfoot{" + Settings.getInstance().systemInfoTag() + "}");
+        report.append("\\rfoot{" + Version.getInstance().getTag() + "}");
+
+        report.append("\\noindent\n");
+        report.append("\\Large{Třída " + classID + "}\n\n");
+        report.append("\\begin{table}[htbp]\n\n");
+        report.append("\\centering\n");
+        report.append("\\begin{tabularx}{\\textwidth}{| c | X | X | r | c |}\n");
+        report.append("\\hline\n");
+        report.append("\\bf{Č.\\,tř.\\,výk.} & \\bf{Příjmení} & \\bf{Jméno} & \\bf{UPN}  & \\bf{Heslo}  \\\\ \\hline \\hline\n");
+
+        // data
+        report.append(internalData);
+
+        report.append("\\end{tabularx}\n\n");
+        report.append("\\end{table}\n\n");
+        report.append("\\noindent\n");
+        report.append("UPN = \\textit{User Principal Name}, slouží jako přihlašovací jméno do~služeb\n");
+        report.append("Office~365 a~zároveň jako platný tvar e-mailové adresy.\\par\n");
+        report.append("~\\par\n\n");
+        report.append("\\noindent\n");
+        report.append("Žáci si mohou své heslo sami změnit na~portálu https://heslo.zs-studanka.cz.\\par\n\n");
+        report.append("\\end{document}\n");
+
+
+        return report.toString();
     }
 
 }
