@@ -18,6 +18,9 @@ import java.util.Map;
  */
 public class Manipulation {
 
+    /** maximální počet pokusů o reset hesla */
+    public static final int MAX_PASSWORD_ATTEMPTS = 10;
+
     // TODO - ze statiky singleton, pamatovat si si aktivní účet
     /** instance manipulačních operací */
     private static Manipulation instance = null;
@@ -85,23 +88,23 @@ public class Manipulation {
         SQLrecords catalog = new SQLrecords(BakaUtils.classYearFromDn(data.get(0).get(EBakaLDAPAttributes.DN.attribute())), BakaUtils.classLetterFromDn(data.get(0).get(EBakaLDAPAttributes.DN.attribute())));
         DataSQL studentRecord = catalog.getBy(EBakaSQL.F_STU_MAIL, data.get(0).get(EBakaLDAPAttributes.MAIL.attribute()));
 
-        // vygenerování výchozího hesla
-        String password = BakaUtils.createInitialPassword(
-                data.get(0).get(EBakaLDAPAttributes.NAME_LAST.attribute()),
-                data.get(0).get(EBakaLDAPAttributes.NAME_FIRST.attribute()),
-                BakaUtils.classYearFromDn(data.get(0).get(EBakaLDAPAttributes.DN.attribute())),
-                Integer.parseInt(studentRecord.get(EBakaSQL.F_STU_CLASS_ID.basename()))
-        );
+        String password;
+        boolean set = false;
+        int attempt = 0;
 
-        // provedení resetu hesla
-        boolean set = setPassword(studentUPN, password, false);
+        while (!set || attempt < MAX_PASSWORD_ATTEMPTS) {
 
-        // TODO -- nextPassword
-        /*
-        while (!set || ... limit změn) {
+            password = BakaUtils.nextPassword(
+                    data.get(0).get(EBakaLDAPAttributes.NAME_LAST.attribute()),
+                    data.get(0).get(EBakaLDAPAttributes.NAME_FIRST.attribute()),
+                    BakaUtils.classYearFromDn(data.get(0).get(EBakaLDAPAttributes.DN.attribute())),
+                    Integer.parseInt(studentRecord.get(EBakaSQL.F_STU_CLASS_ID.basename())),
+                    attempt
+            );
 
-        } */
-
+            set = setPassword(studentUPN, password, false);
+            attempt++;
+        }
 
         return set;
     }
