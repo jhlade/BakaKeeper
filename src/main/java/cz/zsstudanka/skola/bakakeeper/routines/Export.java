@@ -1,5 +1,6 @@
 package cz.zsstudanka.skola.bakakeeper.routines;
 
+import cz.zsstudanka.skola.bakakeeper.App;
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaADAuthenticator;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
@@ -261,7 +262,7 @@ public class Export {
                 String classTeacher = classTeachers.getBy(EBakaSQL.F_CLASS_LABEL, mYr + "." + mLetter).get(EBakaSQL.F_FAC_GIVENNAME.basename()) + " " + classTeachers.getBy(EBakaSQL.F_CLASS_LABEL, mYr + "." + mLetter).get(EBakaSQL.F_FAC_SURNAME.basename());
 
                 StringBuilder classReportData = new StringBuilder();
-                String template = "__CLASS_ID__ & __SURNAME__ & __GIVENNAME__ & \\texttt{__UPN__} & \\texttt{__PWD__} \\\\ \\hline\n";
+                String template = "__CLASS_ID__ & __SURNAME__ & __GIVENNAME__ & \\texttt{__UPN__} & \\texttt{__PWD__} & \\qrcode{__QR__} \\\\ \\hline\n";
 
                 // získání dat žáků ze třídy - iterace nad evidencí
                 while (classData.iterator().hasNext()) {
@@ -290,6 +291,8 @@ public class Export {
                     // resetování hesla
                     if (resetPassword) {
 
+                        ReportManager.logWait(EBakaLogType.LOG_INFO, "Probíhá reset hesla žáka " + studentSurname + " " + studentName);
+
                         int attempt = 0;
                         boolean passwordSet = false;
 
@@ -303,17 +306,22 @@ public class Export {
                                     attempt // pokus
                             );
 
-                            passwordSet = studentObject.setPassword(newPassword, false);
+                            if (!App.FLAG_DRYRUN) {
+                                passwordSet = studentObject.setPassword(newPassword, false);
+                            } else {
+                                passwordSet = true;
+                                // TODO RM
+                            }
                             attempt++;
                         }
 
-                        // TODO
-                        /*
                         if (passwordSet) {
-                            System.out.println("Heslo bylo úspěšně změněno na " + newPassword);
+                            ReportManager.logResult(EBakaLogType.LOG_OK);
+                            ReportManager.log(EBakaLogType.LOG_VERBOSE, "Heslo žáka " + studentSurname + " " + studentName + " bylo úspěšně změněno na " + newPassword);
                         } else {
-                            System.out.println("Heslo nebylo možné změnit ani po " + attempt + " pokusech.");
-                        }*/
+                            ReportManager.logResult(EBakaLogType.LOG_ERR);
+                            ReportManager.log(EBakaLogType.LOG_ERR_VERBOSE, "Heslo žáka " + studentSurname + " " + studentName + " nebylo možné změnit ani po " + attempt + " pokusech.");
+                        }
                     }
 
                     // zápis do tabulky v sestavě
@@ -323,6 +331,7 @@ public class Export {
                             .replace("__GIVENNAME__", studentName)
                             .replace("__UPN__", studentUPN)
                             .replace("__PWD__", newPassword)
+                            .replace("__QR__", studentUPN + "\t" + newPassword)
                     );
                 }
 
@@ -358,13 +367,18 @@ public class Export {
                 ReportManager.handleException("Nebylo možné vytvořit sestavu.", e);
             }
 
+            ReportManager.logWait(EBakaLogType.LOG_INFO, "Probíhá generování PDF sestavy třídy " + classN);
+
             // pdf lualatex
             try {
                 Process p = Runtime.getRuntime().exec("/usr/bin/lualatex " + reportFile);
                 p.waitFor();
             } catch (Exception x) {
+                ReportManager.logResult(EBakaLogType.LOG_ERR);
                 ReportManager.handleException("Proces LuaLaTeX nebyl spuštěn.", x);
             }
+
+            ReportManager.logResult(EBakaLogType.LOG_OK);
 
 
             String message = "V příloze naleznete sestavu s novými přístupovými údaji žáků " +
@@ -373,12 +387,24 @@ public class Export {
                     "Tuto sestavu považujte za důvěrnou a distribuci " +
                     "hesel, pokud to bude možné, provádějte jednotlivě.\n\n";
 
+            if (App.FLAG_DRYRUN) {
+                message += "[ i ] Sestava byla vygenerována s příznakem zkušebního spuštění, zobrazované údaje nemusí reflektovat skutečný stav.";
+            }
+
             // identifiakce třídního učitele - e-mail
             String classTeacherEmail = classTeachers.getBy(EBakaSQL.F_CLASS_LABEL, classN).get(EBakaSQL.F_FAC_EMAIL.basename());
 
+            String[] addresses;
+            if (!App.FLAG_DRYRUN) {
+                // e-mail pro třídního učitele a správce systému
+                addresses = new String[]{classTeacherEmail, Settings.getInstance().getAdminMail()};
+            } else {
+                // pouze správcovský e-mail
+                addresses = new String[]{Settings.getInstance().getAdminMail()};
+            }
+
             // e-mail pro třídního a správce
-            BakaMailer.getInstance().mail(new String[]{classTeacherEmail, Settings.getInstance().getAdminMail()},
-                    //BakaMailer.getInstance().mail(new String[]{Settings.getInstance().getAdminMail()}, // pouze správce
+            BakaMailer.getInstance().mail(addresses,
                     "Přístupové údaje žáků " + classN, message,
                     new String[]{"./" + BakaUtils.fileBaseName(reportFile.replace(".tex", ".pdf"))});
 
@@ -415,22 +441,33 @@ public class Export {
         report.append("\\geometry{a4paper,total={170mm,257mm},left=20mm,top=20mm}\n");
         report.append("\\def\\arraystretch{1.5}%\n\n");
         report.append("\\usepackage{fancyhdr}\n");
+        report.append("\\usepackage{qrcode}\n");
         report.append("\\pagestyle{fancy}\n\n");
-        report.append("\\begin{document}");
+
+        if (App.FLAG_DRYRUN) {
+            report.append("\\usepackage{xcolor}\n\n");
+        }
+
+        report.append("\\begin{document}\n");
+        report.append("\\qrset{height=.55cm}%\n\n");
 
         report.append("\\fancyhf{}\n");
         report.append("\\lhead{" + classID + "}\n");
         report.append("\\rhead{" + classTeacherName + "}\n");
-        report.append("\\lfoot{" + Settings.getInstance().systemInfoTag() + "}");
-        report.append("\\rfoot{" + Version.getInstance().getTag() + "}");
+        report.append("\\lfoot{" + Settings.getInstance().systemInfoTag() + "}\n");
+        report.append("\\rfoot{" + Version.getInstance().getTag() + "}\n");
+
+        if (App.FLAG_DRYRUN) {
+            report.append("\\chead{{\\color{red}\\textbf{ZKUŠEBNÍ SESTAVA}}}\n");
+        }
 
         report.append("\\noindent\n");
         report.append("\\Large{Třída " + classID + "}\n\n");
         report.append("\\begin{table}[htbp]\n\n");
         report.append("\\centering\n");
-        report.append("\\begin{tabularx}{\\textwidth}{| c | X | X | r | c |}\n");
+        report.append("\\begin{tabularx}{\\textwidth}{| c | X | X | r | c | c |}\n");
         report.append("\\hline\n");
-        report.append("\\bf{Č.\\,tř.\\,výk.} & \\bf{Příjmení} & \\bf{Jméno} & \\bf{UPN}  & \\bf{Heslo}  \\\\ \\hline \\hline\n");
+        report.append("\\bf{Č.} & \\bf{Příjmení} & \\bf{Jméno} & \\bf{UPN}  & \\bf{Heslo} & {~} \\\\ \\hline \\hline\n");
 
         // data
         report.append(internalData);
@@ -442,7 +479,7 @@ public class Export {
         report.append("Office~365 a~zároveň jako platný tvar e-mailové adresy.\\par\n");
         report.append("~\\par\n\n");
         report.append("\\noindent\n");
-        report.append("Žáci si mohou své heslo sami změnit na~portálu https://heslo.zs-studanka.cz.\\par\n\n");
+        report.append("Žáci si mohou své heslo sami změnit na~portálu https://heslo.zs-studanka.cz/.\\par\n\n");
         report.append("\\end{document}\n");
 
 
