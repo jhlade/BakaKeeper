@@ -296,7 +296,7 @@ public class Export {
                         int attempt = 0;
                         boolean passwordSet = false;
 
-                        while (!passwordSet || attempt < Manipulation.MAX_PASSWORD_ATTEMPTS) {
+                        while (!passwordSet && attempt < Manipulation.MAX_PASSWORD_ATTEMPTS) {
 
                             newPassword = BakaUtils.nextPassword(
                                     studentSurname, // příjmení

@@ -14,14 +14,28 @@ import java.util.Map;
 /**
  * Rutiny manipulačních operací.
  *
- * TODO.
+ * TODO
+ * Typy manipulace
+ * - reset hesla
+ * - zablokování
+ * - odblokování
+ * - vyřazení (žáka, zaměstnance)
+ * - přesun (žáka ze třídy do třídy)
+ *
+ * - reset jednoho žáka [x]
+ * - reset jednoho učitele [ ]
+ * - reset jednoho zaměstnance [ ]
+ * - reset jedné celé třídy [ ]
+ * - reset jednoho ročníku [ ]
+ * - reset několika tříd/ročníků [ ]
+ *  - - to vše +report
  */
 public class Manipulation {
 
     /** maximální počet pokusů o reset hesla */
-    public static final int MAX_PASSWORD_ATTEMPTS = 10;
+    public static final int MAX_PASSWORD_ATTEMPTS = 25;
 
-    // TODO - ze statiky singleton, pamatovat si si aktivní účet
+    // TODO - ze statiky singleton, pamatovat si si aktivní účet (?)
     /** instance manipulačních operací */
     private static Manipulation instance = null;
 
@@ -92,7 +106,7 @@ public class Manipulation {
         boolean set = false;
         int attempt = 0;
 
-        while (!set || attempt < MAX_PASSWORD_ATTEMPTS) {
+        while (!set && attempt < MAX_PASSWORD_ATTEMPTS) {
 
             password = BakaUtils.nextPassword(
                     data.get(0).get(EBakaLDAPAttributes.NAME_LAST.attribute()),
