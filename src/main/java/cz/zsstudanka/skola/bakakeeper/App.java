@@ -366,17 +366,17 @@ public class App {
 
         // 1) konfigurační soubor
         if (!checkConfig()) {
-            return;
+            //return;
         }
 
         // 2) spojení s Active Directory
         if (!checkLDAP()) {
-            return;
+            //return;
         }
 
         // 3) spojení s databázovým serverem
         if (!checkSQL()) {
-            return;
+            //return;
         }
 
         // 4) spojení s poštovním serverem
