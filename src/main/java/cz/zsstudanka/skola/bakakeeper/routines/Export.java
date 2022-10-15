@@ -107,7 +107,12 @@ public class Export {
             Date current = new Date();
             SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
 
-            Date logonDate = new Date((Long.parseLong(data.get(0).get(EBakaLDAPAttributes.LAST_LOGON.attribute())) / 10000L) - + 11644473600000L);
+            Date logonDate = new Date((Long.parseLong("10000") / 10000L) - +11644473600000L);
+            try {
+                logonDate = new Date((Long.parseLong(data.get(0).get(EBakaLDAPAttributes.LAST_LOGON.attribute())) / 10000L) - +11644473600000L);
+            } catch (NumberFormatException e) {
+                ReportManager.log(EBakaLogType.LOG_VERBOSE, "Nebylo nalezeno žádné předchozí přihlášení uživatele.");
+            }
             long logonDiff = (current.getTime() - logonDate.getTime()) / 1000 / 3600 / 24;
             ReportManager.log(EBakaLogType.LOG_STDOUT, "Poslední přihlášení: \t" + dateFormat.format(logonDate) + " (" + ((logonDiff > 10000) ? "nikdy" : "před " + logonDiff + " dny") + ")");
 
