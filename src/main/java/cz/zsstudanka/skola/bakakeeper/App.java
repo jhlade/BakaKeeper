@@ -250,6 +250,15 @@ public class App {
                 }
             }
 
+            // nastavení hesla
+            if (params.containsKey("set")) {
+                if (params.get("set").size() == 2) {
+                    actionSetPassword(params.get("set").get(0), params.get("set").get(1));
+                } else {
+                    ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný argument -set. (Použití: -set novak.jan Nove.Heslo)");
+                }
+            }
+
             // rychlá sestava
             if (params.containsKey("report")) {
                 if (params.get("report").size() == 1) {
@@ -494,6 +503,23 @@ public class App {
         // 3) nastaví se flag nutnosti změny hesla při dalším přihlášení(? - spíš ne)
         // 4) reportovat - sestava třídnímu
         // 5) dost možná vyrobit akci + hint v --help
+    }
+
+    /**
+     * Okamžité nastavení hesla účtu.
+     *
+     * @param login UPN
+     * @param password nové heslo k přímému nastavení
+     */
+    public static void actionSetPassword(String login, String password) {
+        ReportManager.logWait(EBakaLogType.LOG_STDOUT, "Probíhá pokus o okamžité nastavení hesla účtu " + login);
+
+        if (Manipulation.setPassword(login, password)) {
+            ReportManager.logResult(EBakaLogType.LOG_OK);
+            // TODO + odeslání hlášení
+        } else {
+            ReportManager.logResult(EBakaLogType.LOG_ERR);
+        }
     }
 
     /**

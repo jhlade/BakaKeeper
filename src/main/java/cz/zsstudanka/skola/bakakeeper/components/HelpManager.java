@@ -67,7 +67,7 @@ public class HelpManager {
 
         if (Settings.getInstance().beVerbose()) {
             helpMessage.append("\n");
-            helpMessage.append("--id uzivatelske.jmeno\n\t\tIdentifikace účtu uživatele.");
+            helpMessage.append("-id uzivatelske.jmeno\n\t\tIdentifikace účtu uživatele.");
             helpMessage.append("\n");
             helpMessage.append("\t\t[-passphrase heslo ke konfiguraci]");
             helpMessage.append("\n");
@@ -75,7 +75,15 @@ public class HelpManager {
             helpMessage.append("\n");
 
             helpMessage.append("\n");
-            helpMessage.append("--reset uzivatelske.jmeno\n\t\tProvede reset hesla uživatele.");
+            helpMessage.append("-reset uzivatelske.jmeno\n\t\tProvede reset hesla uživatele.");
+            helpMessage.append("\n");
+            helpMessage.append("\t\t[-passphrase heslo ke konfiguraci]");
+            helpMessage.append("\n");
+            helpMessage.append("\t\t[--verbose]\tladící informace");
+            helpMessage.append("\n");
+
+            helpMessage.append("\n");
+            helpMessage.append("-set uzivatelske.jmeno Nove.Heslo\n\t\tProvede okamžité nastavení hesla uživatele.");
             helpMessage.append("\n");
             helpMessage.append("\t\t[-passphrase heslo ke konfiguraci]");
             helpMessage.append("\n");

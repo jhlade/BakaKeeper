@@ -135,6 +135,18 @@ public class Manipulation {
         return false;
     }
 
+
+    /**
+     * Provedení nastavení hesla bez nutnosti jeho následné změny.
+     *
+     * @param upn UPN účtu
+     * @param newPassword nové heslo
+     * @return úspěch operace
+     */
+    public static boolean setPassword(String upn, String newPassword) {
+        return setPassword(upn, newPassword, false);
+    }
+
     /**
      * Provedení nastavení hesla.
      *
