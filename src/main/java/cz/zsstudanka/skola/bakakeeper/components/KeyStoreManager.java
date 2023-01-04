@@ -77,7 +77,7 @@ public class KeyStoreManager {
 
         File keystoreFile = new File(Settings.getInstance().DEFAULT_JKS_FILE);
 
-        if (keystoreFile.delete()) {
+        if (!keystoreFile.exists() || keystoreFile.delete()) {
             // nastavení příznaku inicializace
             App.FLAG_INIT = true;
             // nová inicializace úložiště
