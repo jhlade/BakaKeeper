@@ -5,6 +5,7 @@ import cz.zsstudanka.skola.bakakeeper.components.KeyStoreManager;
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaPorts;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaUAC;
 import cz.zsstudanka.skola.bakakeeper.model.entities.DataLDAP;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
@@ -103,9 +104,9 @@ public class BakaADAuthenticator {
             env.put(Context.SECURITY_PROTOCOL, "ssl");
             // ověřování certifikátu ve vlasním úložišti klíčů
             env.put("java.naming.ldap.factory.socket", "cz.zsstudanka.skola.bakakeeper.components.BakaSSLSocketFactory");
-            env.put(Context.PROVIDER_URL, "ldaps://" + fqdn + ":636/"); // 3269 pro AD GC
+            env.put(Context.PROVIDER_URL, EBakaPorts.SRV_LDAPS.getScheme() + "://" + fqdn + ":" + EBakaPorts.SRV_LDAPS.getPort() + "/"); // 3269 pro AD GC
         } else {
-            env.put(Context.PROVIDER_URL, "ldap://" + fqdn + "/"); // :3268 pro AD GC
+            env.put(Context.PROVIDER_URL, EBakaPorts.SRV_LDAP.getScheme() + "://" + fqdn + "/:" + EBakaPorts.SRV_LDAP.getPort()); // :3268 pro AD GC
         }
         env.put(Context.SECURITY_AUTHENTICATION, "simple");
         env.put(Context.SECURITY_PRINCIPAL, user + "@" + domain);

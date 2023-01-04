@@ -2,6 +2,7 @@ package cz.zsstudanka.skola.bakakeeper.components;
 
 import cz.zsstudanka.skola.bakakeeper.App;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaPorts;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 
 import javax.net.SocketFactory;
@@ -20,7 +21,7 @@ import java.security.cert.X509Certificate;
 public class KeyStoreManager {
 
     // LDAPS port
-    static final Integer LDAPS_PORT = 636;
+    static final Integer LDAPS_PORT = EBakaPorts.SRV_LDAPS.getPort();
 
     public static Boolean initialize() {
 

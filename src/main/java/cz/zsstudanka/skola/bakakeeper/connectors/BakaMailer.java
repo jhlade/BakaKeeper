@@ -1,6 +1,7 @@
 package cz.zsstudanka.skola.bakakeeper.connectors;
 
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaPorts;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.settings.Version;
 import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
@@ -27,7 +28,7 @@ import java.util.Properties;
 public class BakaMailer {
 
     /** TCP port SMTP serveru */
-    static final String SMTP_PORT = "587";
+    static final String SMTP_PORT = Integer.toString(EBakaPorts.SRV_SMTP.getPort());
 
     /** singleton mailového klienta */
     private static BakaMailer instance = null;

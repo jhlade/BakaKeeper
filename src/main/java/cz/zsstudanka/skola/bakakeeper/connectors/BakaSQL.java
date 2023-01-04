@@ -3,6 +3,7 @@ package cz.zsstudanka.skola.bakakeeper.connectors;
 import com.microsoft.sqlserver.jdbc.SQLServerDataSource;
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaPorts;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSManager;
@@ -81,7 +82,7 @@ public class BakaSQL {
             // JTDS ovladač
             Class.forName("net.sourceforge.jtds.jdbc.Driver");
 
-            String url = "jdbc:jtds:sqlserver://" + Settings.getInstance().getSQL_host()
+            String url = "jdbc:jtds:" + EBakaPorts.SRV_MSSQL.getScheme() + "://" + Settings.getInstance().getSQL_host()
                     +"/" + Settings.getInstance().getSQL_database()
                     +";domain=" + Settings.getInstance().getLocalDomain().toUpperCase() + ";useNTLMv2=true;CharacterSet=UTF-8";
 
@@ -109,8 +110,8 @@ public class BakaSQL {
 
         // připojovací řetězec integrovaného ověřování
         conString.append("jdbc:");
-        conString.append("sqlserver://" + Settings.getInstance().getSQL_host() + ":1433;");
-        conString.append("ServerSpn=MSSQLSvc/" + Settings.getInstance().getSQL_hostFQDN() + ":1433@" + Settings.getInstance().getLocalDomain().toUpperCase() + ";");
+        conString.append(EBakaPorts.SRV_MSSQL.getScheme() + "://" + Settings.getInstance().getSQL_host() + ":" + Integer.toString(EBakaPorts.SRV_MSSQL.getPort()) + ";");
+        conString.append("ServerSpn=MSSQLSvc/" + Settings.getInstance().getSQL_hostFQDN() + ":" + Integer.toString(EBakaPorts.SRV_MSSQL.getPort()) + "@" + Settings.getInstance().getLocalDomain().toUpperCase() + ";");
         conString.append("DatabaseName=" + Settings.getInstance().getSQL_database() + ";");
         if (Settings.getInstance().useSSL()) {
             conString.append("EncryptionMethod=ssl;");

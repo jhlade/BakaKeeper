@@ -2,22 +2,17 @@ package cz.zsstudanka.skola.bakakeeper.connectors;
 
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaPorts;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
-
-import java.io.*;
-import java.net.URL;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
+import org.ietf.jgss.*;
 
 import javax.security.auth.Subject;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
-
-import org.ietf.jgss.GSSContext;
-import org.ietf.jgss.GSSCredential;
-import org.ietf.jgss.GSSManager;
-import org.ietf.jgss.GSSName;
-import org.ietf.jgss.Oid;
+import java.io.*;
+import java.net.URL;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 
 /**
  * Vyjednání spojení pomocí protokolu Kerberos V.
@@ -162,7 +157,7 @@ public class BakaKerberos implements PrivilegedExceptionAction {
             GSSName client = manager.createName(Settings.getInstance().getKrb_user(), GSSName.NT_USER_NAME);
 
             // SPN služby ve tvaru MSSQLSvc/SRV-ZS-XXX-APP0.ZSXXX.LOCAL:1433
-            GSSName service = manager.createName("MSSQLSvc/" + Settings.getInstance().getSQL_hostFQDN() + ":1433", null);
+            GSSName service = manager.createName("MSSQLSvc/" + Settings.getInstance().getSQL_hostFQDN() + ":" + EBakaPorts.SRV_MSSQL.getPort(), null);
 
             GSSCredential clientCredentials = manager.createCredential(null, 8*60*60, kerberos5Oid, GSSCredential.INITIATE_ONLY);
             GSSContext gssContext = manager.createContext(service, kerberos5Oid, clientCredentials, GSSContext.DEFAULT_LIFETIME);
