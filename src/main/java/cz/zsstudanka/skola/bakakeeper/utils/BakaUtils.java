@@ -1,5 +1,7 @@
 package cz.zsstudanka.skola.bakakeeper.utils;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.text.Normalizer;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -248,13 +250,12 @@ public class BakaUtils {
         return nextPassword(surname, givenName, classYear, classID, 0);
     }
 
-
     /**
      * Vytvoření nebo reset výchozího heslo žáka na základě jeho příjmení, jména a čísla v třídním výkazu
-     * ve formátu 'Pr.Jm.##yy', kde ## je číslo v třídním výkazu XOR ročník žáka a 'yy' začátek současného
-     * školního roku.
+     * ve formátu 'Pr.Jm.yy####', kde #### je dekadická část SHA-256 výtahu čísla v třídním výkazu
+     * XOR ročník žáka a 'yy' začátek současného školního roku.
      *
-     * Aktualizováno podle navržených pravidel 2020/2021.
+     * Aktualizováno podle návrhu ze září 2023.
      *
      * @param surname příjmení žáka
      * @param givenName jméno žáka
@@ -267,13 +268,44 @@ public class BakaUtils {
 
         Map<String, String[]> base = createBaseNameParts(surname, givenName);
 
+        MessageDigest digest;
+        String hash = "0000"; // 0x0000 - 0x720F
+        try {
+            digest = MessageDigest.getInstance("SHA-256");
+            hash = bytesToHex(digest.digest(
+                    String.format("%02d", classID ^ (classYear + attempt)).getBytes()
+            )).toLowerCase().substring(0, 3);
+        } catch (Exception e) {
+            // TODO ...
+        }
+
         return removeAccents(base.get("snn")[0].substring(0, 2))
                 + "."
                 + removeAccents(base.get("gn")[0].substring(0, 2))
                 + "."
-                + String.format("%02d", classID ^ (classYear + attempt)) // číslo v tř. výkazu XOR ročník žáka + číslo pokusu
                 + ""
-                + String.format("%02d", getCurrentClassYear() % 100);
+                + String.format("%02d", getCurrentClassYear() % 100)
+                + ""
+                + String.format("%04d", Integer.parseInt(hash, 16));
+    }
+
+    /**
+     * Pomocná metoda konverze pole bajtů do hexadecimálního řetězce.
+     *
+     * @param bytes vstupní pole bajtů
+     * @return hexadecimální forma v podobě textového řetězce
+     */
+    private static String bytesToHex(byte[] bytes) {
+        final char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
+
+        char[] hexChars = new char[bytes.length * 2];
+        for (int j = 0; j < bytes.length; j++) {
+            int v = bytes[j] & 0xFF;
+            hexChars[j * 2] = HEX_ARRAY[v >>> 4];
+            hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
+        }
+
+        return new String(hexChars);
     }
 
     /**
