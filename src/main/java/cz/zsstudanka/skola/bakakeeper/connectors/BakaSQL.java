@@ -5,9 +5,6 @@ import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaPorts;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
-import org.ietf.jgss.GSSCredential;
-import org.ietf.jgss.GSSManager;
-import org.ietf.jgss.Oid;
 
 import java.sql.*;
 
@@ -110,13 +107,17 @@ public class BakaSQL {
 
         // připojovací řetězec integrovaného ověřování
         conString.append("jdbc:");
-        conString.append(EBakaPorts.SRV_MSSQL.getScheme() + "://" + Settings.getInstance().getSQL_host() + ":" + Integer.toString(EBakaPorts.SRV_MSSQL.getPort()) + ";");
-        conString.append("ServerSpn=MSSQLSvc/" + Settings.getInstance().getSQL_hostFQDN() + ":" + Integer.toString(EBakaPorts.SRV_MSSQL.getPort()) + "@" + Settings.getInstance().getLocalDomain().toUpperCase() + ";");
-        conString.append("DatabaseName=" + Settings.getInstance().getSQL_database() + ";");
+        conString.append(EBakaPorts.SRV_MSSQL.getScheme() + "://" + Settings.getInstance().getSQL_host() + ":" + Integer.toString(EBakaPorts.SRV_MSSQL.getPort()) + "; ");
+        conString.append("DatabaseName=" + Settings.getInstance().getSQL_database() + "; ");
+
+        // UPN
+        conString.append("user=" + Settings.getInstance().getKrb_user() + "; ");
+        // SPN
+        conString.append("ServerSpn=" + Settings.getInstance().getSQL_SPN() + "; ");
+
         if (Settings.getInstance().useSSL()) {
-            conString.append("EncryptionMethod=ssl;");
+            conString.append("EncryptionMethod=ssl; encrypt=false; integratedSecurity=true; authenticationScheme=JavaKerberos; loginTimeout=1; ");
         }
-        conString.append("integratedSecurity=true;authenticationScheme=JavaKerberos");
 
         String connectionUrl = conString.toString();
 
@@ -127,7 +128,6 @@ public class BakaSQL {
         // vytvoření Krb5 tiketu
         try {
             BakaKerberos.generateTicket();
-            //BakaKerberos.systemSettings();
         } catch (Exception e) {
             ReportManager.handleException("Nevytvořil se tiket služby MSSQLSvc.", e);
         }
@@ -135,22 +135,13 @@ public class BakaSQL {
         // vytvoření spojení
         try {
             // identifikace třídy
-            //Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
+            Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
 
             SQLServerDataSource ds = new SQLServerDataSource();
+            // základní řetězec
             ds.setURL(connectionUrl);
-            //ds.setIntegratedSecurity(true);
-            //ds.setAuthenticationScheme("JavaKerberos");
-            //ds.setUser(Settings.getInstance().getKrbUser());
-            //ds.setPassword(Settings.getInstance().getPass());
-            //GSSName client = GSSManager.getInstance().createName(Settings.getInstance().getKrbUser(), GSSName.NT_USER_NAME);
-            GSSCredential credential = GSSManager.getInstance().createCredential(null, GSSCredential.DEFAULT_LIFETIME, new Oid("1.2.840.113554.1.2.2"), GSSCredential.ACCEPT_ONLY);
-            ds.setGSSCredentials(credential);
 
             this.con = ds.getConnection();
-
-            //this.con = java.sql.DriverManager.getConnection(connectionUrl);
-            //this.con = java.sql.DriverManager.getConnection(connectionUrl, Settings.getInstance().getKrbUser(), Settings.getInstance().getPass());
 
             if (this.con != null) {
                 debugInfo();

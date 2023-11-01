@@ -2,7 +2,6 @@ package cz.zsstudanka.skola.bakakeeper.connectors;
 
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
-import cz.zsstudanka.skola.bakakeeper.constants.EBakaPorts;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import org.ietf.jgss.*;
 
@@ -25,6 +24,12 @@ public class BakaKerberos implements PrivilegedExceptionAction {
      * Inicializace nastavení pro práci se službou Kerberos V.
      */
     public static void systemSettings() {
+
+        File keytab = new File("baka.keytab");
+        // TODO upravit hlášení + zkusit vytvořit keytab
+        if (!keytab.exists()) {
+            ReportManager.log(EBakaLogType.LOG_ERR, "Nebyla nalezena tabulka klíčů baka.keytab.");
+        }
 
         // vytvoření nové konfigurace krb5.conf
         File customKrb5Config;
@@ -52,6 +57,7 @@ public class BakaKerberos implements PrivilegedExceptionAction {
 
                     newKrb5Config.append(
                             confLine.replace("{DOMAIN}", Settings.getInstance().getLocalDomain().toUpperCase())
+                            .replace("{domain}", Settings.getInstance().getLocalDomain().toUpperCase())
                             .replace("{AD_SRV}", Settings.getInstance().getLDAP_fqdn().toUpperCase())
                     );
                     newKrb5Config.append("\n");
@@ -73,7 +79,7 @@ public class BakaKerberos implements PrivilegedExceptionAction {
             }
         }
 
-        // systémové konstanty
+        // systémové konstanty:
 
         // cesta ke konfiguraci pro Kerberos V
         System.setProperty("java.security.krb5.conf", customKrb5Config.getAbsolutePath());
@@ -89,7 +95,6 @@ public class BakaKerberos implements PrivilegedExceptionAction {
             System.setProperty("sun.security.krb5.debug", "true");
         }
     }
-
 
     /**
      * Vyžádání a vytvoření tiketu služby MSSQLSvc.
@@ -123,18 +128,21 @@ public class BakaKerberos implements PrivilegedExceptionAction {
             byte[] serviceTicket = (byte[]) Subject.doAs(clientSubject, new BakaKerberos());
 
             if (Settings.getInstance().beVerbose()) {
-                ReportManager.log(EBakaLogType.LOG_OK, "Tiket služby MSSQLSvc byl vygenerován (přijato " + serviceTicket.length + " bajtů).");
+                ReportManager.log(EBakaLogType.LOG_OK, "Tiket služby MSSQL byl vygenerován (přijato " + serviceTicket.length + " bajtů).");
             }
 
             // uložení tokenu do souboru?
-            File krb5Ticket = new File("./ticket.key");
-            try {
-                FileOutputStream ticketStream = new FileOutputStream(krb5Ticket);
-                ticketStream.write(serviceTicket);
-                ticketStream.close();
-            } catch (Exception e) {
-                ReportManager.handleException("Uložení tokenu se nezdařilo.", e);
+            if (Settings.getInstance().debugMode()) {
+                File krb5Ticket = new File("./debug.ticket");
+                try {
+                    FileOutputStream ticketStream = new FileOutputStream(krb5Ticket);
+                    ticketStream.write(serviceTicket);
+                    ticketStream.close();
+                } catch (Exception e) {
+                    ReportManager.handleException("Uložení tokenu se nezdařilo.", e);
+                }
             }
+
         } catch (LoginException le) {
             ReportManager.handleException("Nebyl vygenerován tiket služby - Kerberos přihlášení se nezdařilo.", le);
         }
@@ -156,10 +164,10 @@ public class BakaKerberos implements PrivilegedExceptionAction {
             // přihlášení pod systémovým účtem
             GSSName client = manager.createName(Settings.getInstance().getKrb_user(), GSSName.NT_USER_NAME);
 
-            // SPN služby ve tvaru MSSQLSvc/SRV-ZS-XXX-APP0.ZSXXX.LOCAL:1433
-            GSSName service = manager.createName("MSSQLSvc/" + Settings.getInstance().getSQL_hostFQDN() + ":" + EBakaPorts.SRV_MSSQL.getPort(), null);
+            // SPN služby
+            GSSName service = manager.createName(Settings.getInstance().getSQL_SPN(), null);
 
-            GSSCredential clientCredentials = manager.createCredential(null, 8*60*60, kerberos5Oid, GSSCredential.INITIATE_ONLY);
+            GSSCredential clientCredentials = manager.createCredential(client, 8*60*60, kerberos5Oid, GSSCredential.INITIATE_ONLY);
             GSSContext gssContext = manager.createContext(service, kerberos5Oid, clientCredentials, GSSContext.DEFAULT_LIFETIME);
 
             // Vyžaduje SQL JDBC Driver od Microsoftu
@@ -169,7 +177,7 @@ public class BakaKerberos implements PrivilegedExceptionAction {
 
             // vytvoření tiketu
             byte[] serviceTicket = gssContext.initSecContext(new byte[0], 0, 0);
-            //gssContext.dispose();
+            gssContext.dispose();
             return serviceTicket;
 
         } catch (Exception ex) {

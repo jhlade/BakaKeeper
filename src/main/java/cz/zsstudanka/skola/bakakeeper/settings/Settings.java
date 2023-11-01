@@ -836,10 +836,29 @@ public class Settings {
     public String getSQL_host() {
 
         if (this.settings_data.get("sql_host").toLowerCase().contains(this.settings_data.get("domain").toLowerCase())) {
-            return (this.settings_data.get("sql_host").toUpperCase().replace("." + this.getLocalDomain().toUpperCase(), "")).toLowerCase();
+            return settings_data.get("sql_host");
         } else {
-            return this.settings_data.get("sql_host").toLowerCase();
+            return this.settings_data.get("sql_host").toLowerCase() + "." + this.settings_data.get("domain").toLowerCase();
         }
+    }
+
+    /**
+     * Service Principal Name pro SQL Server
+     * ve výchozím tvaru ve tvaru MSSQLSvc/{host}.{domena}@{DOMENA}
+     *
+     * @return
+     */
+    public String getSQL_SPN() {
+        StringBuilder spnBuilder = new StringBuilder();
+
+        spnBuilder.append("MSSQLSvc/");
+        spnBuilder.append(Settings.getInstance().getSQL_host().toLowerCase().replace("." + Settings.getInstance().getLocalDomain().toLowerCase(), ""));
+        spnBuilder.append(".");
+        spnBuilder.append(Settings.getInstance().getLocalDomain().toLowerCase());
+        spnBuilder.append("@");
+        spnBuilder.append(Settings.getInstance().getLocalDomain().toUpperCase());
+
+        return spnBuilder.toString();
     }
 
 
