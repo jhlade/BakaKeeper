@@ -110,8 +110,9 @@ public class BakaSQL {
         conString.append(EBakaPorts.SRV_MSSQL.getScheme() + "://" + Settings.getInstance().getSQL_host() + ":" + Integer.toString(EBakaPorts.SRV_MSSQL.getPort()) + "; ");
         conString.append("DatabaseName=" + Settings.getInstance().getSQL_database() + "; ");
 
-        // UPN
+        // UPN + heslo pro Kerberos
         conString.append("user=" + Settings.getInstance().getKrb_user() + "; ");
+        conString.append("password=" + Settings.getInstance().getPass() + "; ");
         // SPN
         conString.append("ServerSpn=" + Settings.getInstance().getSQL_SPN() + "; ");
 
@@ -120,10 +121,6 @@ public class BakaSQL {
         }
 
         String connectionUrl = conString.toString();
-
-        if (Settings.getInstance().debugMode()) {
-            System.out.println("[ DEBUG ] " + connectionUrl);
-        }
 
         // vytvoření Krb5 tiketu
         try {

@@ -25,12 +25,6 @@ public class BakaKerberos implements PrivilegedExceptionAction {
      */
     public static void systemSettings() {
 
-        File keytab = new File("baka.keytab");
-        // TODO upravit hlášení + zkusit vytvořit keytab
-        if (!keytab.exists()) {
-            ReportManager.log(EBakaLogType.LOG_ERR, "Nebyla nalezena tabulka klíčů baka.keytab.");
-        }
-
         // vytvoření nové konfigurace krb5.conf
         File customKrb5Config;
 
