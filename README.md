@@ -27,7 +27,7 @@ s daty aplikace Bakaláři s doménovým ověřováním uživatele.
 * Dedikovaný neinteraktivní účet s přístupem k SMTP,
 právy Domain Admin v AD, právy ke čtení i zápisu v SQL databázi
 s Bakaláři.
-* JVM kompatibilní s Java 8 se síťovým přístupem k
+* JVM kompatibilní s Java 18 se síťovým přístupem k
 serverům AD a SQL.
 * Nepovinně – v případě použití O365 je možné nastavit poštovní
 filtrovací pravidlo na základě hodnoty `CustomAttribute2:TRUE`
@@ -76,4 +76,4 @@ plugin Mavenu  a&nbsp;sestavit archiv i&nbsp;se závislostmi)
 * `net.tirasa.adsddl` >= 1.9 (+`slf4j-api`, `activation`)
 * (`junit` >= 4.13.1)
 
-2019-2022 [ZŠ Pardubice - Studánka](https://www.zs-studanka.cz/)
+2019-2023 [ZŠ Pardubice - Studánka](https://www.zs-studanka.cz/)

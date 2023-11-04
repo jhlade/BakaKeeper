@@ -11,14 +11,14 @@ import javax.security.auth.login.LoginException;
 import java.io.*;
 import java.net.URL;
 import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
+import java.util.concurrent.Callable;
 
 /**
  * Vyjednání spojení pomocí protokolu Kerberos V.
  *
  * @author Jan Hladěna
  */
-public class BakaKerberos implements PrivilegedExceptionAction {
+public class BakaKerberos implements Callable {
 
     /**
      * Inicializace nastavení pro práci se službou Kerberos V.
@@ -119,7 +119,7 @@ public class BakaKerberos implements PrivilegedExceptionAction {
 
             // vygenerování tokenu služby
             Subject clientSubject = lc.getSubject();
-            byte[] serviceTicket = (byte[]) Subject.doAs(clientSubject, new BakaKerberos());
+            byte[] serviceTicket = (byte[]) Subject.callAs(clientSubject, new BakaKerberos());
 
             if (Settings.getInstance().beVerbose()) {
                 ReportManager.log(EBakaLogType.LOG_OK, "Tiket služby MSSQL byl vygenerován (přijato " + serviceTicket.length + " bajtů).");
@@ -148,7 +148,7 @@ public class BakaKerberos implements PrivilegedExceptionAction {
      * @return token služby
      * @throws Exception
      */
-    public Object run() throws Exception {
+    public Object call() throws Exception {
 
         // callback - kopie tiketu služby
         try {
@@ -179,5 +179,4 @@ public class BakaKerberos implements PrivilegedExceptionAction {
             throw new PrivilegedActionException(ex);
         }
     }
-
 }
