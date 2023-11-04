@@ -21,7 +21,7 @@ public class EncryptionOutputStream extends FilterOutputStream {
     private int bIndex;
 
     /** heslo */
-    private final String PASSPHRASE;
+    private final char[] PASSPHRASE;
 
     /** jeden paket */
     private byte[] CHUNK;
@@ -35,7 +35,7 @@ public class EncryptionOutputStream extends FilterOutputStream {
      * @param out nižší vrstva
      * @param passphrase tajná fráze
      */
-    public EncryptionOutputStream(OutputStream out, String passphrase) {
+    public EncryptionOutputStream(OutputStream out, char[] passphrase) {
         super(out);
 
         this.buffer = null;
@@ -53,7 +53,7 @@ public class EncryptionOutputStream extends FilterOutputStream {
      * @param out nižší vrstva
      */
     public EncryptionOutputStream(OutputStream out) {
-        this(out, "");
+        this(out, new char[]{0});
     }
 
     /**

@@ -80,14 +80,14 @@ public class EncryptionManager {
      * @throws NoSuchAlgorithmException
      * @throws InvalidKeySpecException
      */
-    private static SecretKey getKeyFromPassphrase(String passphrase, byte[] salt) throws NoSuchAlgorithmException, InvalidKeySpecException {
+    private static SecretKey getKeyFromPassphrase(char[] passphrase, byte[] salt) throws NoSuchAlgorithmException, InvalidKeySpecException {
 
         // továrna na tajné klíče odvozené z hesla
         // typ Password-Based Key Derivation Function 2, HMAC SHA-256
         SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
 
         // specifikace klíče (heslo, sůl, počet iterací, délka v bitech)
-        KeySpec spec = new PBEKeySpec(passphrase.toCharArray(), salt, AES_ITER, AES_BITS);
+        KeySpec spec = new PBEKeySpec(passphrase, salt, AES_ITER, AES_BITS);
 
         // odvozený klíč
         return new SecretKeySpec(factory.generateSecret(spec).getEncoded(), "AES");
@@ -101,7 +101,7 @@ public class EncryptionManager {
      * @return zašifrovaná data s IV, solí a autentizační značkou
      * @throws Exception
      */
-    public static byte[] encrypt(byte[] plainData, String passphrase) throws Exception {
+    public static byte[] encrypt(byte[] plainData, char[] passphrase) throws Exception {
 
         // vytvoření náhodné soli
         byte[] salt = getRandomBytes(SALT_BYTES);
@@ -135,7 +135,7 @@ public class EncryptionManager {
      * @param passphrase tajná fráze
      * @return dešifrovaná data
      */
-    public static byte[] decrypt(byte[] cipherInput, String passphrase) throws Exception {
+    public static byte[] decrypt(byte[] cipherInput, char[] passphrase) throws Exception {
         // buffer - rozbalení IV + sůl + šifrovaná data
         ByteBuffer cipherBuffer = ByteBuffer.wrap(cipherInput);
 
@@ -169,7 +169,7 @@ public class EncryptionManager {
      * @return zašifrovaný text kódovaný v Base64
      * @throws Exception výjimka při šifrování
      */
-    public static String encrypt(String plainText, String passphrase) throws Exception {
+    public static String encrypt(String plainText, char[] passphrase) throws Exception {
         // B64 výsledek
         return Base64.getEncoder().encodeToString(encrypt(plainText.getBytes(), passphrase));
     }
@@ -182,7 +182,7 @@ public class EncryptionManager {
      * @return čistý dešifrovaný text
      * @throws Exception výjimka při dešiforvání
      */
-    public static String decrypt(String cipherText, String passphrase) throws Exception {
+    public static String decrypt(String cipherText, char[] passphrase) throws Exception {
         return new String(decrypt(Base64.getDecoder().decode(cipherText.getBytes(StandardCharsets.UTF_8)), passphrase), StandardCharsets.UTF_8);
     }
 

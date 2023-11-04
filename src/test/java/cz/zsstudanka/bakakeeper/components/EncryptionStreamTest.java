@@ -26,8 +26,8 @@ public class EncryptionStreamTest {
     @Test
     public void basicEncryptionTest() throws Exception {
 
-        String encryptedMessage = EncryptionManager.encrypt(message, password);
-        String decryptedMessage = EncryptionManager.decrypt(encryptedMessage, password);
+        String encryptedMessage = EncryptionManager.encrypt(message, password.toCharArray());
+        String decryptedMessage = EncryptionManager.decrypt(encryptedMessage, password.toCharArray());
 
         assertEquals(message, decryptedMessage);
     }
@@ -40,7 +40,7 @@ public class EncryptionStreamTest {
         // ---
 
         OutputStream ods;
-        ods = new EncryptionOutputStream(new FileOutputStream(tempFile.getAbsolutePath()), password);
+        ods = new EncryptionOutputStream(new FileOutputStream(tempFile.getAbsolutePath()), password.toCharArray());
         ObjectOutputStream outFile = new ObjectOutputStream( new GZIPOutputStream( ods ));
 
         outFile.writeObject(message);
@@ -51,7 +51,7 @@ public class EncryptionStreamTest {
         String inputData = new String();
 
         InputStream ids;
-        ids = ( new EncryptionInputStream(new FileInputStream(tempFile.getAbsolutePath()), password) );
+        ids = ( new EncryptionInputStream(new FileInputStream(tempFile.getAbsolutePath()), password.toCharArray()) );
         ObjectInputStream inStream = new ObjectInputStream(new GZIPInputStream( ids ));
 
         inputData = (String) inStream.readObject();
@@ -72,7 +72,7 @@ public class EncryptionStreamTest {
         // ---
 
         OutputStream ods;
-        ods = new EncryptionOutputStream(new FileOutputStream(tempFile.getAbsolutePath()), password);
+        ods = new EncryptionOutputStream(new FileOutputStream(tempFile.getAbsolutePath()), password.toCharArray());
         OutputStream outFile = new GZIPOutputStream( ods );
 
         outFile.write(this.message.getBytes());
@@ -83,7 +83,7 @@ public class EncryptionStreamTest {
         String inputData = new String();
 
         InputStream ids;
-        ids = ( new EncryptionInputStream(new FileInputStream(tempFile.getAbsolutePath()), password) );
+        ids = ( new EncryptionInputStream(new FileInputStream(tempFile.getAbsolutePath()), password.toCharArray()) );
 
         try {
             ids = new GZIPInputStream((ids));

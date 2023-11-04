@@ -32,7 +32,7 @@ public class EncryptionInputStream extends FilterInputStream {
     private int end;
 
     /** heslo */
-    private final String PASSPHRASE;
+    private final char[] PASSPHRASE;
 
     /** velikost jednoho paketu */
     private final static int ENCRYPTED_CHUNK_SIZE = EncryptionManager.IV_BYTES
@@ -61,7 +61,7 @@ public class EncryptionInputStream extends FilterInputStream {
      * @param in nižší vrstva
      * @param passphrase tajná fráze
      */
-    public EncryptionInputStream(InputStream in, String passphrase) {
+    public EncryptionInputStream(InputStream in, char[] passphrase) {
         super(in);
 
         this.buffer = new byte[ BUFFER_SIZE ];
@@ -88,7 +88,7 @@ public class EncryptionInputStream extends FilterInputStream {
      * @param in nižší vrstva
      */
     protected EncryptionInputStream(InputStream in) {
-        this(in, "");
+        this(in, new char[]{0});
     }
 
     /**

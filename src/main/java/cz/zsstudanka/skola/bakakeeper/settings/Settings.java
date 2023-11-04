@@ -31,7 +31,7 @@ public class Settings {
     private boolean develMode = false;
 
     /** uchovávané heslo k nastavení */
-    private String PASSPHRASE = null;
+    private char[] PASSPHRASE = null;
 
     /** výchozí název souboru s nastavením */
     private final String DEFAULT_CONF_FILE = "./settings.conf";
@@ -702,6 +702,7 @@ public class Settings {
 
     /**
      * Otevřená podoba uživatelského hesla doménového správce AD.
+     * TODO: hypoteticky může mít také mutabilní podobu v obecné hashmapě
      *
      * @return heslo správce AD
      */
@@ -733,7 +734,7 @@ public class Settings {
      * @param passphrase heslo pro konfiguraci
      */
     public void setPassphrase(String passphrase) {
-        this.PASSPHRASE = passphrase;
+        this.PASSPHRASE = passphrase.toCharArray();
     }
 
     /**
@@ -744,7 +745,7 @@ public class Settings {
     private Boolean useEncryption() {
 
         if (this.PASSPHRASE == null) return false;
-        if (this.PASSPHRASE.length() > 0) return true;
+        if (this.PASSPHRASE.length > 0) return true;
 
         return false;
     }
