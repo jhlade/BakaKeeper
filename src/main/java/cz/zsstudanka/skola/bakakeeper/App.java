@@ -13,6 +13,7 @@ import cz.zsstudanka.skola.bakakeeper.routines.Sync;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.settings.Version;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -262,7 +263,12 @@ public class App {
             // rychlá sestava
             if (params.containsKey("report")) {
                 if (params.get("report").size() == 1) {
-                    Export.genericReport(params.get("report").get(0), false);
+                    try {
+                        Export.genericReport(params.get("report").get(0), false);
+                    } catch (IOException e) {
+                        // TODO
+                        ReportManager.log(EBakaLogType.LOG_DEBUG, e.getLocalizedMessage());
+                    }
                 } else {
                     ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný argument -report. (Použití: -report 1.A)");
                 }
@@ -271,7 +277,12 @@ public class App {
             // rychlá sestava s resetem hesel
             if (params.containsKey("resetreport")) {
                 if (params.get("resetreport").size() == 1) {
-                    Export.genericReport(params.get("resetreport").get(0), true);
+                    try {
+                        Export.genericReport(params.get("resetreport").get(0), true);
+                    } catch (IOException e) {
+                        // TODO
+                        ReportManager.log(EBakaLogType.LOG_DEBUG, e.getLocalizedMessage());
+                    }
                 } else {
                     ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný argument -resetreport. (Použití: -resetreport 1.A)");
                 }
@@ -280,7 +291,7 @@ public class App {
             // TODO vývojový test
             if (params.containsKey("test") && FLAG_DEVEL) {
                 System.out.println("====== [ TEST ] ======");
-                //Test.test_16();
+
                 System.out.println("====== [ /TEST ] ======");
                 return;
             } // test

@@ -6,7 +6,7 @@
 
     <groupId>cz.zsstudanka.skola</groupId>
     <artifactId>bakakeeper</artifactId>
-    <version>1.1-SNAPSHOT</version>
+    <version>1.2-SNAPSHOT</version>
 
     <name>BakaKeeper</name>
     <description>Synchronizační nástroj evidence žáků v programu Bakaláři s uživatelskými účty v Active Directory.</description>
@@ -124,6 +124,23 @@
             <version>1.9</version>
         </dependency>
 
+        <!-- generátor PDF sestav -->
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>commons</artifactId>
+            <version>8.0.3</version>
+        </dependency>
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>layout</artifactId>
+            <version>8.0.3</version>
+        </dependency>
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>barcodes</artifactId>
+            <version>8.0.3</version>
+        </dependency>
+
         <!-- vypnutí SLF4J API od ADSDDL; NOP logger musí být v classpath ./lib-->
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -134,7 +151,7 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.13.1</version>
+            <version>4.13.2</version>
             <!-- pouze pro testy -->
             <scope>test</scope>
         </dependency>

@@ -1,5 +1,7 @@
 package cz.zsstudanka.skola.bakakeeper.settings;
 
+import java.net.InetAddress;
+
 /**
  * Informace o verzi a sestavení programu.
  *
@@ -13,7 +15,7 @@ public class Version {
     private final String purpose      = "Synchronizační nástroj evidence žáků v programu Bakaláři s uživatelskými účty vedenými v Active Directory.";
     private final String author       = "Jan Hladěna <jan.hladena@zs-studanka.cz>";
     private final String organization = "ZŠ Pardubice - Studánka";
-    private final String version      = "1.1.0-dev";
+    private final String version      = "1.2.0-dev";
     private final String year         = "2020";
 
     /**
@@ -87,6 +89,28 @@ public class Version {
         tag.append(version);
 
         return tag.toString();
+    }
+
+    /**
+     * Jméno aktuálního počítače.
+     *
+     * @return jméno aktuálního počítače
+     */
+    public String getHostname() {
+        try {
+            return InetAddress.getLocalHost().getHostName();
+        } catch (Exception e) {
+            return "(unknown)";
+        }
+    }
+
+    /**
+     * Informace o operačním systému aktuálního počítače.
+     *
+     * @return info o OS
+     */
+    public String getSystemInfo() {
+        return System.getProperty("os.name") + " " + System.getProperty("os.version");
     }
 
     /**

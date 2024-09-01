@@ -1,5 +1,18 @@
 package cz.zsstudanka.skola.bakakeeper.routines;
 
+import com.itextpdf.io.font.FontProgram;
+import com.itextpdf.io.font.FontProgramFactory;
+import com.itextpdf.io.font.PdfEncodings;
+import com.itextpdf.kernel.events.PdfDocumentEvent;
+import com.itextpdf.kernel.font.PdfFont;
+import com.itextpdf.kernel.font.PdfFontFactory;
+import com.itextpdf.kernel.pdf.*;
+import com.itextpdf.layout.Document;
+import com.itextpdf.layout.element.Cell;
+import com.itextpdf.layout.element.Paragraph;
+import com.itextpdf.layout.element.Table;
+import com.itextpdf.layout.element.Text;
+import com.itextpdf.layout.properties.TextAlignment;
 import cz.zsstudanka.skola.bakakeeper.App;
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaADAuthenticator;
@@ -15,11 +28,9 @@ import cz.zsstudanka.skola.bakakeeper.model.entities.Student;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.settings.Version;
 import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
+import cz.zsstudanka.skola.bakakeeper.utils.HelperPDF;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.PrintStream;
+import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -182,12 +193,23 @@ public class Export {
     }
 
     /**
-     * Odešle LuaLaTeXem generované PDF se současným stavem dat.
+     * Ad-hoc 2024-09
+     * Generátor sestav iText 8
      *
-     * @param query dotazované objekty (ročník, třída, UPN žáka - seznam oddělený čárkami)
+     * @param query dotazované objekty
      * @param resetPassword provede okamžitý reset hesla nad danými objekty
      */
-    public static void genericReport(String query, boolean resetPassword) {
+    public static void genericReport(String query, boolean resetPassword) throws IOException {
+
+        // iText písma
+        InputStream fontNormalTTFStream = Export.class.getResourceAsStream("/font/cmunrm.ttf");
+        InputStream fontMonoTTFStream = Export.class.getResourceAsStream("/font/cmuntt.ttf");
+
+        FontProgram fontProgramNormal = FontProgramFactory.createFont(fontNormalTTFStream.readAllBytes());
+        PdfFont fontNormal = PdfFontFactory.createFont(fontProgramNormal, PdfEncodings.IDENTITY_H);
+
+        FontProgram fontProgramMono = FontProgramFactory.createFont(fontMonoTTFStream.readAllBytes());
+        PdfFont fontMono = PdfFontFactory.createFont(fontProgramMono, PdfEncodings.IDENTITY_H);
 
         // zpracovávané celé třídy
         ArrayList<String> classes = new ArrayList<>();
@@ -238,14 +260,21 @@ public class Export {
         Collections.sort(classes);
         Collections.sort(students);
 
-        // sestavy <třída, TeX data>
-        Map<String, String> reports = new HashMap<>();
+        // sestavy <třída, tabulka>
+        Map<String, Table> reports = new HashMap<>();
         // třídní učitelé
         SQLrecords classTeachers = new SQLrecords(true);
 
         // celé třídy
         for (int mYr = 1; mYr <= 9; mYr++) {
             for (char mLetter = 'A'; mLetter <= 'E'; mLetter++) {
+
+                Table studentTable = new Table(5).useAllAvailableWidth().setFontSize(10);
+                studentTable.addCell(new Cell().setTextAlignment(TextAlignment.CENTER).add(new Paragraph(new Text("č.").setBold())));
+                studentTable.addCell(new Cell().add(new Paragraph(new Text("Příjmení").setBold())));
+                studentTable.addCell(new Cell().add(new Paragraph(new Text("Jméno").setBold())));
+                studentTable.addCell(new Cell().setTextAlignment(TextAlignment.RIGHT).add(new Paragraph(new Text("UPN").setBold())));
+                studentTable.addCell(new Cell().setTextAlignment(TextAlignment.CENTER).add(new Paragraph(new Text("Heslo").setBold())));
 
                 // generovaná třída není na seznamu požadavků
                 if (!classes.contains(mYr + "." + mLetter)) {
@@ -266,6 +295,7 @@ public class Export {
                 // identifikace třídního učitele - jméno
                 String classTeacher = classTeachers.getBy(EBakaSQL.F_CLASS_LABEL, mYr + "." + mLetter).get(EBakaSQL.F_FAC_GIVENNAME.basename()) + " " + classTeachers.getBy(EBakaSQL.F_CLASS_LABEL, mYr + "." + mLetter).get(EBakaSQL.F_FAC_SURNAME.basename());
 
+                // TODO ad-hoc
                 StringBuilder classReportData = new StringBuilder();
                 String template = "__CLASS_ID__ & __SURNAME__ & __GIVENNAME__ & \\texttt{__UPN__} & \\texttt{__PWD__} & \\qrcode{__QR__} \\\\ \\hline\n";
 
@@ -330,18 +360,15 @@ public class Export {
                     }
 
                     // zápis do tabulky v sestavě
-                    classReportData.append(template
-                            .replace("__CLASS_ID__", classNum.toString())
-                            .replace("__SURNAME__", studentSurname)
-                            .replace("__GIVENNAME__", studentName)
-                            .replace("__UPN__", studentUPN)
-                            .replace("__PWD__", newPassword)
-                            .replace("__QR__", studentUPN + "\t" + newPassword)
-                    );
+                    studentTable.addCell(new Cell().setTextAlignment(TextAlignment.CENTER).add(new Paragraph(classNum.toString())));
+                    studentTable.addCell(new Cell().add(new Paragraph(studentSurname)));
+                    studentTable.addCell(new Cell().add(new Paragraph(studentName)));
+                    studentTable.addCell(new Cell().setTextAlignment(TextAlignment.RIGHT).add(new Paragraph(new Text(studentUPN).setFont(fontMono))));
+                    studentTable.addCell(new Cell().setTextAlignment(TextAlignment.CENTER).add(new Paragraph(new Text(newPassword).setFont(fontMono))));
                 }
 
-                // vytvoření TeX sestavy
-                reports.put(mYr + "." + mLetter, Export.latexReportTemplate(mYr + "." + mLetter, classTeacher, classReportData.toString()));
+                // sestava
+                reports.put(mYr + "." + mLetter, studentTable);
 
             } // celá třída
 
@@ -351,41 +378,72 @@ public class Export {
         //
         //
 
+        // [2024-09-01 iText ->]
 
         // uložení, vytvoření a odeslání sestav
-        Iterator<String> tex = reports.keySet().iterator();
-        while (tex.hasNext()) {
+        Iterator<String> tableReport = reports.keySet().iterator();
+        while (tableReport.hasNext()) {
 
-            String classN = tex.next();
+            Document reportPdf = null;
+            PdfDocument pdf = null;
+
+            // třída
+            String classN = tableReport.next();
 
             SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
+            SimpleDateFormat formatterReport = new SimpleDateFormat("yyy-MM-dd HH:mm:ss");
             Date date = new Date();
 
-            String reportFile = "./reports/" + formatter.format(date)
+            // výstupní dokument
+            String reportPdfFile = "./reports/" + formatter.format(date)
                     + "_" + classN.toLowerCase().replace(".", "")
-                    + ".tex";
+                    + ".pdf";
 
-            try (PrintStream out = new PrintStream(new FileOutputStream(reportFile))) {
-                out.print(reports.get(classN));
-            } catch (FileNotFoundException e) {
-                // TODO
-                ReportManager.handleException("Nebylo možné vytvořit sestavu.", e);
+            // PDF 1.4
+            WriterProperties properties = new WriterProperties().addXmpMetadata().setPdfVersion(PdfVersion.PDF_1_4);
+            PdfWriter pdfWriter = new PdfWriter(reportPdfFile, properties);
+            pdf = new PdfDocument(pdfWriter);
+
+            // PDF metadata
+            PdfDocumentInfo info = pdf.getDocumentInfo();
+
+            info.setTitle("Sestava: Přístupové údaje " + classN);
+            info.setAuthor(Version.getInstance().getHostname());
+            info.setSubject("Sestava: Přístupové údaje " + classN);
+            info.setKeywords("");
+            info.setCreator(Version.getInstance().getName());
+            info.setProducer(Version.getInstance().getTag() + " @ " + Version.getInstance().getHostname()).addCreationDate();
+
+            reportPdf = new Document(pdf);
+            reportPdf.setFontSize(12);
+            reportPdf.setFont(fontNormal);
+            reportPdf.setMargins(65, 50, 65, 50);
+
+            // hlavička a patička
+            HelperPDF helperPDF = new HelperPDF(1,
+                    classN,
+                    classTeachers.getBy(EBakaSQL.F_CLASS_LABEL, classN).get(EBakaSQL.F_FAC_GIVENNAME.basename()) + " " + classTeachers.getBy(EBakaSQL.F_CLASS_LABEL, classN).get(EBakaSQL.F_FAC_SURNAME.basename()),
+                    formatterReport.format(date) + " @ " + Version.getInstance().getHostname() + " (" + Version.getInstance().getSystemInfo() + ")",
+                    Version.getInstance().getTag());
+            pdf.addEventHandler(PdfDocumentEvent.END_PAGE, helperPDF);
+
+            reportPdf.add(reports.get(classN));
+
+            // zpráva
+            reportPdf.add(
+                    new Paragraph("UPN = ").setFontSize(12)
+                            .add(new Text("User Principal Name").setItalic())
+                            .add(", slouží jako přihlašovací jméno do služeb Office 365 a zároveň jako platný tvar e-mailové adresy.")
+            );
+            reportPdf.add(new Paragraph("Žáci si mohou své heslo sami změnit na portálu https://heslo.zs-studanka.cz/.")).setFontSize(12);
+
+            // konec PDF
+            reportPdf.close();
+            if (pdf != null) {
+                pdf.close();
             }
 
-            ReportManager.logWait(EBakaLogType.LOG_INFO, "Probíhá generování PDF sestavy třídy " + classN);
-
-            // pdf lualatex
-            try {
-                Process p = Runtime.getRuntime().exec("/usr/bin/lualatex " + reportFile);
-                p.waitFor();
-            } catch (Exception x) {
-                ReportManager.logResult(EBakaLogType.LOG_ERR);
-                ReportManager.handleException("Proces LuaLaTeX nebyl spuštěn.", x);
-            }
-
-            ReportManager.logResult(EBakaLogType.LOG_OK);
-
-
+            // e-mail
             String message = "V příloze naleznete sestavu s novými přístupovými údaji žáků " +
                     classN + " pro použití v prostředí Office365. Všichni žáci mají přiřazené " +
                     "odpovídající žákovské licence, mohou tedy ihned plně používat všechny cloudové služby O365.\n\n" +
@@ -411,84 +469,11 @@ public class Export {
             // e-mail pro třídního a správce
             BakaMailer.getInstance().mail(addresses,
                     "Přístupové údaje žáků " + classN, message,
-                    new String[]{"./" + BakaUtils.fileBaseName(reportFile.replace(".tex", ".pdf"))});
+                    new String[]{"./reports/" + BakaUtils.fileBaseName(reportPdfFile)});
 
-            // úklid
-            File pdf = new File("./" + BakaUtils.fileBaseName(reportFile.replace(".tex", ".pdf")));
-            File aux = new File("./" + BakaUtils.fileBaseName(reportFile.replace(".tex", ".aux")));
-            File log = new File("./" + BakaUtils.fileBaseName(reportFile.replace(".tex", ".log")));
-            pdf.delete();
-            aux.delete();
-            log.delete();
-            File texfile = new File("./reports/" + BakaUtils.fileBaseName(reportFile));
-            texfile.delete();
+            File pdfFile = new File("./reports/" + BakaUtils.fileBaseName(reportPdfFile));
+            pdfFile.delete();
         }
-
-    }
-
-    /**
-     * TODO - LaTeXová šablona sestavy
-     *
-     * @param classID třída
-     * @param classTeacherName jméno třídního učitele
-     * @param internalData vnitřní data - tabulka s žáky
-     * @return TeX - sestava
-     */
-    public static String latexReportTemplate(String classID, String classTeacherName, String internalData) {
-
-        // tvorba sestavy
-        StringBuilder report = new StringBuilder();
-        report.append("\\documentclass[10pt]{article}\n\n");
-        report.append("\\usepackage[czech]{babel}\n");
-        report.append("\\usepackage[utf8]{inputenc}\n");
-        report.append("\\usepackage{tabularx}\n\n");
-        report.append("\\usepackage{geometry}\n");
-        report.append("\\geometry{a4paper,total={170mm,257mm},left=20mm,top=20mm}\n");
-        report.append("\\def\\arraystretch{1.5}%\n\n");
-        report.append("\\usepackage{fancyhdr}\n");
-        report.append("\\usepackage{qrcode}\n");
-        report.append("\\pagestyle{fancy}\n\n");
-
-        if (App.FLAG_DRYRUN) {
-            report.append("\\usepackage{xcolor}\n\n");
-        }
-
-        report.append("\\begin{document}\n");
-        report.append("\\qrset{height=.55cm}%\n\n");
-
-        report.append("\\fancyhf{}\n");
-        report.append("\\lhead{" + classID + "}\n");
-        report.append("\\rhead{" + classTeacherName + "}\n");
-        report.append("\\lfoot{" + Settings.getInstance().systemInfoTag() + "}\n");
-        report.append("\\rfoot{" + Version.getInstance().getTag() + "}\n");
-
-        if (App.FLAG_DRYRUN) {
-            report.append("\\chead{{\\color{red}\\textbf{ZKUŠEBNÍ SESTAVA}}}\n");
-        }
-
-        report.append("\\noindent\n");
-        report.append("\\Large{Třída " + classID + "}\n\n");
-        report.append("\\begin{table}[htbp]\n\n");
-        report.append("\\centering\n");
-        report.append("\\begin{tabularx}{\\textwidth}{| c | X | X | r | c | c |}\n");
-        report.append("\\hline\n");
-        report.append("\\bf{Č.} & \\bf{Příjmení} & \\bf{Jméno} & \\bf{UPN}  & \\bf{Heslo} & {~} \\\\ \\hline \\hline\n");
-
-        // data
-        report.append(internalData);
-
-        report.append("\\end{tabularx}\n\n");
-        report.append("\\end{table}\n\n");
-        report.append("\\noindent\n");
-        report.append("UPN = \\textit{User Principal Name}, slouží jako přihlašovací jméno do~služeb\n");
-        report.append("Office~365 a~zároveň jako platný tvar e-mailové adresy.\\par\n");
-        report.append("~\\par\n\n");
-        report.append("\\noindent\n");
-        report.append("Žáci si mohou své heslo sami změnit na~portálu https://heslo.zs-studanka.cz/.\\par\n\n");
-        report.append("\\end{document}\n");
-
-
-        return report.toString();
     }
 
 }
