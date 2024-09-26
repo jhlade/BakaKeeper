@@ -20,6 +20,9 @@ public enum EBakaSQL {
     LIT_WEB_ADMIN("S", "Kód pro označení webového účtu správce."),
     LIT_WEB_SYSSIG("NOUSR", ""),
 
+    LIT_LOGIN_UPD("H", "Kód H"), // TODO dokumentace???
+    LIT_LOGIN_ADMIN("*", "Název účtu správce systému."),
+
     BK_FLAG("baka_flag", "Pomocný virtuální parametr příznaku."),
 
     // tabulky
@@ -29,6 +32,7 @@ public enum EBakaSQL {
     TBL_STU_GUA("dbo.zaci_zzr", "Tabulka s definicí vztahů zákonných zástupců k žákům."),
     TBL_WEB_LOGIN("dbo.webuser", "Tabulka s definicí přístupů uživatelů webové aplikace."),
     TBL_CLASS("dbo.tridy", "Tabulka s definicí tříd."),
+    TBL_LOGIN("dbo.webuser", "Tabulka s interními uživateli."),
 
     // pole - Student
     F_STU_ID(TBL_STU.field + "." + "INTERN_KOD", "Interní kód žáka."),
@@ -75,8 +79,19 @@ public enum EBakaSQL {
     F_WEB_USRID(TBL_WEB_LOGIN.field + "." + "INTERN_KOD", "ID uživatele."),
     F_WEB_LOGIN(TBL_WEB_LOGIN.field + "." + "LOGIN", "Přihlašovací jméno uživatatele do webové aplikace."),
     F_WEB_TYPE(TBL_WEB_LOGIN.field + "." + "KOD1", "Typ uživatelského účtu definovaný literálem R/S/V/Z."),
-    F_WEB_MODIFIED(TBL_WEB_LOGIN.field + "." + "MODIFIED", "Datum poslední modifikace webovéo přístupu."),
+    F_WEB_MODIFIED(TBL_WEB_LOGIN.field + "." + "MODIFIED", "Datum poslední modifikace webového přístupu."),
     F_WEB_MODIFIEDBY(TBL_WEB_LOGIN.field + "." + "MODIFIEDBY", "Označení odpovědnosti  modifikace (FK nebo literál)."),
+    // pole - interní uživatelé
+    F_LOGIN_ID(TBL_LOGIN.field + "." + "INTERN_KOD", "ID uživatele."),
+    F_LOGIN_LOGIN(TBL_LOGIN.field + "." + "LOGIN", "Přihlašovací jméno uživatatele."),
+    F_LOGIN_TYPE(TBL_LOGIN.field + "." + "KOD1", "Typ uživatelského účtu definovaný literálem R/S/V/Z."),
+    F_LOGIN_ACL(TBL_LOGIN.field + "." + "PRAVA", "Uživatelské oprávnění (1)."),
+    F_LOGIN_UPDTYPE(TBL_LOGIN.field + "." + "UPD_TYP", "UPD TYP definovaný literálem."), // TODO - dokumentace?
+    F_LOGIN_PWD(TBL_LOGIN.field + "." + "HESLO", "B64 hash hesla uživatele."),
+    F_LOGIN_PWD_MET(TBL_LOGIN.field + "." + "METODA", "Hashovací metoda."),
+    F_LOGIN_PWD_SALT(TBL_LOGIN.field + "." + "SALT", "Sůl hashe."),
+    F_LOGIN_MODIFIED(TBL_LOGIN.field + "." + "MODIFIED", "Datum poslední modifikace uživatele."),
+    F_LOGIN_MODIFIEDBY(TBL_LOGIN.field + "." + "MODIFIEDBY", "Označení odpovědnosti  modifikace (FK nebo literál)."),
 
     // selektor pole - aliases
     S_STU_BK_CLASSYEAR("SUBSTRING(" + TBL_STU.field + "." + "TRIDA, 1, 1) AS " + F_STU_BK_CLASSYEAR.field, "Výběr: ročník žáka."),
