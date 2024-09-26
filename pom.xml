@@ -124,6 +124,13 @@
             <version>1.9</version>
         </dependency>
 
+        <!-- Lombok -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.34</version>
+        </dependency>
+
         <!-- vypnutí SLF4J API od ADSDDL; NOP logger musí být v classpath ./lib-->
         <dependency>
             <groupId>org.slf4j</groupId>
