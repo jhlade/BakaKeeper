@@ -17,16 +17,18 @@ přihlašovacího jména, e-mailu a počátečního hesla, vyřazení
 * Tvorba distribučních skupin třídních učitelů.
 * Tvorba anonymizovaných distribučních skupin s kontakty
 na zákonné zástupce žáků třídy/ročníku/stupně/školy.
+* Generování sestav pro třídní učitele.
 * Navrženo pro neinteraktivní periodický běh.
 
 ### Co je výhledově v plánu
  
 * Sjednocený generátor sestav.
+* Zálohování a obnova interních uživatelů v případě nežádoucího zásahu.
 * Možnost specifikace jiných výchozích tvarů hesel a režimu aktivace účtů.
 * Dříve odloženo z legislativních důvodů: Automatická definice
 přístupů k webové aplikaci pro žáky a jejich zákonné zástupce (metoda
 vyžádání nového hesla na základě ověřené e-mailové adresy).
-* Grafické uživatelské rozhraní.
+* Grafické uživatelské rozhraní, interaktivní CLI.
 
 ### Prerekvizity
  
@@ -96,8 +98,9 @@ plugin Mavenu  a&nbsp;sestavit archiv i&nbsp;se závislostmi,
 nebo rovnou použít shade plugin*
 * `com.sun.mail.javax.mail` >= 1.6.2
 * `com.microsoft.sqlserver.mssql-jdbc` >= 8.2.0
+* `org.projectlombok.lombok` >= 1.18.34
 * `net.sourceforge.jtds.jtds` >= 1.3.1
 * `net.tirasa.adsddl` >= 1.9 (+`slf4j-api`, `activation`)
 * (`junit` >= 4.13.1)
 
-2019-2023 [ZŠ Pardubice - Studánka](https://www.zs-studanka.cz/)
+2019-2024 [ZŠ Pardubice – Studánka](https://www.zs-studanka.cz/)
