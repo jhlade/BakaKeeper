@@ -7,16 +7,15 @@ import cz.zsstudanka.skola.bakakeeper.connectors.BakaADAuthenticator;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaSQL;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
+import cz.zsstudanka.skola.bakakeeper.model.collections.BakaInternalUserHistory;
+import cz.zsstudanka.skola.bakakeeper.model.entities.BakaInternalUser;
 import cz.zsstudanka.skola.bakakeeper.routines.Export;
 import cz.zsstudanka.skola.bakakeeper.routines.Manipulation;
 import cz.zsstudanka.skola.bakakeeper.routines.Sync;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.settings.Version;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Nástroj pro synchronizaci záznamů z Bakalářů a informacemi v Active Directory.
@@ -274,6 +273,49 @@ public class App {
                     Export.genericReport(params.get("resetreport").get(0), true);
                 } else {
                     ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný argument -resetreport. (Použití: -resetreport 1.A)");
+                }
+            }
+
+            // práce s interními uživateli
+            // TODO přesun logiky mimo třídu App
+            if (params.containsKey("internaldb")) {
+
+                // restore
+                if (params.get("internaldb").size() == 3) {
+                    // restore ADMIN 1
+                    if (params.get("internaldb").get(0).toString().equals("restore")) {
+                        BakaInternalUserHistory.getInstance().restore(
+                                params.get("internaldb").get(1),
+                                Integer.parseInt(params.get("internaldb").get(2))
+                        );
+                    }
+                } else if (params.get("internaldb").size() == 2) {
+
+                    // list
+                    if (params.get("internaldb").get(0).toString().equals("list")) {
+
+                        Map<Date, BakaInternalUser> data = BakaInternalUserHistory.getInstance().list(params.get("internaldb").get(1));
+
+                        if (data != null) {
+                            BakaInternalUser current = new BakaInternalUser(params.get("internaldb").get(1));
+
+                            Integer i = 0;
+                            for (Map.Entry<Date, BakaInternalUser> backupEntry : data.entrySet()) {
+                                ReportManager.log("[ " + i + " ]" + ((backupEntry.getValue().compareTo(current) == 0) ? "*" : "" ) + "\t[" + backupEntry.getKey().toString() + "] : " + backupEntry.getValue().getLogin());
+                                i++;
+                            }
+                        } else {
+                            ReportManager.log("Pro zadaného uživatele neexistují žádné zálohy.");
+                        }
+                    }
+
+                    // backup
+                    if (params.get("internaldb").get(0).toString().equals("backup")) {
+                        ReportManager.log(EBakaLogType.LOG_DEBUG, "Flow: backup ("+params.get("internaldb").get(1)+").");
+                        BakaInternalUserHistory.getInstance().backup(params.get("internaldb").get(1));
+                    }
+                } else {
+                    ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný argument -internaldb. (Použití: -internaldb (list|backup|restore) login [index])");
                 }
             }
 
