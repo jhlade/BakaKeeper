@@ -50,6 +50,11 @@ public class BakaSQL {
     }
 
     public Connection getConnection() {
+
+        if (!isConnected()) {
+            connect();
+        }
+
         return this.con;
     }
 
