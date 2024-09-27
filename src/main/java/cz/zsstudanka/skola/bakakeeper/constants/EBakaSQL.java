@@ -22,6 +22,7 @@ public enum EBakaSQL {
 
     LIT_LOGIN_UPD("H", "Kód H"), // TODO dokumentace???
     LIT_LOGIN_ADMIN("*", "Název účtu správce systému."),
+    LIT_DUMMY_ADMIN("ADMIN", "Univerzální označení pro účet správce."),
 
     BK_FLAG("baka_flag", "Pomocný virtuální parametr příznaku."),
 
@@ -87,6 +88,7 @@ public enum EBakaSQL {
     F_LOGIN_TYPE(TBL_LOGIN.field + "." + "KOD1", "Typ uživatelského účtu definovaný literálem R/S/V/Z."),
     F_LOGIN_ACL(TBL_LOGIN.field + "." + "PRAVA", "Uživatelské oprávnění (1)."),
     F_LOGIN_UPDTYPE(TBL_LOGIN.field + "." + "UPD_TYP", "UPD TYP definovaný literálem."), // TODO - dokumentace?
+    F_LOGIN_KODF(TBL_LOGIN.field + "." + "KODF", "Pole KODF."), // TODO - dokumentace?
     F_LOGIN_PWD(TBL_LOGIN.field + "." + "HESLO", "B64 hash hesla uživatele."),
     F_LOGIN_PWD_MET(TBL_LOGIN.field + "." + "METODA", "Hashovací metoda."),
     F_LOGIN_PWD_SALT(TBL_LOGIN.field + "." + "SALT", "Sůl hashe."),
