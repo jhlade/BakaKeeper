@@ -1,0 +1,200 @@
+# =============================================================================
+# BakaKeeper – vývojové prostředí v Podmanu
+#
+# Služby:
+#   samba4   – simulace Microsoft AD (LDAP 389/636/3268/3269, Kerberos KDC 88)
+#   mssql    – MS SQL Server 2022 s Kerberos ověřováním (port 1433)
+#   mailpit  – mockup SMTP serveru, veškerá pošta viditelná jen lokálně
+#              SMTP: port 1025, webové rozhraní: http://localhost:8025
+#
+# Spuštění: viz setup-dev.sh
+# Statická podsíť: 172.20.0.0/24
+#
+# Ukládání dat:
+#   samba AD data:  bind-mount → ./data/samba   (přístupné na hostiteli)
+#   keytabs:        bind-mount → ./.data/keytabs (přístupné na hostiteli)
+#   mssql databáze: pojmenovaný Podman svazek    (virtiofs+UID 10001 = nelze bind-mount)
+#   Čistá instalace: ./teardown-dev.sh --clean
+# =============================================================================
+
+networks:
+  bakadev-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Samba4 AD DC – simulace Microsoft Active Directory
+  #
+  # Poskytuje:
+  #   - LDAP (389) a LDAPS (636) – standardní AD porty
+  #   - LDAP/LDAPS Global Catalog (3268/3269) – BakaADAuthenticator naznačuje GC
+  #   - Port 363 přesměrován na 389 (workaround: EBakaPorts.SRV_LDAP = 363, chyba)
+  #   - Kerberos KDC (88) – pro ověřování MSSQL spojení
+  #   - DNS port přesměrován na 15353 (macOS/mDNSResponder obsadí 53)
+  #
+  # IP: 172.20.0.10, hostname: dc01.zsstu.local
+  # ---------------------------------------------------------------------------
+  samba4:
+    build:
+      context: ./samba4
+      dockerfile: Containerfile
+    container_name: bakadev-samba4
+    hostname: dc01.zsstu.local
+    environment:
+      - DOMAIN=${DOMAIN}
+      - REALM=${REALM}
+      - NETBIOS_DOMAIN=${NETBIOS_DOMAIN}
+      - DC_HOSTNAME=${DC_HOSTNAME}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+    networks:
+      bakadev-net:
+        ipv4_address: 172.20.0.10
+    ports:
+      # DNS – alternativní port, macOS obsazuje 53 přes mDNSResponder
+      - "15353:53/tcp"
+      - "15353:53/udp"
+      # Kerberos KDC
+      - "88:88/tcp"
+      - "88:88/udp"
+      # LDAP standardní port
+      - "389:389/tcp"
+      # Workaround: EBakaPorts.SRV_LDAP má chybně 363 místo 389
+      # TODO refactor: opravit EBakaPorts.SRV_LDAP → port 389
+      - "363:389/tcp"
+      # LDAPS standardní port
+      - "636:636/tcp"
+      # Global Catalog (LDAP + LDAPS) – potřebné pro isGlobalCatalogReady
+      - "3268:3268/tcp"
+      - "3269:3269/tcp"
+      # SMB/RPC a kpasswd
+      - "445:445/tcp"
+      - "464:464/tcp"
+      - "464:464/udp"
+    volumes:
+      # Perzistentní data domény – bind-mount do .data/samba
+      - ./.data/samba:/var/lib/samba
+      # Sdílený adresář pro keytab MSSQL (Samba4 ho sem zapíše)
+      - ./.data/keytabs:/keytabs
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+      - MKNOD
+      - NET_BIND_SERVICE
+    security_opt:
+      - label=disable
+    healthcheck:
+      # Ověřujeme dostupnost LDAP – KDC je pak také připraven
+      test: ["CMD-SHELL", "ldapsearch -x -H ldap://localhost -b '' -s base '(objectClass=*)' > /dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+
+  # ---------------------------------------------------------------------------
+  # Azure SQL Edge s podporou Kerberos  (náhrada za SQL Server 2022)
+  #
+  # SQL Server 2022 nemá nativní ARM64 build → Segfault na Apple Silicon
+  # s Podman/libkrun. Azure SQL Edge je T-SQL kompatibilní a ARM64 nativní.
+  #
+  # sqlcmd: /usr/local/bin/sqlcmd  (go-sqlcmd, ARM64 nativní)
+  #   - klasický /opt/mssql-tools/bin/sqlcmd není pro ARM64 dostupný přes apt
+  #
+  # Kerberos keytab (mssql.keytab) vytvoří setup-dev.sh v Samba4 kontejneru
+  # a uloží ho do sdíleného bind-mount adresáře .data/keytabs.
+  # MSSQL ho načte z /var/opt/mssql/keytabs/mssql.keytab.
+  #
+  # POZNÁMKA – proč pojmenovaný svazek pro data:
+  #   sqlservr (UID 10001) při prvním startu extrahuje šablony systémových DB
+  #   (master.mdf, model.mdf…) z embedded zdrojů binárky do /var/opt/mssql/data.
+  #   Bind-mount macOS adresáře přes virtiofs způsobuje chybu ENOENT/EACCES
+  #   (macOS adresář vlastní jiné UID než 10001 → sqlservr nemůže zapisovat).
+  #   Pojmenovaný Podman svazek toto obchází – Podman inicializuje svazek
+  #   s oprávněními odpovídajícími kontejnerovému uživateli.
+  #
+  # IP: 172.20.0.20, hostname: mssql.zsstu.local
+  # ---------------------------------------------------------------------------
+  mssql:
+    build:
+      context: ./mssql
+      dockerfile: Containerfile
+    container_name: bakadev-mssql
+    hostname: mssql.zsstu.local
+    environment:
+      - ACCEPT_EULA=1
+      - MSSQL_SA_PASSWORD=${SQL_SA_PASSWORD}
+      # Vypnutí telemetrie na úrovni prostředí
+      - MSSQL_TELEMETRY_ENABLED=FALSE
+      # Vypnutí Azure SQL Edge streaming (ONNX, IoT) – pro dev nepotřebné
+      - MSSQL_PACKAGE_REVIEW_ACCEPTED=Y
+      - MSSQL_AGENT_ENABLED=FALSE
+    networks:
+      bakadev-net:
+        ipv4_address: 172.20.0.20
+    extra_hosts:
+      # MSSQL kontejner musí vidět KDC Samba4 jako dc01.zsstu.local
+      - "dc01.zsstu.local:172.20.0.10"
+      - "zsstu.local:172.20.0.10"
+    ports:
+      - "1433:1433"
+    volumes:
+      # Databázová data – pojmenovaný svazek (bind-mount z macOS nefunguje pro UID 10001)
+      - mssql-data:/var/opt/mssql/data
+      # Keytab generovaný Samba4 (čtení) – sdílený bind-mount z .data/keytabs
+      - ./.data/keytabs:/var/opt/mssql/keytabs:ro
+      # Konfigurace MSSQL (jazyk, keytab cesta)
+      - ./mssql/mssql.conf:/var/opt/mssql/mssql.conf:ro
+      # Inicializační SQL skript pro vytvoření schématu
+      - ./mssql/init-db.sql:/init-db.sql:ro
+    depends_on:
+      samba4:
+        condition: service_healthy
+    healthcheck:
+      # Bash TCP check – nevyžaduje sqlcmd, ověří, že port 1433 přijímá spojení.
+      # start_period je záměrně 120s – při prvním startu inicializuje systémové DB
+      # a dřívější pokusy zbytečně spalují retry limit.
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/localhost/1433' 2>/dev/null"]
+      interval: 20s
+      timeout: 5s
+      retries: 15
+      start_period: 120s
+
+  # ---------------------------------------------------------------------------
+  # Mailpit – mockup SMTP serveru
+  #
+  # Zachytí veškerou odchozí poštu aplikace a zobrazí ji ve webovém rozhraní.
+  # Ven se nic nepošle – ideální pro testování notifikací a sestav.
+  #
+  # SMTP:  localhost:1025  (nakonfigurovat smtp_host=localhost v settings.dat)
+  # Web:   http://localhost:8025
+  # IP: 172.20.0.30, hostname: mail.zsstu.local
+  # ---------------------------------------------------------------------------
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: bakadev-mailpit
+    hostname: mail.zsstu.local
+    networks:
+      bakadev-net:
+        ipv4_address: 172.20.0.30
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    environment:
+      # Přijme libovolné SMTP přihlašovací údaje (přihlášení MSSQL/O365 účty)
+      - MP_MAX_MESSAGES=1000
+      - MP_SMTP_AUTH_ACCEPT_ANY=true
+      - MP_SMTP_AUTH_ALLOW_INSECURE=true
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8025 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# Pojmenované Podman svazky
+# mssql-data: databázové soubory MSSQL (Azure SQL Edge sqlservr UID 10001 potřebuje
+#             zápisová práva; bind-mount z macOS přes virtiofs toto nesplňuje)
+volumes:
+  mssql-data:
