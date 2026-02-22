@@ -17,6 +17,8 @@
 #   Čistá instalace: ./teardown-dev.sh --clean
 # =============================================================================
 
+name: bakakeeper
+
 networks:
   bakadev-net:
     driver: bridge
@@ -32,18 +34,17 @@ services:
   # Poskytuje:
   #   - LDAP (389) a LDAPS (636) – standardní AD porty
   #   - LDAP/LDAPS Global Catalog (3268/3269) – BakaADAuthenticator naznačuje GC
-  #   - Port 363 přesměrován na 389 (workaround: EBakaPorts.SRV_LDAP = 363, chyba)
   #   - Kerberos KDC (88) – pro ověřování MSSQL spojení
   #   - DNS port přesměrován na 15353 (macOS/mDNSResponder obsadí 53)
   #
-  # IP: 172.20.0.10, hostname: dc01.zsstu.local
+  # IP: 172.20.0.10, hostname: dc.skola.local
   # ---------------------------------------------------------------------------
   samba4:
     build:
       context: ./samba4
       dockerfile: Containerfile
     container_name: bakadev-samba4
-    hostname: dc01.zsstu.local
+    hostname: dc.skola.local
     environment:
       - DOMAIN=${DOMAIN}
       - REALM=${REALM}
@@ -62,9 +63,6 @@ services:
       - "88:88/udp"
       # LDAP standardní port
       - "389:389/tcp"
-      # Workaround: EBakaPorts.SRV_LDAP má chybně 363 místo 389
-      # TODO refactor: opravit EBakaPorts.SRV_LDAP → port 389
-      - "363:389/tcp"
       # LDAPS standardní port
       - "636:636/tcp"
       # Global Catalog (LDAP + LDAPS) – potřebné pro isGlobalCatalogReady
@@ -115,14 +113,14 @@ services:
   #   Pojmenovaný Podman svazek toto obchází – Podman inicializuje svazek
   #   s oprávněními odpovídajícími kontejnerovému uživateli.
   #
-  # IP: 172.20.0.20, hostname: mssql.zsstu.local
+  # IP: 172.20.0.20, hostname: sql.skola.local
   # ---------------------------------------------------------------------------
   mssql:
     build:
       context: ./mssql
       dockerfile: Containerfile
     container_name: bakadev-mssql
-    hostname: mssql.zsstu.local
+    hostname: sql.skola.local
     environment:
       - ACCEPT_EULA=1
       - MSSQL_SA_PASSWORD=${SQL_SA_PASSWORD}
@@ -135,9 +133,9 @@ services:
       bakadev-net:
         ipv4_address: 172.20.0.20
     extra_hosts:
-      # MSSQL kontejner musí vidět KDC Samba4 jako dc01.zsstu.local
-      - "dc01.zsstu.local:172.20.0.10"
-      - "zsstu.local:172.20.0.10"
+      # MSSQL kontejner musí vidět KDC Samba4 jako dc.skola.local
+      - "dc.skola.local:172.20.0.10"
+      - "skola.local:172.20.0.10"
     ports:
       - "1433:1433"
     volumes:
@@ -170,12 +168,12 @@ services:
   #
   # SMTP:  localhost:1025  (nakonfigurovat smtp_host=localhost v settings.dat)
   # Web:   http://localhost:8025
-  # IP: 172.20.0.30, hostname: mail.zsstu.local
+  # IP: 172.20.0.30, hostname: mail.skola.ext
   # ---------------------------------------------------------------------------
   mailpit:
     image: axllent/mailpit:latest
     container_name: bakadev-mailpit
-    hostname: mail.zsstu.local
+    hostname: mail.skola.ext
     networks:
       bakadev-net:
         ipv4_address: 172.20.0.30

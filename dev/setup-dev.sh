@@ -27,7 +27,7 @@ INFO="\033[0;34m[INFO]\033[0m"
 WARN="\033[0;33m[WARN]\033[0m"
 ERR="\033[0;31m[ERR]\033[0m"
 
-# Přesuneme se do adresáře dev/ (skript lze spustit odkudkoli)
+# Přesune do adresáře dev/ (skript lze spustit odkudkoli)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${SCRIPT_DIR}"
 
@@ -185,12 +185,18 @@ echo -e "${OK} Keytab uložen do sdíleného svazku (keytabs:/keytabs/mssql.keyt
 # ---------------------------------------------------------------------------
 # Krok 6: Čekání na MSSQL a inicializace databáze
 # ---------------------------------------------------------------------------
-# Azure SQL Edge při prvním startu inicializuje systémové databáze – dáme mu 6 minut
+# Azure SQL Edge při prvním startu inicializuje systémové databáze – dáme mu až 6 minut
 wait_for_healthy "bakadev-mssql" 360
 
 echo -e "${INFO} Inicializuji databázi '${SQL_DB}'..."
-# go-sqlcmd v /usr/local/bin/sqlcmd (mssql-tools není pro ARM64 dostupný přes apt)
-podman exec bakadev-mssql \
+# go-sqlcmd v1.9.0 v /usr/local/bin/sqlcmd (mssql-tools není pro ARM64 dostupný přes apt)
+# SQLCMDENCRYPT=false: úplně vypne TLS na straně klienta (disable, nikoli optional).
+# go-sqlcmd (Go ≥1.21) odmítá self-signed certifikát SQL Serveru s negativním sériovým číslem
+# (x509: negative serial number); v dev prostředí (loopback) je plaintext v pořádku.
+# Serverová strana doplněna forceencryption=0 v mssql.conf.
+podman exec \
+    -e SQLCMDENCRYPT=false \
+    bakadev-mssql \
     /usr/local/bin/sqlcmd \
         -S localhost \
         -U sa \
@@ -210,6 +216,13 @@ podman restart bakadev-mssql
 wait_for_healthy "bakadev-mssql" 120
 
 # ---------------------------------------------------------------------------
+# Krok 7b: Seed testovacích dat (SQL + AD zaměstnanci)
+# ---------------------------------------------------------------------------
+echo ""
+echo -e "${INFO} Spouštím seed testovacích dat..."
+bash "${SCRIPT_DIR}/seed/run-seed.sh"
+
+# ---------------------------------------------------------------------------
 # Krok 8: Záznamy v /etc/hosts
 # ---------------------------------------------------------------------------
 echo ""
@@ -218,7 +231,7 @@ echo -e "${WARN} Tato operace vyžaduje sudo."
 echo ""
 
 # Zkontrolujeme, zda záznamy již existují
-if grep -q "dc01.zsstu.local" /etc/hosts 2>/dev/null; then
+if grep -q "dc.skola.local" /etc/hosts 2>/dev/null; then
     echo -e "  [=] Záznamy v /etc/hosts již existují – přeskakuji."
 else
     read -r -p "Přidat záznamy do /etc/hosts? (sudo) [y/N] " response
@@ -226,17 +239,17 @@ else
         sudo tee -a /etc/hosts <<EOF
 
 # BakaKeeper vývojové prostředí – přidáno setup-dev.sh
-127.0.0.1  dc01.zsstu.local zsstu.local
-127.0.0.1  mssql.zsstu.local
-127.0.0.1  mail.zsstu.local
+127.0.0.1  dc.skola.local skola.local
+127.0.0.1  sql.skola.local
+127.0.0.1  mail.skola.ext
 EOF
         echo -e "${OK} Záznamy přidány do /etc/hosts."
     else
         echo -e "${WARN} Záznamy nebyly přidány. Kerberos autentizace nebude funkční."
         echo "Přidejte ručně do /etc/hosts:"
-        echo "  127.0.0.1  dc01.zsstu.local zsstu.local"
-        echo "  127.0.0.1  mssql.zsstu.local"
-        echo "  127.0.0.1  mail.zsstu.local"
+        echo "  127.0.0.1  dc.skola.local skola.local"
+        echo "  127.0.0.1  sql.skola.local"
+        echo "  127.0.0.1  mail.skola.ext"
     fi
 fi
 
@@ -249,9 +262,9 @@ echo -e " ${OK} Vývojové prostředí je připraveno!"
 echo "============================================================"
 echo ""
 echo " Služby:"
-echo "   LDAP:     ldap://dc01.zsstu.local:389"
-echo "   Kerberos: dc01.zsstu.local:88"
-echo "   MSSQL:    mssql.zsstu.local:1433  (SA: ${SQL_SA_PASSWORD})"
+echo "   LDAP:     ldap://dc.skola.local:389"
+echo "   Kerberos: dc.skola.local:88"
+echo "   MSSQL:    sql.skola.local:1433  (SA: ${SQL_SA_PASSWORD})"
 echo "   Mailpit:  http://localhost:8025"
 echo ""
 echo " Kerberos autentizace pro aplikaci:"
@@ -260,9 +273,9 @@ echo "   kinit bakalari@${REALM}"
 echo "   # Heslo: ${BAKALARI_PASSWORD}"
 echo ""
 echo " LDAP dotaz (ověření AD):"
-echo "   ldapsearch -x -H ldap://dc01.zsstu.local \\"
+echo "   ldapsearch -x -H ldap://dc.skola.local \\"
 echo "     -D 'bakalari@${DOMAIN}' -w '${BAKALARI_PASSWORD}' \\"
-echo "     -b 'OU=Zaci,OU=Uzivatele,OU=Skola,DC=zsstu,DC=local' '(objectClass=user)'"
+echo "     -b 'OU=Zaci,OU=Uzivatele,OU=Skola,DC=skola,DC=local' '(objectClass=user)'"
 echo ""
 echo " Zastavení prostředí:"
 echo "   ./teardown-dev.sh"

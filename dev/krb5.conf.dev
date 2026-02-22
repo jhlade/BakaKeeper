@@ -1,19 +1,19 @@
 # =============================================================================
-# Kerberos konfigurace pro hostitele (vývojový Mac)
+# Kerberos konfigurace pro hostitele (vývojový macOS)
 #
 # Použití:
-#   export KRB5_CONFIG=/Users/eidos/Developer/BakaSync/dev/krb5.conf.dev
-#   kinit bakalari@ZSSTU.LOCAL
+#   export KRB5_CONFIG=/Users/bakalari/Developer/BakaSync/dev/krb5.conf.dev
+#   kinit bakalari@SKOLA.LOCAL
 #   java -jar local/BakaKeeper.jar --check
 #
 # Předpoklady:
-#   - setup-dev.sh byl spuštěn a /etc/hosts obsahuje záznamy pro zsstu.local
+#   - setup-dev.sh byl spuštěn a /etc/hosts obsahuje záznamy pro skola.local
 #   - Kontejner bakadev-samba4 běží a naslouchá na portu 88
 # =============================================================================
 
 [libdefaults]
-    # Výchozí doména musí odpovídat doméně v settings.dat (domain=zsstu.local)
-    default_realm           = ZSSTU.LOCAL
+    # Výchozí doména musí odpovídat doméně v settings.dat (domain=skola.local)
+    default_realm           = SKOLA.LOCAL
 
     # Bez DNS lookup – KDC hledáme explicitně v sekci [realms]
     dns_lookup_realm        = false
@@ -36,13 +36,13 @@
     permitted_enctypes      = aes256-cts aes128-cts arcfour-hmac-md5
 
 [realms]
-    ZSSTU.LOCAL = {
+    SKOLA.LOCAL = {
         # KDC je Samba4 kontejner, přeposílaný na localhost:88
-        kdc          = dc01.zsstu.local:88
-        admin_server = dc01.zsstu.local
-        default_domain = zsstu.local
+        kdc          = dc.skola.local:88
+        admin_server = dc.skola.local
+        default_domain = skola.local
     }
 
 [domain_realm]
-    .zsstu.local  = ZSSTU.LOCAL
-    zsstu.local   = ZSSTU.LOCAL
+    .skola.local  = SKOLA.LOCAL
+    skola.local   = SKOLA.LOCAL

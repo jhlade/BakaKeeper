@@ -8,9 +8,9 @@
 
 set -e
 
-DOMAIN="${DOMAIN:-zsstu.local}"
-REALM="${REALM:-ZSSTU.LOCAL}"
-NETBIOS="${NETBIOS_DOMAIN:-ZSSTU}"
+DOMAIN="${DOMAIN:-skola.local}"
+REALM="${REALM:-SKOLA.LOCAL}"
+NETBIOS="${NETBIOS_DOMAIN:-SKOLA}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-BakaSync#Dev2024!}"
 DC_HOSTNAME="${DC_HOSTNAME:-dc01}"
 
@@ -65,10 +65,10 @@ echo "[BakaDev] Spouštím Samba4 AD DC pro ${REALM}..."
 # Přesměrujeme DNS na interní Samba4 DNS.
 # samba_dnsupdate ověřuje záznamy domény přes /etc/resolv.conf.
 # Bez tohoto nastavení selhává s 17s timeoutem, protože Podman DNS
-# (výchozí resolver kontejneru) doménu zsstu.local nezná → fatal exit.
+# (výchozí resolver kontejneru) doménu skola.local nezná → fatal exit.
 # Samba4 přeposílá neznámé dotazy na DNS forwarder 8.8.8.8.
 echo "nameserver 127.0.0.1" > /etc/resolv.conf
-echo "search zsstu.local" >> /etc/resolv.conf
+echo "search skola.local" >> /etc/resolv.conf
 
 # Spuštění Samby v popředí (Podman sleduje tento proces)
 # --debug-stdout: logy jdou na stdout (viditelné přes 'podman logs bakadev-samba4')

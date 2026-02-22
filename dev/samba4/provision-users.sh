@@ -11,12 +11,12 @@
 
 set -e
 
-DOMAIN="${DOMAIN:-zsstu.local}"
-REALM="${REALM:-ZSSTU.LOCAL}"
+DOMAIN="${DOMAIN:-skola.local}"
+REALM="${REALM:-SKOLA.LOCAL}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-BakaSync#Dev2024!}"
 BAKALARI_PASSWORD="${BAKALARI_PASSWORD:-Baka1234!}"
 
-# Sestavení základního DN z doménového jména (zsstu.local → DC=zsstu,DC=local)
+# Sestavení základního DN z doménového jména (skola.local → DC=skola,DC=local)
 IFS='.' read -ra PARTS <<< "${DOMAIN}"
 BASE_DN="DC=${PARTS[0]},DC=${PARTS[1]}"
 
@@ -36,12 +36,16 @@ echo "[BakaDev] =========================================="
 # ------------------------------------------
 # OU struktura odpovídající settings.conf:
 #
-#   OU=Skola,DC=zsstu,DC=local
+#   OU=Skola,DC=skola,DC=local
 #   ├── OU=Uzivatele
 #   │   ├── OU=Zaci
 #   │   │   └── OU=StudiumUkonceno
 #   │   └── OU=Zamestnanci
-#   │       └── OU=Ucitele
+#   │       ├── OU=Ucitele
+#   │       ├── OU=Vedeni       ← ředitel, zástupci
+#   │       ├── OU=Asistenti    ← asistenti pedagoga
+#   │       ├── OU=Vychovatelky ← vychovatelé školní družiny
+#   │       └── OU=Provoz       ← hospodářský/provozní personál
 #   ├── OU=Skupiny
 #   │   ├── OU=Zaci
 #   │   ├── OU=Uzivatele
@@ -62,9 +66,13 @@ create_ou "Zaci"        "${UZIV_BASE}"
 ZACI_BASE="OU=Zaci,${UZIV_BASE}"
 create_ou "StudiumUkonceno" "${ZACI_BASE}"
 
-create_ou "Zamestnanci" "${UZIV_BASE}"
+create_ou "Zamestnanci"   "${UZIV_BASE}"
 ZAMEST_BASE="OU=Zamestnanci,${UZIV_BASE}"
-create_ou "Ucitele"     "${ZAMEST_BASE}"
+create_ou "Ucitele"       "${ZAMEST_BASE}"
+create_ou "Vedeni"        "${ZAMEST_BASE}"
+create_ou "Asistenti"     "${ZAMEST_BASE}"
+create_ou "Vychovatelky"  "${ZAMEST_BASE}"
+create_ou "Provoz"        "${ZAMEST_BASE}"
 
 # Skupiny
 create_ou "Skupiny"     "${SKOLA_BASE}"
@@ -91,7 +99,7 @@ echo ""
 echo "[BakaDev] Importuji Exchange schema extension..."
 
 # Dynamicky doplníme Base DN do LDIF šablony a importujeme
-sed "s/DC=zsstu,DC=local/${BASE_DN}/g" /exchange-schema.ldif \
+sed "s/DC=skola,DC=local/${BASE_DN}/g" /exchange-schema.ldif \
     | ldapadd -H ldap://localhost \
               -D "CN=Administrator,CN=Users,${BASE_DN}" \
               -w "${ADMIN_PASSWORD}" \

@@ -7,7 +7,7 @@ package cz.zsstudanka.skola.bakakeeper.constants;
  */
 public enum EBakaPorts {
 
-    SRV_LDAP("ldap", 363, "LDAP"),
+    SRV_LDAP("ldap", 389, "LDAP"),
     SRV_LDAPS("ldaps", 636, "LDAPS"),
     SRV_GC("ldap", 3268, "AD Global Catalog"),
     SRV_GCS("ldaps", 3269, "AD Global Catalog (SSL)"),

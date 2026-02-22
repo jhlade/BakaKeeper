@@ -62,7 +62,7 @@ if ${CLEAN}; then
     # Odebrání záznamů z /etc/hosts (vyžaduje sudo)
     if grep -q "BakaKeeper vývojové prostředí" /etc/hosts 2>/dev/null; then
         echo "Odstraňuji záznamy z /etc/hosts (vyžaduje sudo)..."
-        sudo sed -i.bak '/BakaKeeper vývojové prostředí/,/mail\.zsstu\.local/d' /etc/hosts
+        sudo sed -i.bak '/BakaKeeper vývojové prostředí/,/mail\.skola\.ext/d' /etc/hosts
         echo "[OK] Záznamy odstraněny."
     fi
     echo "[OK] Vývojové prostředí smazáno."

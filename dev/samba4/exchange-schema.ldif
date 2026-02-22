@@ -17,7 +17,7 @@
 #   msExchRequireAuthToSendTo:   1.2.840.113556.1.4.2398  (aproximace pro dev)
 #
 # Pro načtení je potřeba LDAP bind jako Administrator:
-#   ldapadd -H ldap://localhost -D "CN=Administrator,CN=Users,DC=zsstu,DC=local"
+#   ldapadd -H ldap://localhost -D "CN=Administrator,CN=Users,DC=skola,DC=local"
 #          -w "$ADMIN_PASSWORD" -f /exchange-schema.ldif
 # =============================================================================
 
@@ -26,7 +26,7 @@
 # Skryje kontakt nebo poštovní skupinu v Global Address Listu Exchange / O365.
 # BakaKeeper ho nastavuje na kontakty zákonných zástupců.
 # ---------------------------------------------------------------------------
-dn: CN=ms-Exch-Hide-From-Address-Lists,CN=Schema,CN=Configuration,DC=zsstu,DC=local
+dn: CN=ms-Exch-Hide-From-Address-Lists,CN=Schema,CN=Configuration,DC=skola,DC=local
 changetype: add
 objectClass: attributeSchema
 cn: ms-Exch-Hide-From-Address-Lists
@@ -43,7 +43,7 @@ adminDescription: Skrytí objektu v Global Address Listu Exchange/O365
 # Zajistí, že distribuční skupina přijímá e-mail pouze od ověřených odesílatelů
 # uvnitř organizace. BakaKeeper ho nastavuje na třídní distribuční skupiny.
 # ---------------------------------------------------------------------------
-dn: CN=ms-Exch-Require-Auth-To-Send-To,CN=Schema,CN=Configuration,DC=zsstu,DC=local
+dn: CN=ms-Exch-Require-Auth-To-Send-To,CN=Schema,CN=Configuration,DC=skola,DC=local
 changetype: add
 objectClass: attributeSchema
 cn: ms-Exch-Require-Auth-To-Send-To

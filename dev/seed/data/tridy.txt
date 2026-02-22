@@ -1,0 +1,68 @@
+# =============================================================================
+# Třídy vývojového prostředí BakaKeeperu
+#
+# Formát: ROCNIK;ZKRATKA
+# Řádky začínající # a prázdné řádky jsou ignorovány.
+#
+# Struktura: realistická variace počtu tříd na ročník
+#   Ročníky 1–2: 5 tříd (A–E)   – velké ročníky
+#   Ročníky 3–5: 4 třídy (A–D)  – střední ročníky
+#   Ročníky 6–9: 3 třídy (A–C)  – menší ročníky (odliv žáků)
+#
+#   Celkem: 2×5 + 3×4 + 4×3 = 10 + 12 + 12 = 34 tříd
+#
+# Upravte libovolně – testdata.py a run-seed.sh se přizpůsobí automaticky.
+# Třídní učitelé jsou svázáni se zkratkami v data/zamestnanci.txt (TRIDNI_PRO).
+# =============================================================================
+
+# Ročník 1 – 5 tříd
+1;1.A
+1;1.B
+1;1.C
+1;1.D
+1;1.E
+
+# Ročník 2 – 5 tříd
+2;2.A
+2;2.B
+2;2.C
+2;2.D
+2;2.E
+
+# Ročník 3 – 4 třídy
+3;3.A
+3;3.B
+3;3.C
+3;3.D
+
+# Ročník 4 – 4 třídy
+4;4.A
+4;4.B
+4;4.C
+4;4.D
+
+# Ročník 5 – 4 třídy
+5;5.A
+5;5.B
+5;5.C
+5;5.D
+
+# Ročník 6 – 3 třídy
+6;6.A
+6;6.B
+6;6.C
+
+# Ročník 7 – 3 třídy
+7;7.A
+7;7.B
+7;7.C
+
+# Ročník 8 – 3 třídy
+8;8.A
+8;8.B
+8;8.C
+
+# Ročník 9 – 3 třídy
+9;9.A
+9;9.B
+9;9.C
