@@ -19,6 +19,17 @@
 # číslici za e-mailem: jan.novak@domain vs. jan.novak2@domain.
 # Pořadí priority e-mailů: statický s explicitním > statický auto > algoritmický starší > mladší.
 #
+# Variace jmen algoritmických žáků (deterministické, reprodukovatelné):
+#   ~4 % vietnamská, ~4 % ukrajinská (moderní transliterace), ~4 % španělská jména.
+#   ~7 % žáků má dvě křestní jména: „Jan Pavel Novák", „Lucie Kateřina Modrá".
+#   ~1 % žáků (pouze CZ) má šlechtický partikl: „von Blankytnák", „de Oblačník".
+#   ~2 % žáků má hyphenované příjmení (16–18 znaků), aby kombinace jmeno.prijmeni
+#        překročila 20 znaků a otestovala zpracování AD sAMAccountName.
+#
+# Variabilní počet žáků na třídu:
+#   --per-class M  nastavuje průměr (výchozí: 5)
+#   --variance V   nastavuje rozptyl M±V (výchozí: 0 = všechny třídy stejné)
+#
 # Výstup:
 #   --sql-file  <cesta>   zapíše SQL INSERT příkazy (výchozí: stdout)
 #   --sh-file   <cesta>   zapíše shell samba-tool příkazy pro AD
@@ -57,32 +68,36 @@ EVID_DO_ABSOLVENT     = "2024-08-31"
 # Zásobníky používají záměrně vymyšlená jména (zvířata, barvy, příroda, kaledářové
 # variace) – nelze splést s reálnými osobami.
 #
-# Velikosti zásobníků jsou navzájem prvočíselné → LCM >> počet generovaných
-# entit, takže systematické opakování kombinací je minimální:
-#   žáci:  JMENA 31 (prvočíslo) × PRIJMENI 59 (prvočíslo) → LCM = 1 829
+# Velikosti zásobníků jsou zvoleny tak, aby LCM >> počet generovaných entit
+# a systematické opakování kombinací bylo minimální:
+#   žáci:  JMENA 34 × PRIJMENI 72 → LCM = 1 224 (> 1 000 žáků, tj. škola 34×30)
 #   ZZD:   JMENA 23 (prvočíslo) × PRIJMENI 41 (prvočíslo) → LCM = 943
 # =============================================================================
 
 # --- Žáci – mužská příjmení (59): inspirována zvířaty, přírodou, barvami ---
 PRIJMENI_ZAK_M = [
     # zvířata
-    "Liščák",    "Bobřík",    "Ježura",     "Vydří",     "Vlkoun",
-    "Srnec",     "Krtek",     "Jelen",      "Tchoř",     "Jezevec",
+    "Liščák",    "Bobřík",    "Ježura",     "Vydrýsek",  "Vlkoun",
+    "Srnec",     "Krtek",     "Jelen",      "Tchořík",   "Jezevec",
     "Krkavec",   "Sovák",     "Čáp",        "Ledňák",    "Drozd",
     "Losos",     "Kapr",      "Štičák",     "Rak",       "Šnek",
+    "Chrochtal", "Kanec",     "Vrabec",     "Humr",      "Koťák",
+    "Kocour",    "Kocourec",  "Mourek",     "Šupina",    "Korýš",
     # barvy a světlo
     "Modrák",    "Zeleník",   "Červín",     "Fialák",    "Žlutín",
     "Blankytnák","Šedivák",   "Béžák",      "Rumín",     "Zlatník",
     "Stříbrník", "Perleťák",  "Duhovec",    "Soumrák",   "Svítilník",
+    "Černý",     "Šedivý",
     # příroda a počasí
     "Dubový",    "Jehličník", "Kůrovec",    "Lupínek",   "Kořínek",
     "Oblačník",  "Bouřák",    "Mrazík",     "Sněhulák",  "Kapkoun",
-    "Vítrník",   "Mlžák",     "Úsvit",      "Zářínek",   "Polárník",
+    "Větrník",   "Mlžák",     "Úsvitný",    "Zářínek",   "Polárník",
     # vymyšlené
     "Vrtulník",  "Klouzák",   "Pírček",     "Bublánek",  "Šuškánek",
-    "Trpaslik",  "Skřítkov",  "Mlsáček",    "Bubloun",
+    "Trpaslik",  "Skřítkov",  "Mlsáček",    "Bubloun",   "Strup",
+
 ]
-assert len(PRIJMENI_ZAK_M) == 59
+assert len(PRIJMENI_ZAK_M) == 72
 
 # Ženská příjmení odvozena z mužských
 def _f(s: str) -> str:
@@ -90,6 +105,7 @@ def _f(s: str) -> str:
     if s.endswith("ský"): return s[:-3] + "ská"
     if s.endswith("ký"):  return s[:-2] + "ká"
     if s.endswith("ý"):   return s[:-1] + "á"
+    if s.endswith("ek"):  return s[:-2] + "ková"
     if s.endswith("a"):   return s[:-1] + "ová"
     return s + "ová"
 
@@ -98,33 +114,34 @@ PRIJMENI_ZAK_F = [_f(p) for p in PRIJMENI_ZAK_M]
 # --- Žáci – křestní jména (31): kaledářové variace + vymyšlené přezdívky ---
 JMENA_ZAK_M = [
     # kaledářové variace (–oslav, –mir, –boj atd.)
-    "Radoušek",  "Světlomír",  "Kvítoslav",  "Zoroslav",   "Bouřeslav",
-    "Mlžimír",   "Duhomil",    "Zlatoslav",  "Oblakoslav", "Rákosslav",
+    "Radoušek",  "Světlomír",  "Kvítoslav",  "Zoroslav",   "Buřivoj",
+    "Mlžimír",   "Duhomil",    "Zlatoslav",  "Oblakoslav", "Rákoslav",
     # z přírody
     "Duboslav",  "Jehličmír",  "Kapkoslav",  "Mrazimír",   "Sněžoslav",
+    "Krutomír",
     # zkráceniny a přezdívky
-    "Ríša",      "Fikus",      "Kubi",       "Bóbi",       "Cílek",
+    "Ríša",      "Fikus",      "Kubi",       "Bobík",      "Cílek",
     "Krteček",   "Šupin",      "Pírko",      "Dubin",      "Brouk",
     # zcela vymyšlená
     "Zlumek",    "Vrkos",      "Bublík",     "Šmudla",     "Chroust",
-    "Hoblík",
+    "Hoblík",    "Milisálek",  "Mates",
 ]
-assert len(JMENA_ZAK_M) == 31
+assert len(JMENA_ZAK_M) == 34
 
 JMENA_ZAK_F = [
     # kaledářové variace (–slava, –mila, –na)
-    "Duhoslava",  "Mlžena",     "Kvítoslava",  "Zorena",     "Ryboslava",
-    "Bublinava",  "Kapkoslava",  "Sněžena",     "Zlatoslava",  "Oblačena",
+    "Duhoslava",  "Mlžena",     "Kvítkoslava", "Zora",     "Ryboslava",
+    "Bublina",    "Kapkomíra",  "Sněžena",     "Zlatoslava",  "Oblačena",
     # z přírody
-    "Jehličena",  "Rákosena",   "Mrazivá",     "Švestena",    "Lipena",
+    "Jehlička",   "Rákosena",   "Mrazivka",    "Švestka",    "Lipěna",
     # zkráceniny a přezdívky
-    "Vyky",       "Krustýna",   "Zuběna",      "Bubka",       "Šnečka",
-    "Motýlena",   "Broukata",   "Rybena",      "Lupínka",     "Drobka",
+    "Vyky",       "Krustýna",   "Zuběna",      "Bobina",      "Slimka",
+    "Motýla",     "Broučena",   "Ryběna",      "Lupínka",     "Drobka",
     # zcela vymyšlená
     "Šmudlenka",  "Lišejka",    "Pírečka",     "Mlsnička",    "Bublinka",
-    "Chroústka",
+    "Chroustka", "Cihlena",     "Borka",       "Typka",
 ]
-assert len(JMENA_ZAK_F) == 31
+assert len(JMENA_ZAK_F) == 34
 
 # --- Zákonní zástupci – příjmení (41): starší, serióznější variace ---
 PRIJMENI_ZZD_M = [
@@ -166,6 +183,88 @@ JMENA_ZZD_F = [
 assert len(JMENA_ZZD_F) == 23
 
 # =============================================================================
+# Variace jmenných zásobníků: cizí jména, partikly, dlouhá příjmení
+# =============================================================================
+
+# --- Pravděpodobnostní sloty (modulární aritmetika, bez náhodnosti) ----------
+_CIZINEC_MOD  = 25   # každý 25. žák z cizí skupiny (3/25 ≈ 12 % celkem)
+_SLOT_VIET    = 3    # slot pro vietnamské jméno
+_SLOT_UA      = 11   # slot pro ukrajinské jméno
+_SLOT_ES      = 18   # slot pro španělské jméno
+
+_DRUHE_MOD    = 14   # druhé křestní jméno: každý 14. (≈ 7 %)
+_PARTICLE_MOD = 97   # šlechtický partikl: každý 97. CZ žák (≈ 1 %)
+_DLOUHE_MOD   = 53   # hyphenované příjmení: každý 53. CZ žák (≈ 2 %)
+
+PARTICLES = [
+    "von", "Van",                        # BakaKeeper: sloučí → vonlanditz.kristen
+    "da", "Da", "de", "De", "di", "Di", # BakaKeeper: sloučí → davinci.leonardo
+    "al", "Al",                          # BakaKeeper: sloučí → alrashid.xxx
+    "bin", "ibn",                        # arabská patronymika – v reálné DB; BakaKeeper jako příjmení
+]
+_PARTICLES_SET = frozenset(PARTICLES)   # všechny partikly pro generování jmen
+
+# Pouze partikly, které BakaKeeper slučuje s příjmením do loginu (viz BakaUtils.createBaseNameParts).
+# „bin"/„ibn" BakaKeeper zatím nezná → bere je jako první slovo příjmení.
+#
+# TODO (BakaKeeper): rozšířit createBaseNameParts o další typy partiklů:
+#   - „bin"/„ibn"  (arabská patronymika: bin Rashid, ibn Battuta)
+#   - případně další skupiny podle reálné DB
+# Po rozšíření aktualizovat i tuto sadu.
+_MERGE_PARTICLES_SET = frozenset([
+    "von", "Van",
+    "da", "Da", "de", "De", "di", "Di",
+    "al", "Al",
+])
+
+# --- Vietnamská jména --------------------------------------------------------
+# Jednoduché křestní jméno bez rodového partiklu (Thị/Văn) – přímočaré
+# uložení v DB a bezproblémová tvorba e-mailů.
+JMENA_VIET_M  = ["Minh", "Hung", "Nam", "Duc", "Thang", "Dung", "Long",
+                  "Anh", "Tuan", "Dat", "Kien", "Hai"]
+JMENA_VIET_F  = ["Lan", "Mai", "Hoa", "Ngoc", "Thu", "Linh", "Huong",
+                  "Yen", "Thanh", "Hanh", "Phuong", "Nhi"]
+PRIJMENI_VIET = ["Nguyen", "Tran", "Le", "Pham", "Hoang", "Phan", "Vu",
+                  "Dang", "Bui", "Do", "Ho", "Ngo", "Duong", "Ly", "Dinh"]
+
+# --- Ukrajinská jména (moderní česká transliterace, nařízení 2021) -----------
+# Příjmení se v transliteraci neohýbá podle pohlaví (na rozdíl od češtiny).
+JMENA_UA_M  = ["Oleksii", "Mykhailo", "Dmytro", "Bohdan", "Yaroslav",
+                "Vasyl", "Ivan", "Vladyslav", "Andriy", "Oleh",
+                "Taras", "Serhii"]
+JMENA_UA_F  = ["Anastasiia", "Yuliia", "Nataliia", "Viktoriia", "Oksana",
+                "Daryna", "Iryna", "Olha", "Svitlana", "Kateryna",
+                "Sofiia", "Mariia"]
+PRIJMENI_UA = ["Kovalenko", "Melnyk", "Shevchenko", "Boyko", "Tkachenko",
+               "Kravchenko", "Bondarenko", "Marchenko", "Lysenko",
+               "Petrenko", "Moroz", "Savchenko", "Semenko",
+               "Hrytsenko", "Kovalchuk"]
+
+# --- Španělská jména ---------------------------------------------------------
+# Španělé mívají dvě příjmení; druhé přidáme u ~35 % španělských žáků.
+JMENA_ES_M  = ["Alejandro", "Carlos", "Diego", "Fernando", "Gabriel",
+                "Javier", "Luis", "Miguel", "Pablo", "Rodrigo",
+                "Sebastián", "Andrés"]
+JMENA_ES_F  = ["Alejandra", "Camila", "Daniela", "Elena", "Fernanda",
+                "Isabella", "Lucía", "María", "Natalia", "Sofía",
+                "Valentina", "Claudia"]
+PRIJMENI_ES = ["García", "Martínez", "López", "Sánchez", "González",
+               "Rodríguez", "Fernández", "Torres", "Ramírez", "Cruz",
+               "Flores", "Herrera", "Morales", "Ortega", "Silva"]
+
+# --- Hyphenovaná příjmení (16–18 znaků) ---------------------------------------
+# Tato příjmení způsobí, že kombinace login.jmeno (sAMAccountName)
+# překročí 20 znaků a otestuje příslušnou logiku BakaKeeperu.
+# Ženské formy se odvozují automaticky přes _f() výše.
+PRIJMENI_DLOUHA_M = [
+    "Krkavoslav-Soumrák",    # 18 znaků → login 22–30 z.
+    "Blankytnák-Mlžák",      # 16 znaků → login 22–28 z.
+    "Svítilník-Oblačník",    # 18 znaků → login 22–30 z.
+    "Jehličník-Šedivák",     # 17 znaků → login 21–29 z.
+]
+PRIJMENI_DLOUHA_F = [_f(p) for p in PRIJMENI_DLOUHA_M]
+
+# =============================================================================
 # Pomocné funkce
 # =============================================================================
 
@@ -203,6 +302,33 @@ def _assign_email(local: str, seen: dict, domain: str) -> str:
     n = seen.get(local, 0) + 1
     seen[local] = n
     return f"{local}@{domain}" if n == 1 else f"{local}{n}@{domain}"
+
+
+def _email_local(jmeno: str, prijmeni: str) -> str:
+    """
+    Sestaví local part e-mailu dle pravidel BakaKeeperu
+    (odpovídá BakaUtils.createSAMloginFromName).
+
+    Pravidla:
+      - Více křestních jmen → první: „Jan Pavel" → „jan"
+      - Hyphenované příjmení → pomlčka → mezera → první část:
+          „Krkavoslav-Soumrák" → „krkavoslav"  (stejně jako BakaKeeper)
+      - Partikl von/Van, da/de/di, al → SLOUČÍ se s příjmením:
+          „von Liščák" → „vonliscak",  „Da Vinci" → „davinci"
+      - Nerozpoznaný partikl (bin, ibn) → BakaKeeper ho bere jako příjmení:
+          „bin Ráhím" → local začíná „bin"
+      - Složené španělské příjmení → první část: „García Rodríguez" → „garcia"
+    """
+    # Pomlčka → mezera (BakaKeeper dělá totéž v createBaseNameParts)
+    prijmeni_norm = prijmeni.replace("-", " ")
+    p_parts = prijmeni_norm.split()
+    if len(p_parts) > 1 and p_parts[0] in _MERGE_PARTICLES_SET:
+        # BakaKeeper slučuje partikl s příjmením: „von"+"Liščák" → „vonLiščák" → slug
+        prijmeni_slug = ascii_slug(p_parts[0] + p_parts[1])
+    else:
+        prijmeni_slug = ascii_slug(p_parts[0])   # první (primární) příjmení
+    jmeno_slug = ascii_slug(jmeno.split()[0])    # první křestní jméno
+    return f"{prijmeni_slug}.{jmeno_slug}"
 
 # =============================================================================
 # Načítání dat ze souborů
@@ -325,6 +451,7 @@ def gen_zaci(
     tridy: list[tuple[int, str]],
     domain: str,
     per_class: int = ZACI_NA_TRIDU_DEFAULT,
+    variance: int = 0,
 ) -> tuple[list[dict], list[dict]]:
     """
     Generuje žáky a zákonné zástupce.
@@ -332,15 +459,20 @@ def gen_zaci(
     Statičtí žáci (z data/zaci_staticti.txt) jsou vždy zahrnuti a prepend-ováni
     před algoritmické žáky ve výsledném listu.
 
+    Počet žáků na třídu: per_class ± variance (deterministicky – liší se třída od třídy).
+    Variance 0 = všechny třídy mají přesně per_class žáků.
+
+    Jmenná diverzita (deterministická, bez random()):
+      ~4 % vietnamská, ~4 % ukrajinská, ~4 % španělská jména.
+      ~7 % CZ/UA/ES žáků má dvě křestní jména.
+      ~1 % CZ žáků má šlechtický partikl před příjmením.
+      ~2 % CZ žáků má hyphenované příjmení (16–18 znaků, testy sAMAccountName).
+
     Postup přiřazení e-mailů (tři kroky):
-      1. Statičtí žáci s explicitním e-mailem: e-mail se použije přímo
-         a zaregistruje se do dedup slovníku (blokuje přiřazení stejné adresy
-         dalším žákům).
-      2. Statičtí žáci bez explicitního e-mailu: auto-generovaný e-mail
-         s předností před všemi algoritmickými žáky (stejný ročník → statický vyhraje).
-      3. Algoritmičtí žáci sestupně dle ročníku – starší žák (vyšší ročník)
-         dostane základní tvar (jan.novak@domain), mladší se stejným jménem
-         dostane příponu (jan.novak2@domain).
+      1. Statičtí žáci s explicitním e-mailem: použije se přímo a zablokuje dedup.
+      2. Statičtí žáci bez e-mailu: auto-generovaný, přednost před algoritmickými.
+      3. Algoritmičtí sestupně dle ročníku – starší dostane základní tvar,
+         mladší se stejným jménem dostane příponu (jan.novak2@domain).
 
     Zákonní zástupci se generují pouze pro algoritmické žáky.
     Statičtí žáci jsou v result listu označeni klíčem _static=True.
@@ -355,16 +487,74 @@ def gen_zaci(
     students: list[dict] = []
     zak_idx = 0
 
-    for rocnik, zkratka in tridy:
-        for poradi in range(1, per_class + 1):
+    for trida_idx, (rocnik, zkratka) in enumerate(tridy):
+        # Počet žáků v této třídě – variuje se dle trida_idx a variance.
+        # Cyklus délky (2*variance+1) zaručuje, že průměr je per_class.
+        if variance > 0:
+            n_zaku = max(1, per_class + (trida_idx % (2 * variance + 1)) - variance)
+        else:
+            n_zaku = per_class
+
+        for poradi in range(1, n_zaku + 1):
             zak_idx += 1
             pohlar_m = (poradi % 2 == 1)
-            if pohlar_m:
-                jmeno    = pick(JMENA_ZAK_M, zak_idx)
-                prijmeni = pick(PRIJMENI_ZAK_M, zak_idx)
+
+            # --- Výběr zásobníku jmen dle národnosti ---
+            nat = zak_idx % _CIZINEC_MOD
+
+            if nat == _SLOT_VIET:
+                # Vietnamská jména – bez dvojitého křestního ani partiklu
+                jmeno    = pick(JMENA_VIET_M if pohlar_m else JMENA_VIET_F, zak_idx)
+                prijmeni = pick(PRIJMENI_VIET, zak_idx)
+
+            elif nat == _SLOT_UA:
+                # Ukrajinská jména – příjmení neohýbáme, dvojité křestní ~7 %
+                jmeno    = pick(JMENA_UA_M if pohlar_m else JMENA_UA_F, zak_idx)
+                prijmeni = pick(PRIJMENI_UA, zak_idx)
+                if zak_idx % _DRUHE_MOD == 7:
+                    pool2 = JMENA_UA_M if pohlar_m else JMENA_UA_F
+                    j2    = pick(pool2, zak_idx + len(pool2) // 2)
+                    if j2 != jmeno:
+                        jmeno = f"{jmeno} {j2}"
+
+            elif nat == _SLOT_ES:
+                # Španělská jména – dvě příjmení ~35 %, dvojité křestní ~7 %
+                jmeno    = pick(JMENA_ES_M if pohlar_m else JMENA_ES_F, zak_idx)
+                prijmeni = pick(PRIJMENI_ES, zak_idx)
+                if zak_idx % 3 == 0:
+                    p2 = pick(PRIJMENI_ES, zak_idx + 111)
+                    if p2 != prijmeni:
+                        prijmeni = f"{prijmeni} {p2}"
+                if zak_idx % _DRUHE_MOD == 9:
+                    pool2 = JMENA_ES_M if pohlar_m else JMENA_ES_F
+                    j2    = pick(pool2, zak_idx + len(pool2) // 2)
+                    if j2 != jmeno:
+                        jmeno = f"{jmeno} {j2}"
+
             else:
-                jmeno    = pick(JMENA_ZAK_F, zak_idx)
-                prijmeni = pick(PRIJMENI_ZAK_F, zak_idx)
+                # České fantasy jméno
+                if pohlar_m:
+                    jmeno    = pick(JMENA_ZAK_M, zak_idx)
+                    prijmeni = pick(PRIJMENI_ZAK_M, zak_idx)
+                else:
+                    jmeno    = pick(JMENA_ZAK_F, zak_idx)
+                    prijmeni = pick(PRIJMENI_ZAK_F, zak_idx)
+
+                # Hyphenované příjmení (~2 %) – testuje >20-znakový sAMAccountName
+                if zak_idx % _DLOUHE_MOD == 0:
+                    dl = PRIJMENI_DLOUHA_M if pohlar_m else PRIJMENI_DLOUHA_F
+                    prijmeni = pick(dl, zak_idx)
+                # Šlechtický partikl (~1 %) – vzájemně se vylučuje s dlouhým příjmením
+                elif zak_idx % _PARTICLE_MOD == 0:
+                    prijmeni = f"{pick(PARTICLES, zak_idx)} {prijmeni}"
+
+                # Druhé křestní jméno (~7 %)
+                if zak_idx % _DRUHE_MOD == 5:
+                    pool2 = JMENA_ZAK_M if pohlar_m else JMENA_ZAK_F
+                    j2    = pick(pool2, zak_idx + len(pool2) // 2)
+                    if j2 != jmeno:
+                        jmeno = f"{jmeno} {j2}"
+
             students.append({
                 "INTERN_KOD": f"Z{zak_idx:05d}",
                 "C_TR_VYK":   poradi,
@@ -417,7 +607,7 @@ def gen_zaci(
         key=lambda x: (-x["_rocnik"], 0 if x.get("_static") else 1, x["TRIDA"])
     )
     for s in needs_email:
-        local = f"{ascii_slug(s['PRIJMENI'])}.{ascii_slug(s['JMENO'])}"
+        local = _email_local(s["JMENO"], s["PRIJMENI"])
         s["E_MAIL"] = _assign_email(local, email_seen, domain)
 
     # Odstraníme dočasný klíč _rocnik; _static záměrně ponecháme pro callers.
@@ -531,10 +721,10 @@ def sql_zzr(zzd_list: list[dict]) -> list[str]:
     return lines
 
 
-def build_sql(domain: str, sql_db: str, per_class: int) -> str:
+def build_sql(domain: str, sql_db: str, per_class: int, variance: int = 0) -> str:
     tridy       = load_tridy()
     zamestnanci = load_zamestnanci(domain=domain)
-    zaci, zzd   = gen_zaci(tridy, domain, per_class)
+    zaci, zzd   = gen_zaci(tridy, domain, per_class, variance)
 
     sections = [f"USE {sql_db};\nGO\n"]
 
@@ -651,18 +841,25 @@ def main() -> None:
     parser.add_argument("--ad-pass",    default="BakaKeeper.2026",    help="Heslo AD účtů zaměstnanců")
     parser.add_argument("--sql-db",     default="bakalari",           help="Název SQL databáze")
     parser.add_argument("--per-class",  type=int, default=ZACI_NA_TRIDU_DEFAULT,
-                        metavar="N",    help=f"Počet žáků ve třídě (výchozí: {ZACI_NA_TRIDU_DEFAULT})")
+                        metavar="N",    help=f"Průměr žáků na třídu (výchozí: {ZACI_NA_TRIDU_DEFAULT})")
+    parser.add_argument("--variance",   type=int, default=0,
+                        metavar="V",    help="Rozptyl počtu žáků na třídu – každá třída dostane "
+                                             "N±V žáků (výchozí: 0 = všechny třídy stejné)")
     parser.add_argument("--stats",      action="store_true",          help="Vypíše statistiku a skončí")
     args = parser.parse_args()
 
-    if not (1 <= args.per_class <= 20):
-        print(f"Chyba: --per-class musí být 1–20 (zadáno: {args.per_class})", file=sys.stderr)
+    if not (1 <= args.per_class <= 50):
+        print(f"Chyba: --per-class musí být 1–50 (zadáno: {args.per_class})", file=sys.stderr)
+        sys.exit(1)
+    if not (0 <= args.variance < args.per_class):
+        print(f"Chyba: --variance musí být 0 až per-class-1 (zadáno: {args.variance}, per-class: {args.per_class})",
+              file=sys.stderr)
         sys.exit(1)
 
     if args.stats:
         tridy       = load_tridy()
         zamestnanci = load_zamestnanci(domain=args.domain)
-        zaci, zzd   = gen_zaci(tridy, args.domain, args.per_class)
+        zaci, zzd   = gen_zaci(tridy, args.domain, args.per_class, args.variance)
         vedeni      = [z for z in zamestnanci if z["OU"] == "Vedeni"]
         ucitele_tr  = [z for z in zamestnanci if z["OU"] == "Ucitele" and z["TRIDNI_PRO"]]
         ucitele_ntr = [z for z in zamestnanci if z["OU"] == "Ucitele" and not z["TRIDNI_PRO"]]
@@ -672,10 +869,19 @@ def main() -> None:
         staticti    = [z for z in zaci if z.get("_static")]
         aktivni     = [z for z in zaci if z["EVID_DO"] is None]
         absolventi  = [z for z in zaci if z["EVID_DO"] is not None]
-        # Zjistíme, kolik e-mailů je s číselnou příponou (duplicitní jméno)
+        algo_zaci   = [z for z in zaci if not z.get("_static")]
+        # Kolik e-mailů je s číselnou příponou (duplicitní jméno)
         duplic = [z for z in zaci if z["E_MAIL"][0].isalpha() and
                   any(c.isdigit() for c in z["E_MAIL"].split("@")[0])]
-        print(f"Třídy:          {len(tridy)}  (× {args.per_class} žáků/třídu)")
+        # Jmenná diverzita – počty dle národnosti (odhad dle INTERN_KOD řady)
+        cizinci = sum(1 for z in algo_zaci
+                      if not any(c in "áéíóúůýžšřčďťňěĺĽäÄöÖüÜ" for c in z.get("PRIJMENI", ""))
+                      and not z["INTERN_KOD"].startswith("ZFIX"))
+        per_class_range = (
+            f"{args.per_class}±{args.variance}" if args.variance > 0
+            else str(args.per_class)
+        )
+        print(f"Třídy:          {len(tridy)}  (průměr {per_class_range} žáků/třídu)")
         print(f"Vedení:         {len(vedeni)}")
         print(f"Učitelé tř.:    {len(ucitele_tr)}")
         print(f"Učitelé ntr.:   {len(ucitele_ntr)}")
@@ -690,7 +896,7 @@ def main() -> None:
         print(f"Duplik. e-mail: {len(duplic)}  (dostaly číslo)")
         return
 
-    sql_content = build_sql(args.domain, args.sql_db, args.per_class)
+    sql_content = build_sql(args.domain, args.sql_db, args.per_class, args.variance)
     if args.sql_file:
         with open(args.sql_file, "w", encoding="utf-8") as f:
             f.write(sql_content)
