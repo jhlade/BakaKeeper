@@ -106,7 +106,7 @@ public class BakaADAuthenticator {
             env.put("java.naming.ldap.factory.socket", "cz.zsstudanka.skola.bakakeeper.components.BakaSSLSocketFactory");
             env.put(Context.PROVIDER_URL, EBakaPorts.SRV_LDAPS.getScheme() + "://" + fqdn + ":" + EBakaPorts.SRV_LDAPS.getPort() + "/"); // 3269 pro AD GC
         } else {
-            env.put(Context.PROVIDER_URL, EBakaPorts.SRV_LDAP.getScheme() + "://" + fqdn + "/:" + EBakaPorts.SRV_LDAP.getPort()); // :3268 pro AD GC
+            env.put(Context.PROVIDER_URL, EBakaPorts.SRV_LDAP.getScheme() + "://" + fqdn + ":" + EBakaPorts.SRV_LDAP.getPort() + "/"); // 3268 pro AD GC
         }
         env.put(Context.SECURITY_AUTHENTICATION, "simple");
         env.put(Context.SECURITY_PRINCIPAL, user + "@" + domain);

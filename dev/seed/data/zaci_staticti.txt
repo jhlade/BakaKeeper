@@ -1,0 +1,38 @@
+# =============================================================================
+# Statičtí žáci vývojového prostředí BakaKeeperu
+#
+# Tito žáci existují vždy – nezávisí na --per-class ani na jmenných zásobnících.
+# Jsou vhodní pro ruční sledování konkrétních scénářů v testech a debuggingu.
+#
+# Formát:  INTERN_KOD;JMENO;PRIJMENI;TRIDA;EVID_DO;E_MAIL
+#
+# INTERN_KOD  – unikátní kód; doporučujeme prefix ZFIX aby se nepřekrýval
+#               s algoritmicky generovanými Z{05d}
+# JMENO       – křestní jméno
+# PRIJMENI    – příjmení
+# TRIDA       – zkratka třídy (musí odpovídat záznamu v tridy.txt)
+# EVID_DO     – datum ukončení evidence ve formátu RRRR-MM-DD;
+#               prázdné = aktivní žák
+# E_MAIL      – e-mail; prázdné = vygeneruje se automaticky jako
+#               prijmeni.jmeno@<doména> (s dedupl. číslem pokud kolize)
+#
+# Statičtí žáci mají přednost při přiřazení základního (bečíslicového)
+# e-mailu před algoritmicky generovanými žáky.
+# Zákonní zástupci se pro statické žáky negenerují – přidejte ručně do
+# statickych_zzd a statickych_zzr pokud je potřebujete.
+#
+# Řádky začínající # a prázdné řádky jsou ignorovány.
+# =============================================================================
+
+# Žák v 9. ročníku – pro testování starších žáků (ext. mail, skupiny, heslo)
+ZFIX01;Světlomír;Zlatník;9.A;;
+
+# Žák v 1. ročníku – pro testování mladších žáků (pwd_nochange, pwd_noexpire)
+ZFIX02;Krustýna;Modrá;1.A;;
+
+# Žáci s explicitním e-mailem – testování kolize / ruční nastavení loginu
+ZFIX03;Bublinava;Červínová;3.A;;bublina.test@skola.local
+ZFIX04;Teji;Bobinková;6.B;;teji.bobina@skola.local
+
+# Absolvent – testování přesunu do OU=StudiumUkonceno a deaktivace AD účtu
+ZFIX05;Bouřeslav;Krkavec;9.C;2024-08-31;

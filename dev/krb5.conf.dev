@@ -1,8 +1,8 @@
 # =============================================================================
-# Kerberos konfigurace pro hostitele (vývojový Mac)
+# Kerberos konfigurace pro hostitele (vývojový macOS)
 #
 # Použití:
-#   export KRB5_CONFIG=/Users/eidos/Developer/BakaSync/dev/krb5.conf.dev
+#   export KRB5_CONFIG=/Users/bakalari/Developer/BakaSync/dev/krb5.conf.dev
 #   kinit bakalari@SKOLA.LOCAL
 #   java -jar local/BakaKeeper.jar --check
 #
@@ -38,8 +38,8 @@
 [realms]
     SKOLA.LOCAL = {
         # KDC je Samba4 kontejner, přeposílaný na localhost:88
-        kdc          = dc01.skola.local:88
-        admin_server = dc01.skola.local
+        kdc          = dc.skola.local:88
+        admin_server = dc.skola.local
         default_domain = skola.local
     }
 
