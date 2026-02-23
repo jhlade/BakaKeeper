@@ -1,0 +1,38 @@
+# =============================================================================
+# Azure SQL Edge s Kerberos podporou
+#
+# mcr.microsoft.com/mssql/server nemá nativní ARM64 build a na Apple Silicon
+# (Podman s libkrun) padá se Segmentation fault.
+# Azure SQL Edge je T-SQL kompatibilní alternativa s nativní ARM64 podporou.
+#
+# Rozdíly oproti SQL Server 2022:
+#   - sqlcmd je na /opt/mssql-tools/bin/sqlcmd (ne mssql-tools18)
+#   - MSSQL_PID se nepodporuje (vždy Developer edition)
+#   - Chybí některé enterprise funkce (Always On apod.) – pro dev nevadí
+#
+# sqlcmd: go-sqlcmd (https://github.com/microsoft/go-sqlcmd)
+#   - mssql-tools v apt repo jsou jen pro amd64; Azure SQL Edge běží na ARM64
+#   - go-sqlcmd je nativní ARM64, kompatibilní rozhraní s klasickým sqlcmd
+#   - nainstalován do /usr/local/bin/sqlcmd
+# =============================================================================
+
+FROM mcr.microsoft.com/azure-sql-edge:latest
+
+# Instalace Kerberos klienta (musíme přepnout na root)
+USER root
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        krb5-user \
+        ldap-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+# go-sqlcmd v1.9.0 – nativní ARM64 binárka, náhrada za mssql-tools na ARM64
+# Archiv obsahuje pouze 'sqlcmd' a 'sqlcmd_debug' v rootu
+RUN curl -fsSL \
+        "https://github.com/microsoft/go-sqlcmd/releases/download/v1.9.0/sqlcmd-linux-arm64.tar.bz2" \
+    | tar -xjf - -C /usr/local/bin sqlcmd \
+    && chmod +x /usr/local/bin/sqlcmd
+
+# Návrat na uživatele mssql
+USER mssql

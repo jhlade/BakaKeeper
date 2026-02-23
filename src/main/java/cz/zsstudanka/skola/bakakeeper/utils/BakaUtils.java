@@ -126,6 +126,11 @@ public class BakaUtils {
      * @param givenName jméno
      * @return jednotlivé části "sn" a "gn" + "snn" pro normalizované příjmení použitelné pro tvorbu hesla
      */
+    // TODO: rozšířit o další typy partiklů dle reálné DB:
+    //   - „bin"/„ibn"  (arabská patronymika: bin Rashid, ibn Battuta)
+    //   - případně další skupiny
+    // Partikl by se měl sloučit se jménem v snParts a odstranit v snNormalized
+    // (pro tvorbu hesla). Viz dev/seed/testdata.py – _MERGE_PARTICLES_SET.
     private static Map<String, String[]> createBaseNameParts(String surname, String givenName) {
         String[] snParts = surname.replace("-", " ")
                 .replaceAll("\\s+", " ")

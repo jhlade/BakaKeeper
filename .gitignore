@@ -5,3 +5,10 @@
 
 /cz.zsstudanka.skola.iml
 *.iml
+
+# Vývojové prostředí – data kontejnerů (bind-mounty, ignorovat obsah, zachovat adresáře)
+# mssql data jsou v pojmenovaném Podman svazku (ne bind-mount z macOS)
+/dev/.data/samba/*
+/dev/.data/keytabs/*
+!/dev/.data/samba/.gitkeep
+!/dev/.data/keytabs/.gitkeep

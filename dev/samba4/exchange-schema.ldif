@@ -1,0 +1,56 @@
+# =============================================================================
+# Samba4 – Exchange schema extension (vývojové prostředí)
+#
+# Přidává atributy, které BakaKeeper používá a které nejsou ve výchozím
+# Samba4 schématu (jsou součástí MS Exchange / rozšířeného AD schématu):
+#
+#   msExchHideFromAddressLists   – skrytí kontaktu v Global Address Listu
+#   msExchRequireAuthToSendTo    – distribuční skupiny přijímají poštu jen z domény
+#
+# Importuje se automaticky z provision-users.sh pomocí:
+#   samba-tool schema attribute modify nebo ldapadd
+#
+# OID poznámky:
+#   Atributy jsou definovány pod OID arc 1.2.840.113556.1.4.* (MS AD base schema).
+#   Přesné OID jsou vzaty z dokumentace MS-ADSC a ověřeny v reálném AD.
+#   msExchHideFromAddressLists:  1.2.840.113556.1.4.609
+#   msExchRequireAuthToSendTo:   1.2.840.113556.1.4.2398  (aproximace pro dev)
+#
+# Pro načtení je potřeba LDAP bind jako Administrator:
+#   ldapadd -H ldap://localhost -D "CN=Administrator,CN=Users,DC=skola,DC=local"
+#          -w "$ADMIN_PASSWORD" -f /exchange-schema.ldif
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# msExchHideFromAddressLists
+# Skryje kontakt nebo poštovní skupinu v Global Address Listu Exchange / O365.
+# BakaKeeper ho nastavuje na kontakty zákonných zástupců.
+# ---------------------------------------------------------------------------
+dn: CN=ms-Exch-Hide-From-Address-Lists,CN=Schema,CN=Configuration,DC=skola,DC=local
+changetype: add
+objectClass: attributeSchema
+cn: ms-Exch-Hide-From-Address-Lists
+attributeID: 1.2.840.113556.1.4.609
+attributeSyntax: 2.5.5.8
+isSingleValued: TRUE
+oMSyntax: 1
+lDAPDisplayName: msExchHideFromAddressLists
+adminDisplayName: ms-Exch-Hide-From-Address-Lists
+adminDescription: Skrytí objektu v Global Address Listu Exchange/O365
+
+# ---------------------------------------------------------------------------
+# msExchRequireAuthToSendTo
+# Zajistí, že distribuční skupina přijímá e-mail pouze od ověřených odesílatelů
+# uvnitř organizace. BakaKeeper ho nastavuje na třídní distribuční skupiny.
+# ---------------------------------------------------------------------------
+dn: CN=ms-Exch-Require-Auth-To-Send-To,CN=Schema,CN=Configuration,DC=skola,DC=local
+changetype: add
+objectClass: attributeSchema
+cn: ms-Exch-Require-Auth-To-Send-To
+attributeID: 1.2.840.113556.1.4.2398
+attributeSyntax: 2.5.5.8
+isSingleValued: TRUE
+oMSyntax: 1
+lDAPDisplayName: msExchRequireAuthToSendTo
+adminDisplayName: ms-Exch-Require-Auth-To-Send-To
+adminDescription: Omezení příjmu e-mailu skupiny pouze na ověřené odesílatele
