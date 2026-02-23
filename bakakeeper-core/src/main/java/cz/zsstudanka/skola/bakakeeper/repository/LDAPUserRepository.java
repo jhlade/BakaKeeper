@@ -77,6 +77,16 @@ public interface LDAPUserRepository {
     boolean moveObject(String dn, String targetOu);
 
     /**
+     * Přesune objekt do jiné OU s volitelným vytvořením cílové OU.
+     *
+     * @param dn distinguished name objektu
+     * @param targetOu cílová OU
+     * @param createOuIfNotExists vytvořit OU, pokud neexistuje
+     * @return úspěch operace
+     */
+    boolean moveObject(String dn, String targetOu, boolean createOuIfNotExists);
+
+    /**
      * Ověří existenci objektu podle DN.
      *
      * @param dn distinguished name

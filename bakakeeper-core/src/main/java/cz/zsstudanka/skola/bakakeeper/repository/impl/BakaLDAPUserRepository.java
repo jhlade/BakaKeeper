@@ -116,6 +116,11 @@ public class BakaLDAPUserRepository implements LDAPUserRepository {
     }
 
     @Override
+    public boolean moveObject(String dn, String targetOu, boolean createOuIfNotExists) {
+        return ldap.moveObject(dn, targetOu, createOuIfNotExists);
+    }
+
+    @Override
     public boolean checkDN(String dn) {
         return ldap.checkDN(dn);
     }

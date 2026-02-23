@@ -287,9 +287,14 @@ public class StudentServiceImpl implements StudentService {
         // odebrat ze všech skupin
         ldapRepo.removeFromAllGroups(dn);
 
-        // přesunout do alumni OU
+        // přesunout do alumni OU (vytvořit OU pro rok, pokud neexistuje)
         String alumniOu = "OU=" + yearStr + "," + config.getLdapBaseAlumni();
-        ldapRepo.moveObject(dn, alumniOu);
+        boolean moved = ldapRepo.moveObject(dn, alumniOu, true);
+
+        if (!moved) {
+            return SyncResult.error(student.getInternalId(),
+                    student.getDisplayName() + " – účet deaktivován, ale přesun do alumni selhal.");
+        }
 
         return SyncResult.retired(student.getInternalId(),
                 student.getDisplayName() + " → alumni " + yearStr);
