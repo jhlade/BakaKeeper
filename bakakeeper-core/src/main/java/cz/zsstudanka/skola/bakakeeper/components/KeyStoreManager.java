@@ -1,6 +1,6 @@
 package cz.zsstudanka.skola.bakakeeper.components;
 
-import cz.zsstudanka.skola.bakakeeper.App;
+import cz.zsstudanka.skola.bakakeeper.RuntimeContext;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaPorts;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
@@ -80,7 +80,7 @@ public class KeyStoreManager {
 
         if (!keystoreFile.exists() || keystoreFile.delete()) {
             // nastavení příznaku inicializace
-            App.FLAG_INIT = true;
+            RuntimeContext.FLAG_INIT = true;
             // nová inicializace úložiště
             return initialize();
         }

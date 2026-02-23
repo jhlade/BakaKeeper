@@ -1,4 +1,4 @@
-# 🕸 BakaKeeper
+# BakaKeeper
 
 Synchronizační nástroj evidence žáků v programu Bakaláři
 s uživatelskými účty vedenými v Active Directory. Předpokládá
@@ -7,7 +7,7 @@ Nástroj byl původně vytvořen během pandemie Covid-19 a počítá se správo
 žákovských hesel v předdefinovaném tvaru a automaticky aktivovanými účty.
 
 ### Vlastnosti
- 
+
 * Automatická údržba účtů žáků v Active Directory podle dat
 získaných v evidenci Bakalářů (jména, zařazení do ročníku/třídy
 v OU a skupinách včetně povýšení školního roku, tvorba nového
@@ -21,86 +21,92 @@ na zákonné zástupce žáků třídy/ročníku/stupně/školy.
 * Navrženo pro neinteraktivní periodický běh.
 
 ### Co je výhledově v plánu
- 
-* Sjednocený generátor sestav.
+
+* Sjednocený generátor sestav (iTextPDF).
+* Grafické uživatelské rozhraní (JavaFX), webová aplikace.
+* YAML konfigurace s deklarativními pravidly pro AD atributy.
+* Granulární workflows (jednotlivec, třída, ročník, stupeň, škola).
 * Zálohování a obnova interních uživatelů v případě nežádoucího zásahu.
 * Možnost specifikace jiných výchozích tvarů hesel a režimu aktivace účtů.
-* Dříve odloženo z legislativních důvodů: Automatická definice
-přístupů k webové aplikaci pro žáky a jejich zákonné zástupce (metoda
-vyžádání nového hesla na základě ověřené e-mailové adresy).
-* Grafické uživatelské rozhraní, interaktivní CLI.
+
+### Struktura projektu
+
+Projekt je organizován jako multi-modulární Maven build:
+
+```
+bakakeeper-parent/          (rodičovský POM)
+├── bakakeeper-core/        (jádro – model, služby, konektory)
+└── bakakeeper-cli/         (příkazový řádek)
+```
 
 ### Prerekvizity
- 
+
 * LDAP server (Microsoft Active Directory) s rozšířenými
   atributy Microsoft Exchange (správce s oprávněním skupiny Schema
-Admins je snadno doinstaluje na řadič AD z balíčku pro Exchange Server).
+  Admins je snadno doinstaluje na řadič AD z balíčku pro Exchange Server).
 * Microsoft SQL Server (nebo MS SQL kompatibilní server)
-s daty aplikace Bakaláři s doménovým ověřováním uživatele (NTLM nebo Kerberos).
+  s daty aplikace Bakaláři s doménovým ověřováním uživatele (NTLM nebo Kerberos).
 * Dedikovaný neinteraktivní doménový účet s přístupem k SMTP,
-právy minimálně Account Operator v AD nad žáky, právy ke čtení i zápisu
-v SQL databázi s Bakaláři.
-* JVM kompatibilní s Java 18 se síťovým přístupem k
-serverům AD a SQL.
+  právy minimálně Account Operator v AD nad žáky, právy ke čtení i zápisu
+  v SQL databázi s Bakaláři.
+* JVM kompatibilní s Java 25 se síťovým přístupem k serverům AD a SQL.
 * *Nepovinně* – v případě použití O365 je možné nastavit poštovní
-filtrovací pravidlo na základě hodnoty `CustomAttribute2:TRUE`
-a odesílatele v doméně mimo organizaci. Na AD se lokálně ukládá
-do atributu `ExtensionAttribute2` a má význam podobný jako
-`msExchRequireAuthToSendTo`.  
+  filtrovací pravidlo na základě hodnoty `CustomAttribute2:TRUE`
+  a odesílatele v doméně mimo organizaci. Na AD se lokálně ukládá
+  do atributu `ExtensionAttribute2` a má význam podobný jako
+  `msExchRequireAuthToSendTo`.
 * *Nepovinně* – `cron` nebo podobný plánovač pro periodické spouštění.
 * *Nepovinně* – pro ověřování přístupu k SQL Serveru pomocí
-protokolu Kerberos namísto integrovaného NTLM musí být
-manuálně delegována oprávnění výše
-zmíněnému účtu (`setspn -s MSSQLSvc/sql-server.domena.local domena\bakalari`).
+  protokolu Kerberos namísto integrovaného NTLM musí být
+  manuálně delegována oprávnění výše
+  zmíněnému účtu (`setspn -s MSSQLSvc/sql-server.domena.local domena\bakalari`).
+
+### Sestavení
+
+```bash
+./mvnw clean compile test        # kompilace a testy
+./mvnw package                   # sestavení JAR (fat jar v bakakeeper-cli/target/)
+```
 
 ### Použití
- 
-1) Rychlá inicializace – vytvoření persistentního nastavení:<br>
-`% java -jar BakaKeeper.jar --init --interactive [-passphrase <heslo>]`<br>
-spustí interaktivní dotazník s nastavením parametrů, které budou
-uloženy ve výchozím souboru `./settings.dat`.<br>Přepínač `[-passphrase <heslo>]`
-není povinný, nicméně provede zašifrování vložených nastavení.
-Idea za šifrováním nastavení je taková,
-že nástroj spolu s&nbsp;nastavením může být uložen na sdíleném
-prostředku a není žádoucí, aby údaje použitého správcovského
-účtu byly veřejně dostupné. Nástroj pak může být spouštěn
-z&nbsp;důveryhodného stroje automaticky pomocí plánovače
-(např. `cron`).<br>
-V&nbsp;rámci inicializace bude také získán certifikát pro
-připojení AD serveru a zapsán v úložišti `./ssl.jks`.
 
-2) Kontrola synchronizace:<br>
-`% java -jar BakaKeeper.jar --status [-passphrase <heslo>]`<br>
-zkontroluje současný stav a vytvoří hlášení.
+1) Rychlá inicializace – vytvoření persistentního nastavení:
+   `java -jar BakaKeeper-2.0-SNAPSHOT.jar --init --interactive [-passphrase <heslo>]`
 
-3) Provedení synchronizace:<br>
-`% java -jar BakaKeeper.jar --sync [-passphrase <heslo>]`<br>
-podle vytvořených nastavení provede synchronizační operace
-a případně zašle hlášení e-mailem.
+2) Kontrola synchronizace:
+   `java -jar BakaKeeper-2.0-SNAPSHOT.jar --status [-passphrase <heslo>]`
 
-4) Identifikace účtu:<br>
-`% java -jar BakaKeeper.jar -id <login> [-passphrase <heslo>]`<br>
-vypíše informace o uživateli s přihlašovacím jménem `<login>` bez domény
+3) Provedení synchronizace:
+   `java -jar BakaKeeper-2.0-SNAPSHOT.jar --sync [-passphrase <heslo>]`
 
-5) Reset hesla žáka:<br>
-`% java -jar BakaKeeper.jar -reset <login> [-passphrase <heslo>]`<br>
-provede nastavení hesla žáka s přihlašovacím jménem `<login>` bez domény
-na výchozí hodnotu 
+4) Identifikace účtu:
+   `java -jar BakaKeeper-2.0-SNAPSHOT.jar -id <login> [-passphrase <heslo>]`
 
-6) Více viz<br>
-`% java -jar BakaKeeper.jar --help`
+5) Reset hesla žáka:
+   `java -jar BakaKeeper-2.0-SNAPSHOT.jar -reset <login> [-passphrase <heslo>]`
 
-### Závislosti pro rychlé sestavení a&nbsp;spuštění
+6) Více viz `java -jar BakaKeeper-2.0-SNAPSHOT.jar --help`
 
-*ve výchozím stavu jsou vyžadovány v&nbsp;externím
-adresáři `./lib/`, ale je možné odkomentovat assembly
-plugin Mavenu  a&nbsp;sestavit archiv i&nbsp;se závislostmi,
-nebo rovnou použít shade plugin*
-* `com.sun.mail.javax.mail` >= 1.6.2
-* `com.microsoft.sqlserver.mssql-jdbc` >= 8.2.0
-* `org.projectlombok.lombok` >= 1.18.34
-* `net.sourceforge.jtds.jtds` >= 1.3.1
-* `net.tirasa.adsddl` >= 1.9 (+`slf4j-api`, `activation`)
-* (`junit` >= 4.13.1)
+### Závislosti
 
-2019-2024 [ZŠ Pardubice – Studánka](https://www.zs-studanka.cz/)
+Spravovány přes Maven (`bakakeeper-core/pom.xml`):
+* `com.sun.mail:javax.mail` 1.6.2
+* `com.microsoft.sqlserver:mssql-jdbc` 10.2.4
+* `net.sourceforge.jtds:jtds` 1.3.1
+* `net.tirasa:adsddl` 1.9
+* `org.projectlombok:lombok` 1.18.42
+* `org.yaml:snakeyaml` 2.3
+* `org.junit.jupiter:junit-jupiter` 5.11.4 (testy)
+* `org.mockito:mockito-core` 5.14.2 (testy)
+
+### Vývojové prostředí
+
+Podman-based dev environment se Samba4 AD, MSSQL a Mailpit:
+```bash
+cd dev && ./setup-dev.sh
+```
+
+Viz `dev/README.md` pro detaily.
+
+---
+2019-2026 [ZS Pardubice - Studanka](https://www.zs-studanka.cz/)

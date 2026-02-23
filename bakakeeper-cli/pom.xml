@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>cz.zsstudanka.skola</groupId>
+        <artifactId>bakakeeper-parent</artifactId>
+        <version>2.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>bakakeeper-cli</artifactId>
+    <packaging>jar</packaging>
+
+    <name>BakaKeeper CLI</name>
+    <description>Příkazový řádek aplikace BakaKeeper.</description>
+
+    <properties>
+        <project.app.mainClass>cz.zsstudanka.skola.bakakeeper.App</project.app.mainClass>
+    </properties>
+
+    <dependencies>
+        <!-- core modul -->
+        <dependency>
+            <groupId>cz.zsstudanka.skola</groupId>
+            <artifactId>bakakeeper-core</artifactId>
+        </dependency>
+
+        <!-- testy -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>lib/</classpathPrefix>
+                            <mainClass>${project.app.mainClass}</mainClass>
+                        </manifest>
+                        <manifestEntries>
+                            <Built-By>${user.name}</Built-By>
+                            <Build-Jdk>${java.version} (${java.vendor} ${java.vm.version})</Build-Jdk>
+                            <Build-Timestamp>${maven.build.timestamp}</Build-Timestamp>
+                            <Build-OS>${os.name} ${os.arch} ${os.version}</Build-OS>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+
+            <!-- fat jar se všemi závislostmi -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>${project.app.mainClass}</mainClass>
+                                </transformer>
+                            </transformers>
+                            <finalName>BakaKeeper-${project.version}</finalName>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

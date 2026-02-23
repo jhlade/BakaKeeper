@@ -1,6 +1,6 @@
 package cz.zsstudanka.skola.bakakeeper.routines;
 
-import cz.zsstudanka.skola.bakakeeper.App;
+import cz.zsstudanka.skola.bakakeeper.RuntimeContext;
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaADAuthenticator;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
@@ -311,7 +311,7 @@ public class Export {
                                     attempt // pokus
                             );
 
-                            if (!App.FLAG_DRYRUN) {
+                            if (!RuntimeContext.FLAG_DRYRUN) {
                                 passwordSet = studentObject.setPassword(newPassword, false);
                             } else {
                                 passwordSet = true;
@@ -392,7 +392,7 @@ public class Export {
                     "Tuto sestavu považujte za důvěrnou a distribuci " +
                     "hesel, pokud to bude možné, provádějte jednotlivě.\n\n";
 
-            if (App.FLAG_DRYRUN) {
+            if (RuntimeContext.FLAG_DRYRUN) {
                 message += "[ i ] Sestava byla vygenerována s příznakem zkušebního spuštění, zobrazované údaje nemusí reflektovat skutečný stav.";
             }
 
@@ -400,7 +400,7 @@ public class Export {
             String classTeacherEmail = classTeachers.getBy(EBakaSQL.F_CLASS_LABEL, classN).get(EBakaSQL.F_FAC_EMAIL.basename());
 
             String[] addresses;
-            if (!App.FLAG_DRYRUN) {
+            if (!RuntimeContext.FLAG_DRYRUN) {
                 // e-mail pro třídního učitele a správce systému
                 addresses = new String[]{classTeacherEmail, Settings.getInstance().getAdminMail()};
             } else {
@@ -449,7 +449,7 @@ public class Export {
         report.append("\\usepackage{qrcode}\n");
         report.append("\\pagestyle{fancy}\n\n");
 
-        if (App.FLAG_DRYRUN) {
+        if (RuntimeContext.FLAG_DRYRUN) {
             report.append("\\usepackage{xcolor}\n\n");
         }
 
@@ -462,7 +462,7 @@ public class Export {
         report.append("\\lfoot{" + Settings.getInstance().systemInfoTag() + "}\n");
         report.append("\\rfoot{" + Version.getInstance().getTag() + "}\n");
 
-        if (App.FLAG_DRYRUN) {
+        if (RuntimeContext.FLAG_DRYRUN) {
             report.append("\\chead{{\\color{red}\\textbf{ZKUŠEBNÍ SESTAVA}}}\n");
         }
 
