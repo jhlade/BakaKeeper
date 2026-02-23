@@ -175,8 +175,11 @@ public class EncryptionInputStream extends FilterInputStream {
             // konec souboru - dekryptování případného lichého zbytku
             if (this.chunkIndex > 0) {
                 finalizeChunk();
+                start = 0;
             }
 
+            // žádná nová data - nepokračovat na start = 0
+            return;
         } else {
             // začíná se číst nový buffer
             this.chunkCounter = 0;

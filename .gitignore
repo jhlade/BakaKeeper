@@ -1,4 +1,7 @@
 /target/
 /local/
-/.idea/
+
+/.*/
+
 /cz.zsstudanka.skola.iml
+*.iml

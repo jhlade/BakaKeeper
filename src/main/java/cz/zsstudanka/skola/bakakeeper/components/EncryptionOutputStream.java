@@ -115,6 +115,9 @@ public class EncryptionOutputStream extends FilterOutputStream {
     @Override
     public void close() throws IOException {
 
+        // vyprázdnění interního bufferu do paketu
+        flushBuffer();
+
         if (cIndex != 0) {
             writeChunk(cIndex);
         }
