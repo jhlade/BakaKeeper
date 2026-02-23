@@ -257,6 +257,7 @@ PRIJMENI_ES = ["García", "Martínez", "López", "Sánchez", "González",
 # překročí 20 znaků a otestuje příslušnou logiku BakaKeeperu.
 # Ženské formy se odvozují automaticky přes _f() výše.
 PRIJMENI_DLOUHA_M = [
+    "Megadlouhopříjmeník",
     "Krkavoslav-Soumrák",    # 18 znaků → login 22–30 z.
     "Blankytnák-Mlžák",      # 16 znaků → login 22–28 z.
     "Svítilník-Oblačník",    # 18 znaků → login 22–30 z.
