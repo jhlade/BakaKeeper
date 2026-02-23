@@ -4,18 +4,17 @@
 # Pridava atributy, ktere BakaKeeper pouziva a ktere nejsou ve vychozim
 # Samba4 schematu (jsou soucasti MS Exchange / rozsireneho AD schematu).
 #
-# Atributy:
-#   extensionAttribute1-15   – rozsirene atributy (ID, sync flagy, metadata)
-#   proxyAddresses           – seznam proxy-adres (SMTP, smtp, X400 atp.)
-#   msExchHideFromAddressLists   – skryti kontaktu v GAL
-#   msExchRequireAuthToSendTo    – distribucni skupiny prijimaji postu jen z domeny
+# OID jsou overeny z produkce (zsstu.local, Exchange schema, export 2026-02-23).
+# Viz exchange-schema-oids.csv a query-exchange-schema.ps1.
 #
-# OID poznamky:
-#   extensionAttribute1-10:  1.2.840.113556.1.2.557 az .566 (MS AD base OID arc)
-#   extensionAttribute11-15: 1.2.840.113556.1.4.374 az .378
-#   proxyAddresses:          1.2.840.113556.1.2.210
-#   msExchHideFromAddressLists:  1.2.840.113556.1.4.609
-#   msExchRequireAuthToSendTo:   1.2.840.113556.1.4.2398 (aproximace pro dev)
+# Atributy:
+#   extensionAttribute1-10:  1.2.840.113556.1.2.423 az .432
+#   extensionAttribute11-15: 1.2.840.113556.1.2.599 az .603
+#   targetAddress:           1.2.840.113556.1.2.352
+#   msExchHideFromAddressLists:  1.2.840.113556.1.4.7000.102.73
+#   msExchRequireAuthToSendTo:   1.2.840.113556.1.4.5062
+#
+# proxyAddresses (1.2.840.113556.1.2.210) je jiz v zakladnim Samba4 schematu.
 #
 # Import z provision-users.sh:
 #   ldapadd -H ldap://localhost -D "CN=Administrator,CN=Users,DC=skola,DC=local"
@@ -30,14 +29,16 @@ dn: CN=ms-Exch-Extension-Attribute-1,CN=Schema,CN=Configuration,DC=skola,DC=loca
 changetype: add
 objectClass: attributeSchema
 cn: ms-Exch-Extension-Attribute-1
-attributeID: 1.2.840.113556.1.2.557
+attributeID: 1.2.840.113556.1.2.423
 attributeSyntax: 2.5.5.12
 isSingleValued: TRUE
 oMSyntax: 64
 lDAPDisplayName: extensionAttribute1
 adminDisplayName: ms-Exch-Extension-Attribute-1
 adminDescription: Rozsireny atribut Exchange 1 (ID v evidenci Bakalari)
-searchFlags: 1
+rangeLower: 1
+rangeUpper: 1024
+searchFlags: 17
 
 # ---------------------------------------------------------------------------
 # extensionAttribute2
@@ -47,13 +48,16 @@ dn: CN=ms-Exch-Extension-Attribute-2,CN=Schema,CN=Configuration,DC=skola,DC=loca
 changetype: add
 objectClass: attributeSchema
 cn: ms-Exch-Extension-Attribute-2
-attributeID: 1.2.840.113556.1.2.558
+attributeID: 1.2.840.113556.1.2.424
 attributeSyntax: 2.5.5.12
 isSingleValued: TRUE
 oMSyntax: 64
 lDAPDisplayName: extensionAttribute2
 adminDisplayName: ms-Exch-Extension-Attribute-2
 adminDescription: Rozsireny atribut Exchange 2
+rangeLower: 1
+rangeUpper: 1024
+searchFlags: 17
 
 # ---------------------------------------------------------------------------
 # extensionAttribute3
@@ -62,13 +66,16 @@ dn: CN=ms-Exch-Extension-Attribute-3,CN=Schema,CN=Configuration,DC=skola,DC=loca
 changetype: add
 objectClass: attributeSchema
 cn: ms-Exch-Extension-Attribute-3
-attributeID: 1.2.840.113556.1.2.559
+attributeID: 1.2.840.113556.1.2.425
 attributeSyntax: 2.5.5.12
 isSingleValued: TRUE
 oMSyntax: 64
 lDAPDisplayName: extensionAttribute3
 adminDisplayName: ms-Exch-Extension-Attribute-3
 adminDescription: Rozsireny atribut Exchange 3
+rangeLower: 1
+rangeUpper: 1024
+searchFlags: 17
 
 # ---------------------------------------------------------------------------
 # extensionAttribute4
@@ -77,13 +84,16 @@ dn: CN=ms-Exch-Extension-Attribute-4,CN=Schema,CN=Configuration,DC=skola,DC=loca
 changetype: add
 objectClass: attributeSchema
 cn: ms-Exch-Extension-Attribute-4
-attributeID: 1.2.840.113556.1.2.560
+attributeID: 1.2.840.113556.1.2.426
 attributeSyntax: 2.5.5.12
 isSingleValued: TRUE
 oMSyntax: 64
 lDAPDisplayName: extensionAttribute4
 adminDisplayName: ms-Exch-Extension-Attribute-4
 adminDescription: Rozsireny atribut Exchange 4
+rangeLower: 1
+rangeUpper: 1024
+searchFlags: 17
 
 # ---------------------------------------------------------------------------
 # extensionAttribute5
@@ -92,13 +102,16 @@ dn: CN=ms-Exch-Extension-Attribute-5,CN=Schema,CN=Configuration,DC=skola,DC=loca
 changetype: add
 objectClass: attributeSchema
 cn: ms-Exch-Extension-Attribute-5
-attributeID: 1.2.840.113556.1.2.561
+attributeID: 1.2.840.113556.1.2.427
 attributeSyntax: 2.5.5.12
 isSingleValued: TRUE
 oMSyntax: 64
 lDAPDisplayName: extensionAttribute5
 adminDisplayName: ms-Exch-Extension-Attribute-5
 adminDescription: Rozsireny atribut Exchange 5
+rangeLower: 1
+rangeUpper: 1024
+searchFlags: 17
 
 # ---------------------------------------------------------------------------
 # extensionAttribute6
@@ -107,13 +120,16 @@ dn: CN=ms-Exch-Extension-Attribute-6,CN=Schema,CN=Configuration,DC=skola,DC=loca
 changetype: add
 objectClass: attributeSchema
 cn: ms-Exch-Extension-Attribute-6
-attributeID: 1.2.840.113556.1.2.562
+attributeID: 1.2.840.113556.1.2.428
 attributeSyntax: 2.5.5.12
 isSingleValued: TRUE
 oMSyntax: 64
 lDAPDisplayName: extensionAttribute6
 adminDisplayName: ms-Exch-Extension-Attribute-6
 adminDescription: Rozsireny atribut Exchange 6
+rangeLower: 1
+rangeUpper: 1024
+searchFlags: 17
 
 # ---------------------------------------------------------------------------
 # extensionAttribute7
@@ -122,13 +138,16 @@ dn: CN=ms-Exch-Extension-Attribute-7,CN=Schema,CN=Configuration,DC=skola,DC=loca
 changetype: add
 objectClass: attributeSchema
 cn: ms-Exch-Extension-Attribute-7
-attributeID: 1.2.840.113556.1.2.563
+attributeID: 1.2.840.113556.1.2.429
 attributeSyntax: 2.5.5.12
 isSingleValued: TRUE
 oMSyntax: 64
 lDAPDisplayName: extensionAttribute7
 adminDisplayName: ms-Exch-Extension-Attribute-7
 adminDescription: Rozsireny atribut Exchange 7
+rangeLower: 1
+rangeUpper: 1024
+searchFlags: 17
 
 # ---------------------------------------------------------------------------
 # extensionAttribute8
@@ -137,13 +156,16 @@ dn: CN=ms-Exch-Extension-Attribute-8,CN=Schema,CN=Configuration,DC=skola,DC=loca
 changetype: add
 objectClass: attributeSchema
 cn: ms-Exch-Extension-Attribute-8
-attributeID: 1.2.840.113556.1.2.564
+attributeID: 1.2.840.113556.1.2.430
 attributeSyntax: 2.5.5.12
 isSingleValued: TRUE
 oMSyntax: 64
 lDAPDisplayName: extensionAttribute8
 adminDisplayName: ms-Exch-Extension-Attribute-8
 adminDescription: Rozsireny atribut Exchange 8
+rangeLower: 1
+rangeUpper: 1024
+searchFlags: 17
 
 # ---------------------------------------------------------------------------
 # extensionAttribute9
@@ -152,13 +174,16 @@ dn: CN=ms-Exch-Extension-Attribute-9,CN=Schema,CN=Configuration,DC=skola,DC=loca
 changetype: add
 objectClass: attributeSchema
 cn: ms-Exch-Extension-Attribute-9
-attributeID: 1.2.840.113556.1.2.565
+attributeID: 1.2.840.113556.1.2.431
 attributeSyntax: 2.5.5.12
 isSingleValued: TRUE
 oMSyntax: 64
 lDAPDisplayName: extensionAttribute9
 adminDisplayName: ms-Exch-Extension-Attribute-9
 adminDescription: Rozsireny atribut Exchange 9
+rangeLower: 1
+rangeUpper: 1024
+searchFlags: 17
 
 # ---------------------------------------------------------------------------
 # extensionAttribute10
@@ -167,13 +192,16 @@ dn: CN=ms-Exch-Extension-Attribute-10,CN=Schema,CN=Configuration,DC=skola,DC=loc
 changetype: add
 objectClass: attributeSchema
 cn: ms-Exch-Extension-Attribute-10
-attributeID: 1.2.840.113556.1.2.566
+attributeID: 1.2.840.113556.1.2.432
 attributeSyntax: 2.5.5.12
 isSingleValued: TRUE
 oMSyntax: 64
 lDAPDisplayName: extensionAttribute10
 adminDisplayName: ms-Exch-Extension-Attribute-10
 adminDescription: Rozsireny atribut Exchange 10
+rangeLower: 1
+rangeUpper: 1024
+searchFlags: 17
 
 # ---------------------------------------------------------------------------
 # extensionAttribute11
@@ -182,13 +210,16 @@ dn: CN=ms-Exch-Extension-Attribute-11,CN=Schema,CN=Configuration,DC=skola,DC=loc
 changetype: add
 objectClass: attributeSchema
 cn: ms-Exch-Extension-Attribute-11
-attributeID: 1.2.840.113556.1.4.374
+attributeID: 1.2.840.113556.1.2.599
 attributeSyntax: 2.5.5.12
 isSingleValued: TRUE
 oMSyntax: 64
 lDAPDisplayName: extensionAttribute11
 adminDisplayName: ms-Exch-Extension-Attribute-11
 adminDescription: Rozsireny atribut Exchange 11
+rangeLower: 1
+rangeUpper: 2048
+searchFlags: 17
 
 # ---------------------------------------------------------------------------
 # extensionAttribute12
@@ -197,13 +228,16 @@ dn: CN=ms-Exch-Extension-Attribute-12,CN=Schema,CN=Configuration,DC=skola,DC=loc
 changetype: add
 objectClass: attributeSchema
 cn: ms-Exch-Extension-Attribute-12
-attributeID: 1.2.840.113556.1.4.375
+attributeID: 1.2.840.113556.1.2.600
 attributeSyntax: 2.5.5.12
 isSingleValued: TRUE
 oMSyntax: 64
 lDAPDisplayName: extensionAttribute12
 adminDisplayName: ms-Exch-Extension-Attribute-12
 adminDescription: Rozsireny atribut Exchange 12
+rangeLower: 1
+rangeUpper: 2048
+searchFlags: 17
 
 # ---------------------------------------------------------------------------
 # extensionAttribute13
@@ -212,13 +246,16 @@ dn: CN=ms-Exch-Extension-Attribute-13,CN=Schema,CN=Configuration,DC=skola,DC=loc
 changetype: add
 objectClass: attributeSchema
 cn: ms-Exch-Extension-Attribute-13
-attributeID: 1.2.840.113556.1.4.376
+attributeID: 1.2.840.113556.1.2.601
 attributeSyntax: 2.5.5.12
 isSingleValued: TRUE
 oMSyntax: 64
 lDAPDisplayName: extensionAttribute13
 adminDisplayName: ms-Exch-Extension-Attribute-13
 adminDescription: Rozsireny atribut Exchange 13
+rangeLower: 1
+rangeUpper: 2048
+searchFlags: 17
 
 # ---------------------------------------------------------------------------
 # extensionAttribute14
@@ -227,13 +264,16 @@ dn: CN=ms-Exch-Extension-Attribute-14,CN=Schema,CN=Configuration,DC=skola,DC=loc
 changetype: add
 objectClass: attributeSchema
 cn: ms-Exch-Extension-Attribute-14
-attributeID: 1.2.840.113556.1.4.377
+attributeID: 1.2.840.113556.1.2.602
 attributeSyntax: 2.5.5.12
 isSingleValued: TRUE
 oMSyntax: 64
 lDAPDisplayName: extensionAttribute14
 adminDisplayName: ms-Exch-Extension-Attribute-14
 adminDescription: Rozsireny atribut Exchange 14
+rangeLower: 1
+rangeUpper: 2048
+searchFlags: 17
 
 # ---------------------------------------------------------------------------
 # extensionAttribute15
@@ -242,30 +282,35 @@ dn: CN=ms-Exch-Extension-Attribute-15,CN=Schema,CN=Configuration,DC=skola,DC=loc
 changetype: add
 objectClass: attributeSchema
 cn: ms-Exch-Extension-Attribute-15
-attributeID: 1.2.840.113556.1.4.378
+attributeID: 1.2.840.113556.1.2.603
 attributeSyntax: 2.5.5.12
 isSingleValued: TRUE
 oMSyntax: 64
 lDAPDisplayName: extensionAttribute15
 adminDisplayName: ms-Exch-Extension-Attribute-15
 adminDescription: Rozsireny atribut Exchange 15
+rangeLower: 1
+rangeUpper: 2048
+searchFlags: 17
 
 # ---------------------------------------------------------------------------
-# proxyAddresses
-# Seznam proxy-adres (SMTP:user@domain, smtp:alias@domain, X400:... atp.)
-# V Samba4 muze jiz existovat – ldapadd -c to preskoci.
+# targetAddress
+# Cilova e-mailova adresa kontaktu (external forwarding)
 # ---------------------------------------------------------------------------
-dn: CN=Proxy-Addresses,CN=Schema,CN=Configuration,DC=skola,DC=local
+dn: CN=ms-Exch-Target-Address,CN=Schema,CN=Configuration,DC=skola,DC=local
 changetype: add
 objectClass: attributeSchema
-cn: Proxy-Addresses
-attributeID: 1.2.840.113556.1.2.210
+cn: ms-Exch-Target-Address
+attributeID: 1.2.840.113556.1.2.352
 attributeSyntax: 2.5.5.12
-isSingleValued: FALSE
+isSingleValued: TRUE
 oMSyntax: 64
-lDAPDisplayName: proxyAddresses
-adminDisplayName: Proxy-Addresses
-adminDescription: Seznam proxy-adres (SMTP, smtp, X400 atp.)
+lDAPDisplayName: targetAddress
+adminDisplayName: ms-Exch-Target-Address
+adminDescription: Cilova e-mailova adresa kontaktu
+rangeLower: 1
+rangeUpper: 1123
+searchFlags: 1
 
 # ---------------------------------------------------------------------------
 # msExchHideFromAddressLists
@@ -276,27 +321,29 @@ dn: CN=ms-Exch-Hide-From-Address-Lists,CN=Schema,CN=Configuration,DC=skola,DC=lo
 changetype: add
 objectClass: attributeSchema
 cn: ms-Exch-Hide-From-Address-Lists
-attributeID: 1.2.840.113556.1.4.609
+attributeID: 1.2.840.113556.1.4.7000.102.73
 attributeSyntax: 2.5.5.8
 isSingleValued: TRUE
 oMSyntax: 1
 lDAPDisplayName: msExchHideFromAddressLists
 adminDisplayName: ms-Exch-Hide-From-Address-Lists
 adminDescription: Skryti objektu v Global Address Listu Exchange/O365
+searchFlags: 16
 
 # ---------------------------------------------------------------------------
 # msExchRequireAuthToSendTo
 # Zajisti, ze distribucni skupina prijima e-mail pouze od overenych odesilatelu
 # uvnitr organizace. BakaKeeper ho nastavuje na tridni distribucni skupiny.
 # ---------------------------------------------------------------------------
-dn: CN=ms-Exch-Require-Auth-To-Send-To,CN=Schema,CN=Configuration,DC=skola,DC=local
+dn: CN=ms-Exch-RequireAuthToSendTo,CN=Schema,CN=Configuration,DC=skola,DC=local
 changetype: add
 objectClass: attributeSchema
-cn: ms-Exch-Require-Auth-To-Send-To
-attributeID: 1.2.840.113556.1.4.2398
+cn: ms-Exch-RequireAuthToSendTo
+attributeID: 1.2.840.113556.1.4.5062
 attributeSyntax: 2.5.5.8
 isSingleValued: TRUE
 oMSyntax: 1
 lDAPDisplayName: msExchRequireAuthToSendTo
-adminDisplayName: ms-Exch-Require-Auth-To-Send-To
+adminDisplayName: ms-Exch-RequireAuthToSendTo
 adminDescription: Omezeni prijmu e-mailu skupiny pouze na overene odesilatele
+searchFlags: 0

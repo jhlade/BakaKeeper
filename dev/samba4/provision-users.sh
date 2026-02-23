@@ -172,6 +172,7 @@ mayContain: extensionAttribute13
 mayContain: extensionAttribute14
 mayContain: extensionAttribute15
 mayContain: proxyAddresses
+mayContain: targetAddress
 mayContain: msExchHideFromAddressLists
 mayContain: msExchRequireAuthToSendTo
 MAYCONTAIN_USER
@@ -200,6 +201,7 @@ mayContain: extensionAttribute13
 mayContain: extensionAttribute14
 mayContain: extensionAttribute15
 mayContain: proxyAddresses
+mayContain: targetAddress
 mayContain: msExchHideFromAddressLists
 mayContain: msExchRequireAuthToSendTo
 MAYCONTAIN_CONTACT
@@ -228,6 +230,7 @@ mayContain: extensionAttribute13
 mayContain: extensionAttribute14
 mayContain: extensionAttribute15
 mayContain: proxyAddresses
+mayContain: targetAddress
 mayContain: msExchHideFromAddressLists
 mayContain: msExchRequireAuthToSendTo
 MAYCONTAIN_GROUP
