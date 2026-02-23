@@ -45,4 +45,10 @@ public interface LDAPConnector {
 
     /** Odebrání objektu ze všech skupin. */
     Boolean removeObjectFromAllGroups(String objectDN);
+
+    /** Seznam přímých členů skupiny/DL. */
+    ArrayList<String> listDirectMembers(String groupDN);
+
+    /** Odebrání objektu z konkrétní skupiny. */
+    Boolean removeObjectFromGroup(String objectDN, String groupDN);
 }

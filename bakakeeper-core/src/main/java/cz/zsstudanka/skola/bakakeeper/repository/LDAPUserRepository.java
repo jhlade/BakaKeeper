@@ -83,4 +83,46 @@ public interface LDAPUserRepository {
      * @return objekt existuje
      */
     boolean checkDN(String dn);
+
+    /**
+     * Přidá objekt do skupiny.
+     *
+     * @param dn distinguished name objektu
+     * @param groupDn DN cílové skupiny
+     * @return úspěch operace
+     */
+    boolean addToGroup(String dn, String groupDn);
+
+    /**
+     * Odebere objekt ze všech skupin.
+     *
+     * @param dn distinguished name objektu
+     * @return úspěch operace
+     */
+    boolean removeFromAllGroups(String dn);
+
+    /**
+     * Získá seznam členství objektu ve skupinách.
+     *
+     * @param dn distinguished name objektu
+     * @return seznam DN skupin
+     */
+    List<String> listMembership(String dn);
+
+    /**
+     * Získá seznam přímých členů skupiny/DL.
+     *
+     * @param groupDn DN skupiny
+     * @return seznam DN členů
+     */
+    List<String> listDirectMembers(String groupDn);
+
+    /**
+     * Odebere objekt z konkrétní skupiny.
+     *
+     * @param dn DN objektu
+     * @param groupDn DN skupiny
+     * @return úspěch operace
+     */
+    boolean removeFromGroup(String dn, String groupDn);
 }

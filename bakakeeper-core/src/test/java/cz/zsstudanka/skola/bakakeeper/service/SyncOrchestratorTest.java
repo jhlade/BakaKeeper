@@ -1,0 +1,168 @@
+package cz.zsstudanka.skola.bakakeeper.service;
+
+import cz.zsstudanka.skola.bakakeeper.config.AppConfig;
+import cz.zsstudanka.skola.bakakeeper.model.FacultyRecord;
+import cz.zsstudanka.skola.bakakeeper.model.GuardianRecord;
+import cz.zsstudanka.skola.bakakeeper.model.StudentRecord;
+import cz.zsstudanka.skola.bakakeeper.repository.FacultyRepository;
+import cz.zsstudanka.skola.bakakeeper.repository.GuardianRepository;
+import cz.zsstudanka.skola.bakakeeper.repository.LDAPUserRepository;
+import cz.zsstudanka.skola.bakakeeper.repository.StudentRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+/**
+ * Testy pro SyncOrchestrator.
+ */
+@ExtendWith(MockitoExtension.class)
+class SyncOrchestratorTest {
+
+    @Mock private AppConfig config;
+    @Mock private StudentRepository studentRepo;
+    @Mock private LDAPUserRepository ldapUserRepo;
+    @Mock private FacultyRepository facultyRepo;
+    @Mock private GuardianRepository guardianRepo;
+    @Mock private StudentService studentService;
+    @Mock private FacultyService facultyService;
+    @Mock private GuardianService guardianService;
+    @Mock private RuleService ruleService;
+
+    private SyncOrchestrator orchestrator;
+
+    @BeforeEach
+    void setUp() {
+        orchestrator = new SyncOrchestrator(config, studentRepo, ldapUserRepo,
+                facultyRepo, guardianRepo, studentService, facultyService,
+                guardianService, ruleService);
+    }
+
+    @Test
+    void runFullSync_voláVšechnyFáze() {
+        // příprava dat
+        StudentRecord sqlStudent = new StudentRecord();
+        sqlStudent.setInternalId("001");
+        StudentRecord ldapStudent = new StudentRecord();
+        ldapStudent.setInternalId("001");
+
+        when(studentRepo.findActive(null, null)).thenReturn(List.of(sqlStudent));
+        when(ldapUserRepo.findAllStudents(any(), any())).thenReturn(List.of(ldapStudent));
+        when(config.getLdapBaseStudents()).thenReturn("OU=Zaci");
+        when(config.getLdapBaseAlumni()).thenReturn("OU=Alumni");
+        when(config.getLdapBaseContacts()).thenReturn("OU=Kontakty");
+        when(config.getRules()).thenReturn(List.of());
+        when(facultyRepo.findActive(true)).thenReturn(List.of());
+        when(guardianRepo.findAllContacts(any())).thenReturn(List.of());
+
+        // services vracejí prázdné výsledky
+        when(facultyService.syncClassTeachers(any(), anyBoolean(), any())).thenReturn(List.of());
+        when(studentService.initializeNewStudents(any(), any(), anyBoolean(), any())).thenReturn(List.of());
+        when(studentService.syncStudentData(any(), any(), anyBoolean(), any())).thenReturn(List.of());
+        when(studentService.retireOrphanedStudents(any(), any(), anyBoolean(), any())).thenReturn(List.of());
+        when(guardianService.syncGuardians(any(), any(), anyBoolean(), any())).thenReturn(List.of());
+
+        List<SyncResult> results = orchestrator.runFullSync(false, SyncProgressListener.SILENT);
+
+        assertNotNull(results);
+        verify(facultyService).syncClassTeachers(any(), eq(false), any());
+        verify(studentService).initializeNewStudents(any(), any(), eq(false), any());
+        verify(studentService).syncStudentData(any(), any(), eq(false), any());
+        verify(studentService).retireOrphanedStudents(any(), any(), eq(false), any());
+        verify(guardianService).syncGuardians(any(), any(), eq(false), any());
+        // pravidla prázdná → ruleService by neměl být volán
+        verifyNoInteractions(ruleService);
+    }
+
+    @Test
+    void runFullSync_sRepair_znoveNačítáLDAP() {
+        StudentRecord sqlStudent = new StudentRecord();
+        StudentRecord ldapStudent = new StudentRecord();
+
+        when(studentRepo.findActive(null, null)).thenReturn(List.of(sqlStudent));
+        when(ldapUserRepo.findAllStudents(any(), any())).thenReturn(List.of(ldapStudent));
+        when(config.getLdapBaseStudents()).thenReturn("OU=Zaci");
+        when(config.getLdapBaseAlumni()).thenReturn("OU=Alumni");
+        when(config.getLdapBaseContacts()).thenReturn("OU=Kontakty");
+        when(config.getRules()).thenReturn(List.of());
+        when(facultyRepo.findActive(true)).thenReturn(List.of());
+        when(guardianRepo.findAllContacts(any())).thenReturn(List.of());
+
+        when(facultyService.syncClassTeachers(any(), anyBoolean(), any())).thenReturn(List.of());
+        when(studentService.initializeNewStudents(any(), any(), anyBoolean(), any())).thenReturn(List.of());
+        when(studentService.syncStudentData(any(), any(), anyBoolean(), any())).thenReturn(List.of());
+        when(studentService.retireOrphanedStudents(any(), any(), anyBoolean(), any())).thenReturn(List.of());
+        when(guardianService.syncGuardians(any(), any(), anyBoolean(), any())).thenReturn(List.of());
+
+        orchestrator.runFullSync(true, SyncProgressListener.SILENT);
+
+        // s repair=true se LDAP načítá vícekrát (po inicializaci)
+        verify(ldapUserRepo, atLeast(2)).findAllStudents(any(), any());
+    }
+
+    @Test
+    void runFullSync_agregaceVýsledků() {
+        when(studentRepo.findActive(null, null)).thenReturn(List.of());
+        when(ldapUserRepo.findAllStudents(any(), any())).thenReturn(List.of());
+        when(config.getLdapBaseStudents()).thenReturn("OU=Zaci");
+        when(config.getLdapBaseAlumni()).thenReturn("OU=Alumni");
+        when(config.getLdapBaseContacts()).thenReturn("OU=Kontakty");
+        when(config.getRules()).thenReturn(List.of());
+        when(facultyRepo.findActive(true)).thenReturn(List.of());
+        when(guardianRepo.findAllContacts(any())).thenReturn(List.of());
+
+        when(facultyService.syncClassTeachers(any(), anyBoolean(), any()))
+                .thenReturn(List.of(SyncResult.updated("T1", "ok")));
+        when(studentService.initializeNewStudents(any(), any(), anyBoolean(), any()))
+                .thenReturn(List.of(SyncResult.created("S1", "ok")));
+        when(studentService.syncStudentData(any(), any(), anyBoolean(), any()))
+                .thenReturn(List.of(SyncResult.error("S2", "chyba")));
+        when(studentService.retireOrphanedStudents(any(), any(), anyBoolean(), any()))
+                .thenReturn(List.of());
+        when(guardianService.syncGuardians(any(), any(), anyBoolean(), any()))
+                .thenReturn(List.of());
+
+        List<SyncResult> results = orchestrator.runFullSync(false, SyncProgressListener.SILENT);
+
+        assertEquals(3, results.size());
+        assertEquals(2, results.stream().filter(SyncResult::isSuccess).count());
+        assertEquals(1, results.stream().filter(r -> !r.isSuccess()).count());
+    }
+
+    @Test
+    void runInitOnly_voláPouzeInicializaci() {
+        when(studentRepo.findActive(null, null)).thenReturn(List.of());
+        when(ldapUserRepo.findAllStudents(any(), any())).thenReturn(List.of());
+        when(config.getLdapBaseStudents()).thenReturn("OU=Zaci");
+        when(config.getLdapBaseAlumni()).thenReturn("OU=Alumni");
+        when(studentService.initializeNewStudents(any(), any(), anyBoolean(), any()))
+                .thenReturn(List.of());
+
+        orchestrator.runInitOnly(false, SyncProgressListener.SILENT);
+
+        verify(studentService).initializeNewStudents(any(), any(), eq(false), any());
+        verifyNoInteractions(facultyService, guardianService, ruleService);
+    }
+
+    @Test
+    void runCheckOnly_voláPouzeKontrolu() {
+        when(studentRepo.findActive(null, null)).thenReturn(List.of());
+        when(ldapUserRepo.findAllStudents(any(), any())).thenReturn(List.of());
+        when(config.getLdapBaseStudents()).thenReturn("OU=Zaci");
+        when(config.getLdapBaseAlumni()).thenReturn("OU=Alumni");
+        when(studentService.syncStudentData(any(), any(), anyBoolean(), any()))
+                .thenReturn(List.of());
+
+        orchestrator.runCheckOnly(false, SyncProgressListener.SILENT);
+
+        verify(studentService).syncStudentData(any(), any(), eq(false), any());
+        verifyNoInteractions(facultyService, guardianService, ruleService);
+    }
+}
