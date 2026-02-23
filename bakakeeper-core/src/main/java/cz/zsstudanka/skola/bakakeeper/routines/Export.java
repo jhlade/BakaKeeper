@@ -30,6 +30,9 @@ import java.util.*;
  */
 public class Export {
 
+    /** Maximální počet pokusů pro generování hesla. */
+    private static final int MAX_PASSWORD_ATTEMPTS = 25;
+
     /**
      * Export žákovských informací ve formě CSV.
      *
@@ -301,7 +304,7 @@ public class Export {
                         int attempt = 0;
                         boolean passwordSet = false;
 
-                        while (!passwordSet && attempt < Manipulation.MAX_PASSWORD_ATTEMPTS) {
+                        while (!passwordSet && attempt < MAX_PASSWORD_ATTEMPTS) {
 
                             newPassword = BakaUtils.nextPassword(
                                     studentSurname, // příjmení
