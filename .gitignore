@@ -17,3 +17,9 @@
 
 /bakakeeper-core/target/
 /bakakeeper-cli/target/
+
+# Runtime artefakty – nikdy v gitu
+settings.dat
+ssl.jks
+*.jar
+!dev/.data/**/.gitkeep

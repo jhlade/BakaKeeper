@@ -191,6 +191,80 @@ public class YamlAppConfig implements AppConfig {
         return getString("mail", "admin");
     }
 
+    // --- Porty (volitelné, s fallback na výchozí hodnoty) ---
+
+    @Override
+    public int getLdapPort() {
+        Integer port = getInteger("ldap", "port");
+        return (port != null) ? port : (isLdapSsl() ? 636 : 389);
+    }
+
+    @Override
+    public int getSqlPort() {
+        Integer port = getInteger("sql", "port");
+        return (port != null) ? port : 1433;
+    }
+
+    @Override
+    public int getSmtpPort() {
+        Integer port = getInteger("mail", "port");
+        return (port != null) ? port : 587;
+    }
+
+    // --- Per-service credentials (fallback na globální credentials) ---
+
+    @Override
+    public String getLdapUser() {
+        String user = getString("ldap", "user");
+        return (user != null) ? user : getUser();
+    }
+
+    @Override
+    public String getLdapPass() {
+        String pass = getString("ldap", "password");
+        return (pass != null) ? pass : getPass();
+    }
+
+    @Override
+    public String getSqlUser() {
+        String user = getString("sql", "user");
+        return (user != null) ? user : getUser();
+    }
+
+    @Override
+    public String getSqlPass() {
+        String pass = getString("sql", "password");
+        return (pass != null) ? pass : getPass();
+    }
+
+    @Override
+    public String getSmtpUser() {
+        String user = getString("mail", "user");
+        return (user != null) ? user : getUser();
+    }
+
+    @Override
+    public String getSmtpPass() {
+        String pass = getString("mail", "password");
+        return (pass != null) ? pass : getPass();
+    }
+
+    // --- SMTP volby ---
+
+    @Override
+    public boolean isSmtpAuth() {
+        Object val = getSection("mail").get("auth");
+        if (val == null) return true; // výchozí: zapnuto
+        return getBooleanValue(val);
+    }
+
+    @Override
+    public boolean isSmtpStarttls() {
+        Object val = getSection("mail").get("starttls");
+        if (val == null) return true; // výchozí: zapnuto
+        return getBooleanValue(val);
+    }
+
     // --- Politiky ---
 
     @Override
@@ -317,10 +391,29 @@ public class YamlAppConfig implements AppConfig {
      */
     private boolean getBoolean(String section, String key) {
         Object val = getSection(section).get(key);
+        return getBooleanValue(val);
+    }
+
+    /**
+     * Převede libovolnou hodnotu na boolean.
+     */
+    private boolean getBooleanValue(Object val) {
         if (val instanceof Boolean b) return b;
         if (val instanceof String s) return "true".equalsIgnoreCase(s) || "1".equals(s) || "ano".equalsIgnoreCase(s);
         if (val instanceof Number n) return n.intValue() != 0;
         return false;
+    }
+
+    /**
+     * Získá celočíselnou hodnotu ze sekce (nebo null, pokud není přítomna).
+     */
+    private Integer getInteger(String section, String key) {
+        Object val = getSection(section).get(key);
+        if (val instanceof Number n) return n.intValue();
+        if (val instanceof String s) {
+            try { return Integer.parseInt(s.trim()); } catch (NumberFormatException e) { return null; }
+        }
+        return null;
     }
 
     /**
@@ -349,6 +442,13 @@ public class YamlAppConfig implements AppConfig {
             return Collections.unmodifiableList(result);
         }
         return List.of();
+    }
+
+    /**
+     * Vloží hodnotu do mapy pouze pokud není null.
+     */
+    private void putIfPresent(Map<String, Object> map, String key, Object value) {
+        if (value != null) map.put(key, value);
     }
 
     /**
@@ -405,6 +505,10 @@ public class YamlAppConfig implements AppConfig {
         ldap.put("domain", getLdapDomain());
         ldap.put("server", getLdapServer());
         ldap.put("ssl", isLdapSsl());
+        // volitelné – zapsat jen pokud je explicitně nastaveno
+        putIfPresent(ldap, "port", getInteger("ldap", "port"));
+        putIfPresent(ldap, "user", getString("ldap", "user"));
+        putIfPresent(ldap, "password", getString("ldap", "password"));
         ldap.put("base", getLdapBase());
         ldap.put("students", getLdapBaseStudents());
         ldap.put("alumni", getLdapBaseAlumni());
@@ -419,14 +523,23 @@ public class YamlAppConfig implements AppConfig {
 
         Map<String, Object> sql = new LinkedHashMap<>();
         sql.put("host", getSqlHost());
+        putIfPresent(sql, "port", getInteger("sql", "port"));
         sql.put("database", getSqlDatabase());
         sql.put("method", getSqlConnectionMethod());
+        putIfPresent(sql, "user", getString("sql", "user"));
+        putIfPresent(sql, "password", getString("sql", "password"));
         output.put("sql", sql);
 
         Map<String, Object> mail = new LinkedHashMap<>();
         mail.put("domain", getMailDomain());
         mail.put("smtp_host", getSmtpHost());
+        putIfPresent(mail, "port", getInteger("mail", "port"));
         mail.put("admin", getAdminMail());
+        putIfPresent(mail, "user", getString("mail", "user"));
+        putIfPresent(mail, "password", getString("mail", "password"));
+        // SMTP volby – zapsat jen pokud nejsou výchozí
+        if (!isSmtpAuth()) mail.put("auth", false);
+        if (!isSmtpStarttls()) mail.put("starttls", false);
         output.put("mail", mail);
 
         Map<String, Object> creds = new LinkedHashMap<>();

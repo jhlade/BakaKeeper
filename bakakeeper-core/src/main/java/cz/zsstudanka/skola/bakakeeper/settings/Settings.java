@@ -38,7 +38,10 @@ public class Settings implements AppConfig {
 
     /** výchozí soubory */
     private static final String DEFAULT_DATA_FILE = "./settings.dat";
-    private static final String DEFAULT_YAML_FILE = "./bakakeeper.yml";
+    private static final String DEFAULT_YAML_FILE = "./settings.yml";
+
+    /** název šablony v resources */
+    private static final String TEMPLATE_RESOURCE = "/settings.yml";
 
     /** výchozí JKS soubor */
     public final String DEFAULT_JKS_FILE = "./ssl.jks";
@@ -77,8 +80,39 @@ public class Settings implements AppConfig {
             return;
         }
 
-        ReportManager.log(EBakaLogType.LOG_ERR,
-                "Nebyl nalezen žádný konfigurační soubor. Proveďte inicializaci s parametrem --init.");
+        // žádný config – zkopírovat šablonu z resources
+        if (copyTemplate()) {
+            ReportManager.log(EBakaLogType.LOG_OK,
+                    "Šablona konfigurace byla zkopírována do " + DEFAULT_YAML_FILE + ". Upravte ji a spusťte --init.");
+        } else {
+            ReportManager.log(EBakaLogType.LOG_ERR,
+                    "Nebyl nalezen žádný konfigurační soubor. Proveďte inicializaci s parametrem --init.");
+        }
+    }
+
+    /**
+     * Zkopíruje šablonu konfigurace z resources do pracovního adresáře,
+     * pokud dosud neexistuje.
+     *
+     * @return true pokud byl soubor úspěšně zkopírován nebo již existuje
+     */
+    public boolean copyTemplate() {
+        File target = new File(DEFAULT_YAML_FILE);
+        if (target.isFile()) return true;
+
+        try (InputStream is = getClass().getResourceAsStream(TEMPLATE_RESOURCE)) {
+            if (is == null) {
+                ReportManager.log(EBakaLogType.LOG_ERR, "Šablona konfigurace nebyla nalezena v resources.");
+                return false;
+            }
+            try (FileOutputStream fos = new FileOutputStream(target)) {
+                is.transferTo(fos);
+            }
+            return true;
+        } catch (IOException e) {
+            ReportManager.log(EBakaLogType.LOG_ERR, "Nebylo možné zkopírovat šablonu konfigurace: " + e.getMessage());
+            return false;
+        }
     }
 
     /**
@@ -160,7 +194,7 @@ public class Settings implements AppConfig {
      * Interaktivní zadávání konfigurace (CLI wizard).
      */
     public void interactivePrompt() {
-        InputStream templateIs = getClass().getResourceAsStream("/bakakeeper.yml");
+        InputStream templateIs = getClass().getResourceAsStream(TEMPLATE_RESOURCE);
         if (templateIs == null) {
             ReportManager.log(EBakaLogType.LOG_ERR, "Šablona konfigurace nebyla nalezena.");
             return;
@@ -268,6 +302,23 @@ public class Settings implements AppConfig {
     @Override public List<Integer> getExtMailAllowed() { return delegate().getExtMailAllowed(); }
     @Override public List<SyncRule> getRules() { return delegate().getRules(); }
 
+    // porty
+    @Override public int getLdapPort() { return delegate().getLdapPort(); }
+    @Override public int getSqlPort() { return delegate().getSqlPort(); }
+    @Override public int getSmtpPort() { return delegate().getSmtpPort(); }
+
+    // per-service credentials
+    @Override public String getLdapUser() { return delegate().getLdapUser(); }
+    @Override public String getLdapPass() { return delegate().getLdapPass(); }
+    @Override public String getSqlUser() { return delegate().getSqlUser(); }
+    @Override public String getSqlPass() { return delegate().getSqlPass(); }
+    @Override public String getSmtpUser() { return delegate().getSmtpUser(); }
+    @Override public String getSmtpPass() { return delegate().getSmtpPass(); }
+
+    // SMTP volby
+    @Override public boolean isSmtpAuth() { return delegate().isSmtpAuth(); }
+    @Override public boolean isSmtpStarttls() { return delegate().isSmtpStarttls(); }
+
     @Override
     public boolean isValid() {
         return config != null && config.isValid();
@@ -343,17 +394,17 @@ public class Settings implements AppConfig {
     }
     /** @deprecated */
     public String getKrb_user() {
-        return getUser().toLowerCase() + "@" + getLdapDomain().toUpperCase();
+        return getSqlUser().toLowerCase() + "@" + getLdapDomain().toUpperCase();
     }
 
     /** @deprecated použijte {@link #getSmtpHost()} */
     public String getSMTP_host() { return getSmtpHost(); }
     /** @deprecated */
     public String getSMTP_user() {
-        return getUser() + "@" + getMailDomain();
+        return getSmtpUser() + "@" + getMailDomain();
     }
     /** @deprecated */
-    public String getSMTP_pass() { return getPass(); }
+    public String getSMTP_pass() { return getSmtpPass(); }
 
     /** @deprecated použijte {@link #isVerbose()} */
     public Boolean beVerbose() { return beVerbose; }

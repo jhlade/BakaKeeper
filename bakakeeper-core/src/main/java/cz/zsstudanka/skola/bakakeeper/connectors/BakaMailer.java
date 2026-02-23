@@ -27,9 +27,6 @@ import java.util.Properties;
  */
 public class BakaMailer {
 
-    /** TCP port SMTP serveru */
-    static final String SMTP_PORT = Integer.toString(EBakaPorts.SRV_SMTP.getPort());
-
     /** singleton mailového klienta */
     private static BakaMailer instance = null;
 
@@ -53,24 +50,31 @@ public class BakaMailer {
 
     /**
      * Autentizace proti SMTP serveru.
-     * Očekává se O365, nebo obdobné nastavení Microsoft Exchange serveru.
+     * Port, autentizace a STARTTLS jsou konfigurovatelné v settings.yml.
      */
     private void authenticate() {
+
+        String smtpPort = Integer.toString(Settings.getInstance().getSmtpPort());
+        boolean smtpAuth = Settings.getInstance().isSmtpAuth();
+        boolean smtpStarttls = Settings.getInstance().isSmtpStarttls();
 
         Properties props = new Properties();
 
         props.put("mail.smtp.host", Settings.getInstance().getSMTP_host());
-        props.put("mail.smtp.port", SMTP_PORT);
-        props.put("mail.smtp.auth", "true");
-        props.put("mail.smtp.starttls.enable", "true");
+        props.put("mail.smtp.port", smtpPort);
+        props.put("mail.smtp.auth", Boolean.toString(smtpAuth));
+        props.put("mail.smtp.starttls.enable", Boolean.toString(smtpStarttls));
 
-        Authenticator auth = new Authenticator() {
-            protected PasswordAuthentication getPasswordAuthentication() {
-                return new PasswordAuthentication(Settings.getInstance().getSMTP_user(), Settings.getInstance().getSMTP_pass());
-            }
-        };
-
-        this.session = Session.getInstance(props, auth);
+        if (smtpAuth) {
+            Authenticator auth = new Authenticator() {
+                protected PasswordAuthentication getPasswordAuthentication() {
+                    return new PasswordAuthentication(Settings.getInstance().getSMTP_user(), Settings.getInstance().getSMTP_pass());
+                }
+            };
+            this.session = Session.getInstance(props, auth);
+        } else {
+            this.session = Session.getInstance(props);
+        }
     }
 
 
@@ -175,7 +179,12 @@ public class BakaMailer {
 
         try {
             Transport transport = session.getTransport("smtp");
-            transport.connect(Settings.getInstance().getSMTP_host(), Integer.parseInt(SMTP_PORT), Settings.getInstance().getSMTP_user(), Settings.getInstance().getSMTP_pass());
+            int port = Settings.getInstance().getSmtpPort();
+            if (Settings.getInstance().isSmtpAuth()) {
+                transport.connect(Settings.getInstance().getSMTP_host(), port, Settings.getInstance().getSMTP_user(), Settings.getInstance().getSMTP_pass());
+            } else {
+                transport.connect(Settings.getInstance().getSMTP_host(), port, null, null);
+            }
             transport.close();
 
             test = true;

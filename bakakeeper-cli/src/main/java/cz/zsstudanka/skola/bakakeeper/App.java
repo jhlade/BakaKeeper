@@ -75,24 +75,24 @@ public class App {
         // --- Globální příznaky ---
 
         if (params.containsKey("develmode")) {
-            RuntimeContext.FLAG_DEVEL = true;
+            RuntimeContext.FLAG_DEVEL = Boolean.TRUE;
             ReportManager.log(EBakaLogType.LOG_DEVEL, "Je aktivní vývojový režim. Nebude se zapisovat do ostrých dat evidence.");
         }
 
         if (params.containsKey("dryrun")) {
-            RuntimeContext.FLAG_DRYRUN = true;
+            RuntimeContext.FLAG_DRYRUN = Boolean.TRUE;
         }
 
         if (params.containsKey("verbose")) {
-            RuntimeContext.FLAG_VERBOSE = true;
+            RuntimeContext.FLAG_VERBOSE = Boolean.TRUE;
             Settings.getInstance().verbosity(RuntimeContext.FLAG_VERBOSE);
             ReportManager.log(EBakaLogType.LOG_ERR_VERBOSE, "Aktivován výstup podrobných informací.");
         }
 
         if (params.containsKey("debug")) {
-            RuntimeContext.FLAG_VERBOSE = true;
+            RuntimeContext.FLAG_VERBOSE = Boolean.TRUE;
             Settings.getInstance().verbosity(RuntimeContext.FLAG_VERBOSE);
-            RuntimeContext.FLAG_DEBUG = true;
+            RuntimeContext.FLAG_DEBUG = Boolean.TRUE;
             Settings.getInstance().debug(RuntimeContext.FLAG_DEBUG);
             ReportManager.log(EBakaLogType.LOG_DEBUG, "Aktivován výstup ladících informací.");
         }
@@ -123,19 +123,19 @@ public class App {
         }
 
         if (params.containsKey("version")) {
-            System.out.print(Version.getInstance().getInfo(true));
+            System.out.print(Version.getInstance().getInfo(Boolean.TRUE));
             return;
         }
 
         // --- Inicializace konfigurace ---
         if (params.containsKey("init")) {
-            RuntimeContext.FLAG_INIT = true;
+            RuntimeContext.FLAG_INIT = Boolean.TRUE;
 
             if (params.containsKey("f")) {
                 if (params.get("f").size() == 1) {
                     actionInitialize(params.get("f").get(0));
                 } else {
-                    ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný argument -f. (Použití: --init -f settings.conf)");
+                    ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný argument -f. (Použití: --init -f settings.yml)");
                 }
                 return;
             }
@@ -146,9 +146,9 @@ public class App {
             }
 
             if (RuntimeContext.FLAG_VERBOSE) {
-                ReportManager.log(EBakaLogType.LOG_VERBOSE, "Probíhá pokus o inicializaci s výchozím souborem settings.conf.");
+                ReportManager.log(EBakaLogType.LOG_VERBOSE, "Probíhá pokus o inicializaci s výchozím souborem settings.yml.");
             }
-            actionInitialize("./settings.conf");
+            actionInitialize("./settings.yml");
             return;
         }
 
@@ -396,7 +396,7 @@ public class App {
         }
 
         // získat classId z SQL evidence
-        Integer classId = 0;
+        int classId = 0;
         StudentRecord sqlStudent = studentRepo.findByInternalId(student.getInternalId());
         if (sqlStudent != null && sqlStudent.getClassNumber() != null) {
             try { classId = Integer.parseInt(sqlStudent.getClassNumber()); } catch (NumberFormatException ignored) {}

@@ -73,7 +73,7 @@ public interface AppConfig {
     /** Název databáze Bakaláři. */
     String getSqlDatabase();
 
-    /** Metoda připojení k SQL (ntlm/kerberos). */
+    /** Metoda připojení k SQL (ntlm/kerberos/sql). */
     String getSqlConnectionMethod();
 
     /** Připojení přes NTLMv2. */
@@ -81,6 +81,9 @@ public interface AppConfig {
 
     /** Připojení přes Kerberos V5. */
     boolean isSqlKerberos();
+
+    /** Připojení přes SQL Server autentizaci (user/password). */
+    default boolean isSqlAuth() { return "sql".equals(getSqlConnectionMethod()); }
 
     // --- E-mail / SMTP ---
 
@@ -103,6 +106,45 @@ public interface AppConfig {
 
     /** Ročníky s přístupem k externímu e-mailu. */
     List<Integer> getExtMailAllowed();
+
+    // --- Porty (volitelné, s výchozími hodnotami) ---
+
+    /** LDAP port (výchozí: ssl=true → 636, ssl=false → 389). */
+    default int getLdapPort() { return isLdapSsl() ? 636 : 389; }
+
+    /** SQL Server port (výchozí: 1433). */
+    default int getSqlPort() { return 1433; }
+
+    /** SMTP port (výchozí: 587). */
+    default int getSmtpPort() { return 587; }
+
+    // --- Per-service credentials (fallback na globální) ---
+
+    /** Uživatel pro LDAP (volitelný, výchozí: credentials.user). */
+    default String getLdapUser() { return getUser(); }
+
+    /** Heslo pro LDAP (volitelné, výchozí: credentials.password). */
+    default String getLdapPass() { return getPass(); }
+
+    /** Uživatel pro SQL (volitelný, výchozí: credentials.user). */
+    default String getSqlUser() { return getUser(); }
+
+    /** Heslo pro SQL (volitelné, výchozí: credentials.password). */
+    default String getSqlPass() { return getPass(); }
+
+    /** Uživatel pro SMTP (volitelný, výchozí: credentials.user). */
+    default String getSmtpUser() { return getUser(); }
+
+    /** Heslo pro SMTP (volitelné, výchozí: credentials.password). */
+    default String getSmtpPass() { return getPass(); }
+
+    // --- SMTP volby ---
+
+    /** SMTP vyžaduje autentizaci (výchozí: true). */
+    default boolean isSmtpAuth() { return true; }
+
+    /** SMTP používá STARTTLS (výchozí: true). */
+    default boolean isSmtpStarttls() { return true; }
 
     // --- Deklarativní pravidla ---
 

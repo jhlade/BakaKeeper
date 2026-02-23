@@ -51,8 +51,8 @@ public class BakaKerberos implements Callable {
 
                     newKrb5Config.append(
                             confLine.replace("{DOMAIN}", Settings.getInstance().getLocalDomain().toUpperCase())
-                            .replace("{domain}", Settings.getInstance().getLocalDomain().toUpperCase())
-                            .replace("{AD_SRV}", Settings.getInstance().getLDAP_fqdn().toUpperCase())
+                            .replace("{domain_lower}", Settings.getInstance().getLocalDomain().toLowerCase())
+                            .replace("{AD_SRV}", Settings.getInstance().getLDAP_fqdn().toLowerCase())
                     );
                     newKrb5Config.append("\n");
                 }
@@ -83,6 +83,9 @@ public class BakaKerberos implements Callable {
         System.setProperty("java.security.auth.login.config", url.toExternalForm());
 
         System.setProperty("javax.security.auth.useSubjectCredsOnly", "false");
+
+        // Samba4 KDC vrací v TGS-REP prázdné nameStrings – vypnout referrals (RFC 6806)
+        System.setProperty("sun.security.krb5.disableReferrals", "true");
 
         // Kerberos - podrobný ladící režim
         if (Settings.getInstance().debugMode()) {
