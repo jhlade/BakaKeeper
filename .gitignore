@@ -2,6 +2,8 @@
 /local/
 
 /.*/
+!/.github/
+!/.mvn/
 
 /cz.zsstudanka.skola.iml
 *.iml
