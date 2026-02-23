@@ -1,1012 +1,382 @@
 package cz.zsstudanka.skola.bakakeeper.settings;
 
-import cz.zsstudanka.skola.bakakeeper.components.EncryptionInputStream;
-import cz.zsstudanka.skola.bakakeeper.components.EncryptionOutputStream;
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
+import cz.zsstudanka.skola.bakakeeper.config.AppConfig;
+import cz.zsstudanka.skola.bakakeeper.config.EncryptedConfigLoader;
+import cz.zsstudanka.skola.bakakeeper.config.SyncRule;
+import cz.zsstudanka.skola.bakakeeper.config.YamlAppConfig;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 
 import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
 
 /**
- * Základní nastavení programových přístupů ke zdrojům.
+ * Singleton přístup ke konfiguraci – bridge pro stávající kód.
+ * Interně deleguje na {@link YamlAppConfig} (YAML formát).
+ *
+ * Tato třída bude odstraněna v Fázi 6 refaktoru, až bude veškerý
+ * kód přepnut na přímé použití {@link AppConfig}.
  *
  * @author Jan Hladěna
  */
-public class Settings {
+public class Settings implements AppConfig {
 
-    /** singleton - instance nastavení */
+    /** singleton instance */
     private static Settings instance = null;
 
-    /** vypisovat podrobné informace */
-    private boolean beVerbose = false;
-    /** vypisovat ladící informace */
-    private boolean debugMode = false;
+    /** interní YAML konfigurace */
+    private YamlAppConfig config;
 
-    /** běh programu je v režimu vývoje */
-    private boolean develMode = false;
-
-    /** uchovávané heslo k nastavení */
+    /** šifrovací heslo */
     private char[] PASSPHRASE = null;
 
-    /** výchozí název souboru s nastavením */
-    private final String DEFAULT_CONF_FILE = "./settings.conf";
-    /** výchozí název datového souboru s nastavením */
-    private final String DEFAULT_DATA_FILE = "./settings.dat";
-    /** výchozí název souboru šifrovaného úložiště certifikátů */
+    /** runtime příznaky */
+    private boolean beVerbose = false;
+    private boolean debugMode = false;
+    private boolean develMode = false;
+
+    /** výchozí soubory */
+    private static final String DEFAULT_DATA_FILE = "./settings.dat";
+    private static final String DEFAULT_YAML_FILE = "./bakakeeper.yml";
+
+    /** výchozí JKS soubor */
     public final String DEFAULT_JKS_FILE = "./ssl.jks";
 
-    /** nastavení jsou platná */
-    private Boolean valid;
-
-    /** nastavení ve formátu tabulky */
-    private Map<String, String> settings_data;
-
     /**
-     * Nastavení je implementováno jako singleton.
+     * Singleton přístup.
      *
      * @return instance nastavení
      */
     public static Settings getInstance() {
-        if (Settings.instance == null) {
-            Settings.instance = new Settings();
+        if (instance == null) {
+            instance = new Settings();
         }
-
-        return Settings.instance;
+        return instance;
     }
 
     /**
-     * Zjištění příznaku validity nastavení.
-     *
-     * @return příznak validity
-     */
-    public Boolean isValid() {
-        return (this.valid != null) ? this.valid : false;
-    }
-
-    /**
-     * Změna příznaku validity nastavení.
-     *
-     * @param validityFlag nová hodnota příznaku
-     */
-    private void setValidity(Boolean validityFlag) {
-        this.valid = validityFlag;
-    }
-
-    /**
-     * Změna příznaku validity na neplatný.
-     */
-    private void setInvalid() {
-        this.setValidity(false);
-    }
-
-    /**
-     * Změna příznaku validity na platný.
-     */
-    private void setValid() {
-        this.setValidity(true);
-    }
-
-    /**
-     * Načtení nastavení z výchozího datového nebo textového souboru. Případná
-     * zašifrovaná data budou automaticky dešifrována zadaným klíčem.
+     * Načtení konfigurace z výchozího souboru (.dat nebo .yml).
      */
     public void load() {
-
-        // ověření existence výchozího datového souboru
-        File ddf = new File(this.DEFAULT_DATA_FILE);
-
-        if (ddf.isFile()) {
-
-            if (this.beVerbose) {
-                ReportManager.log(EBakaLogType.LOG_VERBOSE, "Výchozí datový soubor byl nalezen.");
+        File datFile = new File(DEFAULT_DATA_FILE);
+        if (datFile.isFile()) {
+            if (beVerbose) {
+                ReportManager.log(EBakaLogType.LOG_VERBOSE, "Výchozí datový soubor nalezen.");
             }
-
-            load(this.DEFAULT_DATA_FILE);
+            load(DEFAULT_DATA_FILE);
             return;
-        } else {
-            if (this.beVerbose) {
-                ReportManager.log(EBakaLogType.LOG_VERBOSE, "Výchozí datový soubor neexistuje.");
-            }
         }
 
-        // ověření existence textového souboru
-        File dtf = new File(this.DEFAULT_CONF_FILE);
-        if (dtf.isFile()) {
-
-            if (this.beVerbose) {
-                ReportManager.log(EBakaLogType.LOG_VERBOSE, "Výchozí textový konfigurační soubor existuje.");
-                ReportManager.log(EBakaLogType.LOG_VERBOSE, "Textový konfigurační soubor bude převeden na datový.");
+        File ymlFile = new File(DEFAULT_YAML_FILE);
+        if (ymlFile.isFile()) {
+            if (beVerbose) {
+                ReportManager.log(EBakaLogType.LOG_VERBOSE, "Výchozí YAML konfigurační soubor nalezen.");
             }
-
-            load(this.DEFAULT_CONF_FILE);
+            load(DEFAULT_YAML_FILE);
             return;
-        } else {
-            if (this.beVerbose) {
-                ReportManager.log(EBakaLogType.LOG_VERBOSE, "Výchozí textový konfigurační soubor neexistuje.");
-            }
         }
 
-        ReportManager.log(EBakaLogType.LOG_ERR, "Nebyl nalezen žádný výchozí konfigurační soubor. Proveďte inicializaci spuštětním programu s parametrem --init.");
+        ReportManager.log(EBakaLogType.LOG_ERR,
+                "Nebyl nalezen žádný konfigurační soubor. Proveďte inicializaci s parametrem --init.");
     }
 
     /**
-     * Načtení konfigurace ze souboru.
+     * Načtení konfigurace ze zadaného souboru.
      *
-     * @param filename jméno souboru s konfigurací (.dat/.conf)
+     * @param filename cesta k souboru (.dat nebo .yml)
      */
     public void load(String filename) {
-
-        // ověření existence předávaného souboru
-        File ccf = new File(filename);
-        if (ccf.isFile()) {
-
-            // datový konfigurační soubor
-            if (filename.contains(".dat")) {
-
-                Map<String, String> dataFromFile;
-
-                try {
-
-                    if (this.beVerbose) {
-                        ReportManager.log(EBakaLogType.LOG_VERBOSE, "Probíhá deserializace datového souboru.");
-                    }
-
-                    InputStream dataInputStream;
-                    if (this.useEncryption()) {
-                        dataInputStream = new EncryptionInputStream(new FileInputStream(filename), PASSPHRASE);
-                    } else {
-                        dataInputStream = new FileInputStream(filename);
-                    }
-                    
-                    ObjectInputStream inStream = new ObjectInputStream(new GZIPInputStream( dataInputStream ));
-                    dataFromFile = (Map<String, String>) inStream.readObject();
-
-                    loadDataSettings(dataFromFile);
-                } catch (Exception e) {
-                    if (this.debugMode) {
-                        // pouze zpráva
-                        ReportManager.exceptionMessage(e);
-                    }
-
-                    if (this.useEncryption()) {
-                        ReportManager.log(EBakaLogType.LOG_ERR, "Došlo k chybě při práci s datovým souborem. Možná nesprávné heslo k šifrovanému nastavení?");
-                    } else {
-                        ReportManager.log(EBakaLogType.LOG_ERR, "Došlo k chybě při práci s datovým souborem.");
-                    }
-                }
-
-                // textový konfigurační soubor
-            } else if (filename.contains(".conf")) {
-                String config = this.readConfigFile(filename);
-                this.loadPlainSettings(config.toString());
-            }
-
-        } else {
-            ReportManager.log(EBakaLogType.LOG_ERR, "Konfigurační soubor nebyl nalezen.");
+        File file = new File(filename);
+        if (!file.isFile()) {
+            ReportManager.log(EBakaLogType.LOG_ERR, "Konfigurační soubor nebyl nalezen: " + filename);
             return;
         }
 
-        // validace dat
-        validate();
+        try {
+            if (filename.endsWith(".dat")) {
+                this.config = EncryptedConfigLoader.load(file, PASSPHRASE);
+            } else {
+                this.config = EncryptedConfigLoader.loadPlain(file);
+            }
+            syncRuntimeFlags();
+        } catch (Exception e) {
+            if (debugMode) {
+                ReportManager.exceptionMessage(e);
+            }
+            if (useEncryption()) {
+                ReportManager.log(EBakaLogType.LOG_ERR,
+                        "Chyba při čtení konfigurace. Možná nesprávné heslo?");
+            } else {
+                ReportManager.log(EBakaLogType.LOG_ERR,
+                        "Chyba při čtení konfigurace: " + e.getMessage());
+            }
+        }
     }
 
     /**
-     * Uložení nastavení do výchozího datového souboru. Je-li vybráno šifrování,
-     * soubor bude zašifrovanám pomocí specifikovaného klíče.
+     * Uloží konfiguraci do výchozího datového souboru.
      */
     public void save() {
-        save(this.DEFAULT_DATA_FILE);
+        save(DEFAULT_DATA_FILE);
     }
 
     /**
-     * Uložení nastavení do souboru. Podle přípony bude vytvořen textový/datový soubor.
+     * Uloží konfiguraci do souboru.
      *
-     * @param filename jméno výstupního souboru .conf/.dat
+     * @param filename výstupní soubor (.dat nebo .yml)
      */
     public void save(String filename) {
-
-        File sdf = new File(filename);
-
-        if (filename.contains(".dat")) {
-
-            try {
-
-                OutputStream outputDataStream;
-                if (useEncryption()) {
-                    outputDataStream = new EncryptionOutputStream(new FileOutputStream(filename), PASSPHRASE);
-                } else {
-                    outputDataStream = new FileOutputStream(filename);
-                }
-
-                ObjectOutputStream outFile = new ObjectOutputStream( new GZIPOutputStream( outputDataStream ));
-                outFile.writeObject(this.settings_data);
-                outFile.close();
-
-            } catch (Exception e) {
-                ReportManager.log(EBakaLogType.LOG_ERR, "Došlo k chybě při serializaci nastavení do souboru " + filename + ".");
-
-                if (this.beVerbose) {
-                    ReportManager.exceptionMessage(e);
-                }
-            }
-
-        } else if (filename.contains(".conf")) {
-
-            try {
-                PrintStream outConfig = new PrintStream(new FileOutputStream(filename));
-                outConfig.print(this.toString());
-                outConfig.close();
-
-            } catch (Exception e) {
-                ReportManager.log(EBakaLogType.LOG_ERR, "Došlo k chybě při zápisu nastavení do souboru " + filename + ".");
-
-                if (this.beVerbose) {
-                    ReportManager.exceptionMessage(e);
-                }
-
-                if (this.debugMode) {
-                    ReportManager.printStackTrace(e);
-                }
-            }
-        }
-
-    }
-
-    /**
-     * Načtení nastavení z datového objektu.
-     *
-     * @param data deserializovaná mapa nastavení
-     */
-    private void loadDataSettings(Map<String, String> data) {
-        this.settings_data = data;
-    }
-
-    /**
-     * Načtení konfiguračních dat z textové formy.
-     *
-     * @param data textový řetězec ve formátu konfigurace (parametr=hodnota na zvláštních řádcích)
-     */
-    private void loadPlainSettings(String data) {
-        this.settings_data = parsePlainSettings(data);
-    }
-
-    /**
-     * Vytvoření mapy z dat v textové formě.
-     *
-     * @param data textový řetězec ve formátu konfigurace (parametr=hodnota na zvláštních řádcích)
-     * @return tabulková forma konfiguračních dat
-     */
-    private Map parsePlainSettings(String data) {
-
-        if (beVerbose) {
-            ReportManager.log(EBakaLogType.LOG_VERBOSE, "Začíná zpracování konfiguračních dat.");
-        }
-
-        Map parsedData = new LinkedHashMap<String, String>();
-
-        String[] lines = data.replace("\"", "").split("\n");
-
-        for (String line: lines) {
-            int separator = line.indexOf("=");
-
-            String[] params = new String[2];
-            params[0] = line.substring(0, separator);
-            params[1] = line.substring(separator + 1);
-
-            parsedData.put(params[0], params[1]);
-        }
-
-        if (beVerbose) {
-            ReportManager.log(EBakaLogType.LOG_OK, "Konfigurační data zpracována.");
-        }
-
-        return parsedData;
-    }
-
-    /**
-     * Provede ověření vyplněných údajů a odpovídajícím způsobem nastaví příznak validity.
-     */
-    private void validate() {
-        AtomicReference<Boolean> validity = new AtomicReference<>(true);
-        InputStream configIS = getClass().getResourceAsStream("/settings.conf");
-
-        Map refDataPattern = new HashMap<String, String>();
-
-        // 1) načtení referenčního souboru
-        refDataPattern = parsePlainSettings(readConfigStream(configIS));
-
-        // 2) porovnání získaných dat s referenčními
-        try {
-        refDataPattern.forEach((key, value) -> {
-
-            Boolean keyValid = (this.settings_data.containsKey(key)) ? true : false;
-            validity.updateAndGet(v -> v & keyValid);
-
-            if (debugMode) {
-                ReportManager.log(EBakaLogType.LOG_DEBUG, "Porovnává se klíč " + key + " s načtenými daty... [ " + ((keyValid) ? "OK" : "CHYBA") + " ]");
-            }
-        });
-        } catch (Exception e) {
-            if (this.beVerbose) {
-                if (useEncryption()) {
-                    ReportManager.log(EBakaLogType.LOG_ERR_VERBOSE, "Chyba validace dat. Možná nesprávné heslo k šifrovanému nastavení?");
-                } else {
-                    ReportManager.log(EBakaLogType.LOG_ERR_VERBOSE, "Chyba validace dat.");
-                }
-            }
-
-            if (this.debugMode) {
-                ReportManager.printStackTrace(e);
-            }
-
-            this.setValidity(false);
+        if (config == null) {
+            ReportManager.log(EBakaLogType.LOG_ERR, "Žádná konfigurace k uložení.");
             return;
         }
 
-        this.setValidity(validity.get());
-    }
-
-    /**
-     * Načtení textového souboru do formy textového řetězce k pozdějšímu zpracování.
-     *
-     * @param filename soubor s konfigurací
-     * @return konfigurační řetězec
-     */
-    private String readConfigFile(String filename) {
-        File openFile = new File(filename);
-        return this.readConfigFile(openFile);
-    }
-
-    /**
-     * Načtení textového souboru do formy textového řetězce k pozdějšímu zpracování.
-     *
-     * @param file ukazatel na soubor
-     * @return konfigurační řetězec
-     */
-    private String readConfigFile(File file) {
-
-        InputStream inputStream;
-
         try {
-            inputStream = new FileInputStream(file);
-            return readConfigStream(inputStream);
-        } catch (Exception e) {
-            ReportManager.log(EBakaLogType.LOG_ERR, String.format("Došlo k chybě při čtení souboru '%s'.", file.toPath()));
-
-            if (this.beVerbose) {
-                ReportManager.exceptionMessage(e);
-            }
-
-            if (this.debugMode) {
-                ReportManager.printStackTrace(e);
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Načtení konfiguračních dat ze vstupního proudu.
-     *
-     * @param input vstupní proud konfiguračních dat
-     * @return konfigurační řetězec
-     */
-    private String readConfigStream(InputStream input) {
-
-        StringBuilder config = new StringBuilder();
-
-        try {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(input));
-
-            if (this.beVerbose) {
-                ReportManager.log(EBakaLogType.LOG_VERBOSE, "Probíhá načítání konfigurace ze souboru.");
-            }
-
-            String line;
-            while ((line = reader.readLine()) != null) {
-
-                if (this.debugMode) {
-                    if (line.contains("pass=")) {
-                        ReportManager.log(EBakaLogType.LOG_DEBUG, "Načítá se: pass=*****");
-                    } else {
-                        ReportManager.log(EBakaLogType.LOG_DEBUG, "Načítá se: " + line);
-                    }
-                }
-
-                config.append(line);
-                config.append("\n");
-            }
-
-            reader.close();
-        } catch (Exception e) {
-            ReportManager.log(EBakaLogType.LOG_ERR, "Došlo k závažné chybě při zpracování vstupních dat.");
-
-            if (this.beVerbose) {
-                ReportManager.exceptionMessage(e);
-            }
-
-            if (this.debugMode) {
-                ReportManager.printStackTrace(e);
-            }
-        }
-
-        return config.toString();
-    }
-
-    /**
-     * Režim interaktivního zadávání konfiguračních dat.
-     */
-    public void interactivePrompt() {
-        // načtení referenčního souboru v daném pořadí
-        InputStream configIS = getClass().getResourceAsStream("/settings.conf");
-        Map refDataPattern = new LinkedHashMap<String, String>();
-        refDataPattern = parsePlainSettings(readConfigStream(configIS));
-
-        // vstupní řádky
-        Console console = System.console();
-        StringBuilder inputData = new StringBuilder();
-
-        // naplnění daty z dotazů
-        refDataPattern.forEach((key, value) -> {
-
-            System.out.println(value);
-
-            String data;
-            String defaultData = "";
-
-            // zjednodušeně bez regexpu - výtah obsahu výchozí hodnoty
-            if (value.toString().contains("[")) {
-                defaultData = value.toString().substring(
-                        value.toString().indexOf("[") + 1,
-                        value.toString().indexOf("]")
-                );
-            }
-
-            if (key.toString().contains("pass")) {
-                data = new String(console.readPassword(key + " = "));
+            File file = new File(filename);
+            if (filename.endsWith(".dat")) {
+                EncryptedConfigLoader.save(config, file, PASSPHRASE);
             } else {
-                data = console.readLine(key + " = ");
+                EncryptedConfigLoader.savePlain(config, file);
             }
-
-            // výchozí data
-            if (!key.toString().contains("pass") && data.length() == 0) {
-                data = defaultData;
+        } catch (Exception e) {
+            ReportManager.log(EBakaLogType.LOG_ERR, "Chyba při ukládání konfigurace: " + filename);
+            if (beVerbose) {
+                ReportManager.exceptionMessage(e);
             }
-
-            // lokální úpravy
-            // používat SSL pro komunikaci
-            if (key.toString().equals("ssl")) {
-                if (data.toLowerCase().equals("a")
-                        || data.toLowerCase().equals("ano")
-                        || data.toLowerCase().equals("y")
-                        || data.toLowerCase().equals("yes")
-                        || data.toLowerCase().equals("1")) {
-                    data = "1";
-                } else {
-                    data = "0";
-                }
-            }
-
-            /*
-            // změna hesla na malá písmena
-            if (!key.toString().contains("pass")) {
-                data = data.toLowerCase();
-            }
-            */
-
-            // zápis řádku
-            inputData.append(key).append("=").append(data).append("\n");
-        });
-
-        // zpracování
-        loadPlainSettings(inputData.toString());
-        validate();
-    }
-
-    /**
-     * Okamžitá změna nastavení - určeno pouze pro účely vývoje.
-     *
-     * @param param parametr nastavení
-     * @param value nová hodnota
-     */
-    public void override(String param, String value) {
-        this.settings_data.put(param, value);
-    }
-
-    /**
-     * Nastavení mají generovat podrobné informace.
-     *
-     * @return stav příznaku zobrazování podrobných informací
-     */
-    public Boolean beVerbose() {
-        return this.beVerbose;
-    }
-
-    /**
-     * Nastavení mají generovat ladící informace.
-     *
-     * @return stav příznaku zobrazování ladících informací
-     */
-    public Boolean debugMode() {
-        return this.debugMode;
-    }
-
-    /**
-     * Aplikace je v režimu vývoje.
-     *
-     * @return stav příznaku vývojového režimu
-     */
-    public Boolean develMode() {
-        return this.develMode;
-    }
-
-    /**
-     * Nastavení příznaku vývojářského režimu.
-     *
-     * @param develMode příznak vývojářského režimu
-     */
-    public void setDevelMode(Boolean develMode) {
-        this.develMode = develMode;
-    }
-
-    /**
-     * Hostname nebo IP stroje, kde běží AD/LDAP, například srv-zs-stu-dc01
-     *
-     * @return String LDAP server
-     */
-    public String getLDAP_host() {
-        if (this.settings_data.get("ad_srv").toLowerCase().contains(this.settings_data.get("domain").toLowerCase())) {
-            return (this.settings_data.get("ad_srv").toUpperCase().replace("." + this.getLocalDomain().toUpperCase(), "")).toLowerCase();
-        } else {
-            return this.settings_data.get("ad_srv").toLowerCase();
         }
     }
 
     /**
-     * Typ LDAP serveru je Microsoft Active Directory 2016 nebo novější.
-     * Používá se pro práci s binárními ACE v ntSecurity deskriptoru.
+     * Nastaví heslo pro šifrování/dešifrování.
      *
-     * @return Boolean server je MS AD
-     */
-    public Boolean isLDAP_MSAD() {
-        // TODO detekce by měla probíhat automaticky kontrolou dat v RootDSE
-        // isGlobalCatalogReady !null & true
-        // forestFunctionality !null & >= 7
-        // domainFunctionality !null & >= 7
-        return true; // dočasně
-        //return (this.settings_data.get("ad_srv").toLowerCase().equals("MSAD2016")) ? true : false;
-    }
-
-    /**
-     * Lokální doména AD,
-     * například zsstu.local
-     *
-     * @return String LDAP doména
-     */
-    public String getLDAP_domain() {
-        return this.settings_data.get("domain");
-    }
-
-    /**
-     * Plně kvalifikované jméno LDAP serveru, například srv-zs-stu-dc01.zsstu.local
-     *
-     * @return String LDAP server FQDN
-     */
-    public String getLDAP_fqdn() {
-        return getLDAP_host() + "." + getLDAP_domain();
-    }
-
-    /**
-     * Základní řetězec organizační struktury uživatelů, například
-     * OU=Uzivatele,OU=Skola,DC=zsstu,DC=local
-     *
-     * @return String základní LDAP řetězec
-     */
-    public String getLDAP_base() {
-        return this.settings_data.get("ad_base");
-    }
-
-    /**
-     * Základní řetězec organizační struktury pro žáky, například
-     * OU=Zaci,OU=Uzivatele,OU=Skola,DC=zsstu,DC=local
-     *
-     * @return String základní LDAP řetězec pro žáky
-     */
-    public String getLDAP_baseStudents() {
-        return this.settings_data.get("ad_base_zaci");
-    }
-
-    /**
-     * Základní řetězec organizační struktury pro zaměstnance, například
-     * OU=Zamestnanci,OU=Uzivatele,OU=Skola,DC=zsstu,DC=local
-     *
-     * @return String základní LDAP řetězec pro zaměstnance
-     */
-    public String getLDAP_baseFaculty() {
-        return this.settings_data.get("ad_base_zamestnanci");
-    }
-
-    /**
-     * Základní řetězec organizační struktury pro učitele, například
-     * OU=Ucitele,OU=Zamestnanci,OU=Uzivatele,OU=Skola,DC=zsstu,DC=local
-     *
-     * @return String základní LDAP řetězec pro učitele
-     */
-    public String getLDAP_baseTeachers() {
-        return this.settings_data.get("ad_base_ucitele");
-    }
-
-    /**
-     * Základní řetězec organizační struktury pro vyřazené žáky, například
-     * OU=StudiumUkonceno,OU=Zaci,OU=Uzivatele,OU=Skola,DC=zsstu,DC=local
-     *
-     * @return String základní LDAP řetězec pro vyřazené žáky
-     */
-    public String getLDAP_baseAlumni() {
-        return this.settings_data.get("ad_base_absolventi");
-    }
-
-    /**
-     * Základní řetězec organizační struktury pro karty globálních kontaktů, například
-     * OU=Kontakty,OU=Skola,DC=zsstu,DC=local
-     *
-     * @return String základní LDAP řetězec pro kontakty
-     */
-    public String getLDAP_baseContacts() {
-        return this.settings_data.get("ad_base_kontakty");
-    }
-
-    /**
-     * Cestra k OU s distribučními skupinami, například
-     * OU=Distribucni,OU=Skupiny,OU=Skola,DC=zsstu,DC=local
-     *
-     * @return String základní LDAP řetězec pro distribuční skupiny
-     */
-    public String getLDAP_baseDL() {
-        return this.settings_data.get("ad_base_skupiny_dl");
-    }
-
-    /**
-     * Základní řetězec organizační struktury pro skupiny žáků, například
-     * OU=Zaci,OU=Skupiny,OU=Skola,DC=zsstu,DC=local
-     *
-     * @return
-     */
-    public String getLDAP_baseStudentGroups() {
-        return this.settings_data.get("ad_base_skupiny_zaci");
-    }
-
-    /**
-     * Základní řetězec organizační struktury pro skupiny žáků, například
-     * OU=Skupiny,OU=Skola,DC=zsstu,DC=local
-     *
-     * @return
-     */
-    public String getLDAP_baseGlobalGroups() {
-        return this.settings_data.get("ad_base_skupiny_global");
-    }
-
-    /**
-     * Externí (e-mailová) doména školy.
-     *
-     * @return e-mailová doména školy
-     */
-    public String getMailDomain() {
-        return this.settings_data.get("mail_domain");
-    }
-
-    /**
-     * Otevřená podoba uživatelského hesla doménového správce AD.
-     * TODO: hypoteticky může mít také mutabilní podobu v obecné hashmapě
-     *
-     * @return heslo správce AD
-     */
-    public String getPass() {
-        return this.settings_data.get("pass");
-    }
-
-    /**
-     * Uživatelský účet správce domény.
-     *
-     * @return uživatelské jméno správce AD
-     */
-    public String getUser() {
-        return this.settings_data.get("user");
-    }
-
-    /**
-     * Příznak použití SSL při komunikaci s AD protokolem LDAP.
-     *
-     * @return příznak použití SSL
-     */
-    public Boolean useSSL() {
-        return (this.settings_data.get("ssl").equals("1") ? true : false);
-    }
-
-    /**
-     * Globální nastavení hesla pro šifrování a dešifrování konfigurace.
-     *
-     * @param passphrase heslo pro konfiguraci
+     * @param passphrase heslo
      */
     public void setPassphrase(String passphrase) {
         this.PASSPHRASE = passphrase.toCharArray();
     }
 
     /**
-     * Zjištění stavu příznaku použití šifrování.
-     *
-     * @return stav příznaku použití šifrování
+     * Interaktivní zadávání konfigurace (CLI wizard).
      */
-    private Boolean useEncryption() {
+    public void interactivePrompt() {
+        InputStream templateIs = getClass().getResourceAsStream("/bakakeeper.yml");
+        if (templateIs == null) {
+            ReportManager.log(EBakaLogType.LOG_ERR, "Šablona konfigurace nebyla nalezena.");
+            return;
+        }
 
-        if (this.PASSPHRASE == null) return false;
-        if (this.PASSPHRASE.length > 0) return true;
+        // načteme šablonu jako výchozí hodnoty
+        YamlAppConfig template = new YamlAppConfig(templateIs);
+        Console console = System.console();
+        if (console == null) {
+            ReportManager.log(EBakaLogType.LOG_ERR, "Konzolový vstup není dostupný.");
+            return;
+        }
 
-        return false;
+        Map<String, Object> result = new LinkedHashMap<>();
+
+        // LDAP
+        Map<String, Object> ldap = new LinkedHashMap<>();
+        ldap.put("domain", promptString(console, "Lokální doména AD", template.getLdapDomain()));
+        ldap.put("server", promptString(console, "FQDN řadiče domény AD", template.getLdapServer()));
+        ldap.put("ssl", promptBoolean(console, "Používat SSL pro komunikaci s AD", template.isLdapSsl()));
+        ldap.put("base", promptString(console, "Základní OU uživatelů", template.getLdapBase()));
+        ldap.put("students", promptString(console, "OU žáků", template.getLdapBaseStudents()));
+        ldap.put("alumni", promptString(console, "OU vyřazených žáků", template.getLdapBaseAlumni()));
+        ldap.put("faculty", promptString(console, "OU zaměstnanců", template.getLdapBaseFaculty()));
+        ldap.put("teachers", promptString(console, "OU učitelů", template.getLdapBaseTeachers()));
+        ldap.put("management", promptString(console, "OU vedení školy", template.getLdapBaseManagement()));
+        ldap.put("student_groups", promptString(console, "OU skupin žáků", template.getLdapBaseStudentGroups()));
+        ldap.put("global_groups", promptString(console, "OU globálních skupin", template.getLdapBaseGlobalGroups()));
+        ldap.put("distribution_lists", promptString(console, "OU distribučních skupin", template.getLdapBaseDistributionLists()));
+        ldap.put("contacts", promptString(console, "OU kontaktů", template.getLdapBaseContacts()));
+        result.put("ldap", ldap);
+
+        // SQL
+        Map<String, Object> sql = new LinkedHashMap<>();
+        sql.put("host", promptString(console, "SQL Server (jméno/IP)", template.getSqlHost()));
+        sql.put("database", promptString(console, "Název databáze Bakaláři", template.getSqlDatabase()));
+        sql.put("method", promptString(console, "Metoda připojení (ntlm/kerberos)", template.getSqlConnectionMethod()));
+        result.put("sql", sql);
+
+        // Mail
+        Map<String, Object> mail = new LinkedHashMap<>();
+        mail.put("domain", promptString(console, "Externí e-mailová doména", template.getMailDomain()));
+        mail.put("smtp_host", promptString(console, "SMTP server", template.getSmtpHost()));
+        mail.put("admin", promptString(console, "E-mail správce ICT", template.getAdminMail()));
+        result.put("mail", mail);
+
+        // Credentials
+        Map<String, Object> creds = new LinkedHashMap<>();
+        creds.put("user", promptString(console, "Uživatel (Domain Administrator)", template.getUser()));
+        String pass = new String(console.readPassword("Heslo (nebude zobrazeno): "));
+        creds.put("password", pass);
+        result.put("credentials", creds);
+
+        // Policies – převezmeme výchozí
+        Map<String, Object> policies = new LinkedHashMap<>();
+        policies.put("ext_mail_allowed", new ArrayList<>(template.getExtMailAllowed()));
+        policies.put("pwd_no_change", new ArrayList<>(template.getPwdNoChange()));
+        policies.put("pwd_no_expire", new ArrayList<>(template.getPwdNoExpire()));
+        result.put("policies", policies);
+
+        result.put("rules", List.of());
+
+        this.config = new YamlAppConfig(result);
+        syncRuntimeFlags();
     }
 
     /**
-     * Konverze uchovávaných nastavení do čisté textové podoby.
-     *
-     * @return odřádkovný výpis nastavení
+     * Okamžitá změna nastavení (pro vývoj/testy).
      */
+    public void override(String param, String value) {
+        // TODO: implementovat pro YAML strukturu (potřeba v budoucích fázích)
+    }
+
+    // ===========================
+    // AppConfig implementace
+    // ===========================
+
+    @Override public String getLdapDomain() { return delegate().getLdapDomain(); }
+    @Override public String getLdapServer() { return delegate().getLdapServer(); }
+    @Override public String getLdapHost() { return delegate().getLdapHost(); }
+    @Override public String getLdapFqdn() { return delegate().getLdapFqdn(); }
+    @Override public boolean isLdapSsl() { return delegate().isLdapSsl(); }
+    @Override public String getLdapBase() { return delegate().getLdapBase(); }
+    @Override public String getLdapBaseStudents() { return delegate().getLdapBaseStudents(); }
+    @Override public String getLdapBaseAlumni() { return delegate().getLdapBaseAlumni(); }
+    @Override public String getLdapBaseFaculty() { return delegate().getLdapBaseFaculty(); }
+    @Override public String getLdapBaseTeachers() { return delegate().getLdapBaseTeachers(); }
+    @Override public String getLdapBaseManagement() { return delegate().getLdapBaseManagement(); }
+    @Override public String getLdapBaseStudentGroups() { return delegate().getLdapBaseStudentGroups(); }
+    @Override public String getLdapBaseGlobalGroups() { return delegate().getLdapBaseGlobalGroups(); }
+    @Override public String getLdapBaseDistributionLists() { return delegate().getLdapBaseDistributionLists(); }
+    @Override public String getLdapBaseContacts() { return delegate().getLdapBaseContacts(); }
+    @Override public String getUser() { return delegate().getUser(); }
+    @Override public String getPass() { return delegate().getPass(); }
+    @Override public String getSqlHost() { return delegate().getSqlHost(); }
+    @Override public String getSqlDatabase() { return delegate().getSqlDatabase(); }
+    @Override public String getSqlConnectionMethod() { return delegate().getSqlConnectionMethod(); }
+    @Override public boolean isSqlNtlm() { return delegate().isSqlNtlm(); }
+    @Override public boolean isSqlKerberos() { return delegate().isSqlKerberos(); }
+    @Override public String getMailDomain() { return delegate().getMailDomain(); }
+    @Override public String getSmtpHost() { return delegate().getSmtpHost(); }
+    @Override public String getAdminMail() { return delegate().getAdminMail(); }
+    @Override public List<Integer> getPwdNoChange() { return delegate().getPwdNoChange(); }
+    @Override public List<Integer> getPwdNoExpire() { return delegate().getPwdNoExpire(); }
+    @Override public List<Integer> getExtMailAllowed() { return delegate().getExtMailAllowed(); }
+    @Override public List<SyncRule> getRules() { return delegate().getRules(); }
+
     @Override
-    public String toString() {
-
-        StringBuilder config = new StringBuilder();
-
-        if (this.settings_data != null) {
-            this.settings_data.forEach((key, value) -> config.append(key + "=" + value + "\n"));
-        }
-
-        return config.toString();
+    public boolean isValid() {
+        return config != null && config.isValid();
     }
 
-    /**
-     * Nastavení výpisu podrobných informací.
-     *
-     * @param verboseMode nový stav příznaku výpisu podrobných informací
-     */
-    public void verbosity(Boolean verboseMode) {
-        this.beVerbose = verboseMode;
+    @Override
+    public boolean isVerbose() {
+        return beVerbose;
     }
 
-    /**
-     * Nastavení výpisu ladících informací.
-     *
-     * @param debugMode nový stav příznaku výpisu ladících informací
-     */
-    public void debug(Boolean debugMode) {
-        this.debugMode = debugMode;
+    @Override
+    public boolean isDebug() {
+        return debugMode;
     }
 
-    /**
-     * Adresa SMTP serveru.
-     *
-     * @return IP nebo název SMTP serveru
-     */
-    public String getSMTP_host() {
-        return this.settings_data.get("smtp_host");
+    @Override
+    public boolean isDevelMode() {
+        return develMode;
     }
 
-    /**
-     * Nastavení SMTP uživatele. Předpokládá se použití lokálního Exchange nebo Office 365.
-     * Uživatelem SMTP je globálně definovaná služba pro správu AD.
-     *
-     * @return celé UPN SMTP uživatele
-     */
-    public String getSMTP_user() {
-        StringBuilder smtpUsername = new StringBuilder();
+    // ===========================
+    // Staré API (bridge pro stávající kód)
+    // Bude odstraněno v Fázi 6.
+    // ===========================
 
-        smtpUsername.append(this.settings_data.get("user"));
-        smtpUsername.append("@");
-        smtpUsername.append(this.settings_data.get("mail_domain"));
+    /** @deprecated použijte {@link #getLdapHost()} */
+    public String getLDAP_host() { return getLdapHost(); }
+    /** @deprecated použijte {@link #getLdapDomain()} */
+    public String getLDAP_domain() { return getLdapDomain(); }
+    /** @deprecated použijte {@link #getLdapFqdn()} */
+    public String getLDAP_fqdn() { return getLdapFqdn(); }
+    /** @deprecated použijte {@link #getLdapBase()} */
+    public String getLDAP_base() { return getLdapBase(); }
+    /** @deprecated použijte {@link #getLdapBaseStudents()} */
+    public String getLDAP_baseStudents() { return getLdapBaseStudents(); }
+    /** @deprecated použijte {@link #getLdapBaseAlumni()} */
+    public String getLDAP_baseAlumni() { return getLdapBaseAlumni(); }
+    /** @deprecated použijte {@link #getLdapBaseFaculty()} */
+    public String getLDAP_baseFaculty() { return getLdapBaseFaculty(); }
+    /** @deprecated použijte {@link #getLdapBaseTeachers()} */
+    public String getLDAP_baseTeachers() { return getLdapBaseTeachers(); }
+    /** @deprecated použijte {@link #getLdapBaseContacts()} */
+    public String getLDAP_baseContacts() { return getLdapBaseContacts(); }
+    /** @deprecated použijte {@link #getLdapBaseDistributionLists()} */
+    public String getLDAP_baseDL() { return getLdapBaseDistributionLists(); }
+    /** @deprecated použijte {@link #getLdapBaseStudentGroups()} */
+    public String getLDAP_baseStudentGroups() { return getLdapBaseStudentGroups(); }
+    /** @deprecated použijte {@link #getLdapBaseGlobalGroups()} */
+    public String getLDAP_baseGlobalGroups() { return getLdapBaseGlobalGroups(); }
+    /** @deprecated */
+    public Boolean isLDAP_MSAD() { return true; }
+    /** @deprecated použijte {@link #isLdapSsl()} */
+    public Boolean useSSL() { return isLdapSsl(); }
+    /** @deprecated použijte {@link #getLdapDomain()} */
+    public String getLocalDomain() { return getLdapDomain(); }
 
-        return smtpUsername.toString().toLowerCase();
-    }
-
-    /**
-     * Heslo uživatele SMTP serveru. Předpokládá se použití lokálního Exchange nebo Office 365.
-     * Uživatelem SMTP je globálně definovaná služba pro správu AD.
-     *
-     * @return heslo SMTP uživatele
-     */
-    public String getSMTP_pass() {
-        return this.settings_data.get("pass");
-    }
-
-    /**
-     * E-mailová adresa správce ICT.
-     *
-     * @return e-mail správce ICT
-     */
-    public String getAdminMail() {
-        return this.settings_data.get("admin");
-    }
-
-    /**
-     * Jméno SQL Serveru.
-     *
-     * @return adresa SQL Serveru
-     */
-    public String getSQL_host() {
-
-        if (this.settings_data.get("sql_host").toLowerCase().contains(this.settings_data.get("domain").toLowerCase())) {
-            return settings_data.get("sql_host");
-        } else {
-            return this.settings_data.get("sql_host").toLowerCase() + "." + this.settings_data.get("domain").toLowerCase();
-        }
-    }
-
-    /**
-     * Service Principal Name pro SQL Server
-     * ve výchozím tvaru ve tvaru MSSQLSvc/{host}.{domena}@{DOMENA}
-     *
-     * @return
-     */
-    public String getSQL_SPN() {
-        StringBuilder spnBuilder = new StringBuilder();
-
-        spnBuilder.append("MSSQLSvc/");
-        spnBuilder.append(Settings.getInstance().getSQL_host().toLowerCase().replace("." + Settings.getInstance().getLocalDomain().toLowerCase(), ""));
-        spnBuilder.append(".");
-        spnBuilder.append(Settings.getInstance().getLocalDomain().toLowerCase());
-        spnBuilder.append("@");
-        spnBuilder.append(Settings.getInstance().getLocalDomain().toUpperCase());
-
-        return spnBuilder.toString();
-    }
-
-
-    /**
-     * Plné kvalifikované jméno SQL Serveru.
-     *
-     * @return SQL server FQDN
-     */
+    /** @deprecated použijte {@link #getSqlHost()} */
+    public String getSQL_host() { return getSqlHost(); }
+    /** @deprecated */
     public String getSQL_hostFQDN() {
-        return (getSQL_host().toLowerCase() + "." + getLocalDomain().toUpperCase());
+        return getSqlHost().toLowerCase() + "." + getLdapDomain().toUpperCase();
     }
-
-    /**
-     * Jméno databáze s daty aplikace Bakaláři.
-     *
-     * @return databáze
-     */
-    public String getSQL_database() {
-        return this.settings_data.get("sql_data");
+    /** @deprecated použijte {@link #getSqlDatabase()} */
+    public String getSQL_database() { return getSqlDatabase(); }
+    /** @deprecated */
+    public Boolean sql_NTLM() { return isSqlNtlm(); }
+    /** @deprecated */
+    public Boolean sql_Kerberos() { return isSqlKerberos(); }
+    /** @deprecated */
+    public String getSQL_SPN() {
+        String host = getSqlHost().toLowerCase().replace("." + getLdapDomain().toLowerCase(), "");
+        return "MSSQLSvc/" + host + "." + getLdapDomain().toLowerCase() + "@" + getLdapDomain().toUpperCase();
     }
-
-    /**
-     * Krb5 formát jména
-     *
-     * @return username@REALM.LOCAL
-     */
+    /** @deprecated */
     public String getKrb_user() {
-        StringBuilder krbUser = new StringBuilder();
-
-        krbUser.append(this.settings_data.get("user").toLowerCase());
-        krbUser.append("@");
-        krbUser.append(this.settings_data.get("domain").toUpperCase());
-
-        return krbUser.toString();
+        return getUser().toLowerCase() + "@" + getLdapDomain().toUpperCase();
     }
 
-    /**
-     * Lokální doména AD
-     *
-     * @return řetězec domény
-     */
-    public String getLocalDomain() {
-        return this.settings_data.get("domain");
+    /** @deprecated použijte {@link #getSmtpHost()} */
+    public String getSMTP_host() { return getSmtpHost(); }
+    /** @deprecated */
+    public String getSMTP_user() {
+        return getUser() + "@" + getMailDomain();
     }
+    /** @deprecated */
+    public String getSMTP_pass() { return getPass(); }
+
+    /** @deprecated použijte {@link #isVerbose()} */
+    public Boolean beVerbose() { return beVerbose; }
+    /** @deprecated použijte {@link #isDebug()} */
+    public Boolean debugMode() { return debugMode; }
+    /** @deprecated použijte {@link #isDevelMode()} */
+    public Boolean develMode() { return develMode; }
+
+    public void verbosity(Boolean verboseMode) { this.beVerbose = verboseMode; }
+    public void debug(Boolean debugMode) { this.debugMode = debugMode; }
+    public void setDevelMode(Boolean develMode) { this.develMode = develMode; }
 
     /**
-     * Metoda spojení se SQL Serverem
+     * Informační značka o aktuálním zpracování.
      *
-     * @return String ntlm|kerberos
-     */
-    public String getSQLConnectionMethod() {
-        return this.settings_data.get("sql_con").toLowerCase();
-    }
-
-    /**
-     * SQL spojení je konfigurováno pro použití NTLMv2 ověřování.
-     *
-     * @return
-     */
-    public Boolean sql_NTLM() {
-        return (getSQLConnectionMethod().equals("ntlm")) ? true : false;
-    }
-
-    /**
-     * SQL spojení je konfigurováno pro použití protokolu Kerberos V k ověřování a delegování identity.
-     *
-     * @return
-     */
-    public Boolean sql_Kerberos() {
-        return (getSQLConnectionMethod().equals("kerberos")) ? true : false;
-    }
-
-    /**
-     * Seznam ročníků žáků, kteří si nemohou samostatně změnit své heslo.
-     *
-     * @return pole čísel ročníků
-     */
-    public ArrayList<Integer> getPwdNoChange() {
-        ArrayList<Integer> noChageList = new ArrayList<>();
-
-        if (this.settings_data.get("pwd_nochange").length() > 0) {
-            String[] parts = this.settings_data.get("pwd_nochange").replace(" ", "").split("\\,");
-
-            if (parts.length > 0) {
-                for (String part : parts) {
-                    noChageList.add(Integer.parseInt(part));
-                }
-            }
-        }
-
-        // this.settings_data.get("sql_con").toLowerCase()
-        return noChageList;
-    }
-
-    /**
-     * Seznam ročníků žáků, kterým heslo nikdy nevyprší.
-     *
-     * @return pole číslel ročníků
-     */
-    public ArrayList<Integer> getPwdNoExpire() {
-        ArrayList<Integer> noExpireList = new ArrayList<>();
-
-        if (this.settings_data.get("pwd_noexpire").length() > 0) {
-            String[] parts = this.settings_data.get("pwd_noexpire").replace(" ", "").split("\\,");
-
-            if (parts.length > 0) {
-                for (String part : parts) {
-                    noExpireList.add(Integer.parseInt(part));
-                }
-            }
-        }
-
-        return noExpireList;
-    }
-
-    /**
-     * Seznam ročníků žáků, kteří mohou přijímat poštu z externích adres.
-     *
-     * @return pole čísel ročníků
-     */
-    public ArrayList<Integer> getExtMailAllowed() {
-        ArrayList<Integer> extMailList = new ArrayList<>();
-
-        if (this.settings_data.get("ext_mail").length() > 0) {
-            String[] parts = this.settings_data.get("ext_mail").replace(" ", "").split("\\,");
-
-            if (parts.length > 0) {
-                for (String part : parts) {
-                    extMailList.add(Integer.parseInt(part));
-                }
-            }
-        }
-
-        return extMailList;
-    }
-
-    /**
-     * Informační značka o aktuálním zpracování požadavku.
-     *
-     * @return značka ve tvaru YYYY-MM-DD HH:mmm:ss @ hostname
+     * @return značka ve tvaru YYYY-MM-DD HH:mm:ss @ hostname (OS)
      */
     public String systemInfoTag() {
         String hostname;
         String os;
 
         try {
-             hostname = new BufferedReader(
+            hostname = new BufferedReader(
                     new InputStreamReader(Runtime.getRuntime().exec("hostname").getInputStream()))
                     .readLine();
         } catch (IOException e) {
@@ -1020,8 +390,58 @@ public class Settings {
         }
 
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        Date date = new Date();
+        return formatter.format(new Date()) + " @ " + hostname + " (" + os + ")";
+    }
 
-        return formatter.format(date) + " @ " + hostname + " (" + os + ")";
+    // ===========================
+    // Interní
+    // ===========================
+
+    /**
+     * Interaktivní dotaz na řetězcovou hodnotu.
+     */
+    private String promptString(Console console, String label, String defaultValue) {
+        String def = (defaultValue != null) ? defaultValue : "";
+        String input = console.readLine("%s [%s]: ", label, def);
+        return (input == null || input.isBlank()) ? def : input;
+    }
+
+    /**
+     * Interaktivní dotaz na booleovskou hodnotu.
+     */
+    private boolean promptBoolean(Console console, String label, boolean defaultValue) {
+        String def = defaultValue ? "ano" : "ne";
+        String input = console.readLine("%s [%s]: ", label, def);
+        if (input == null || input.isBlank()) return defaultValue;
+        String lower = input.toLowerCase();
+        return "a".equals(lower) || "ano".equals(lower) || "y".equals(lower)
+                || "yes".equals(lower) || "1".equals(lower);
+    }
+
+    private YamlAppConfig delegate() {
+        if (config == null) {
+            throw new IllegalStateException("Konfigurace nebyla načtena. Zavolejte load() nebo interactivePrompt().");
+        }
+        return config;
+    }
+
+    private boolean useEncryption() {
+        return PASSPHRASE != null && PASSPHRASE.length > 0;
+    }
+
+    private void syncRuntimeFlags() {
+        if (config != null) {
+            config.setVerbose(beVerbose);
+            config.setDebug(debugMode);
+            config.setDevelMode(develMode);
+        }
+    }
+
+    @Override
+    public String toString() {
+        if (config == null) return "(konfigurace nenačtena)";
+        StringWriter sw = new StringWriter();
+        config.writeTo(sw);
+        return sw.toString();
     }
 }

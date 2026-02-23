@@ -1,0 +1,69 @@
+# BakaKeeper – šablona konfigurace synchronizace AD/SQL
+# Tento soubor obsahuje výchozí hodnoty. Upravte dle prostředí školy.
+
+ldap:
+  # Lokální doména Active Directory
+  domain: skola.local
+  # Plně kvalifikované jméno řadiče domény AD
+  server: dc.skola.local
+  # Používat SSL pro komunikaci s AD (vyžadováno pro práci s hesly)
+  ssl: true
+  # Základní OU uživatelů
+  base: "OU=Uzivatele,OU=Skola,DC=skola,DC=local"
+  # OU žáků
+  students: "OU=Zaci,OU=Uzivatele,OU=Skola,DC=skola,DC=local"
+  # OU vyřazených žáků
+  alumni: "OU=StudiumUkonceno,OU=Zaci,OU=Uzivatele,OU=Skola,DC=skola,DC=local"
+  # OU zaměstnanců
+  faculty: "OU=Zamestnanci,OU=Uzivatele,OU=Skola,DC=skola,DC=local"
+  # OU učitelů
+  teachers: "OU=Ucitele,OU=Zamestnanci,OU=Uzivatele,OU=Skola,DC=skola,DC=local"
+  # OU vedení školy
+  management: "OU=Vedeni,OU=Zamestnanci,OU=Uzivatele,OU=Skola,DC=skola,DC=local"
+  # OU skupin žáků
+  student_groups: "OU=Zaci,OU=Skupiny,OU=Skola,DC=skola,DC=local"
+  # OU globálních skupin
+  global_groups: "OU=Uzivatele,OU=Skupiny,OU=Skola,DC=skola,DC=local"
+  # OU distribučních skupin
+  distribution_lists: "OU=Distribucni,OU=Skupiny,OU=Skola,DC=skola,DC=local"
+  # OU kontaktů (zákonných zástupců)
+  contacts: "OU=Kontakty,OU=Skola,DC=skola,DC=local"
+
+sql:
+  # Jméno nebo IP SQL Serveru
+  host: sql.skola.local
+  # Název databáze Bakaláři
+  database: bakalari
+  # Metoda připojení (ntlm / kerberos)
+  method: ntlm
+
+mail:
+  # Externí e-mailová doména školy
+  domain: skola.ext
+  # Jméno nebo IP SMTP serveru
+  smtp_host: mail.skola.ext
+  # E-mailová adresa správce ICT
+  admin: ict@skola.ext
+
+credentials:
+  # Uživatelské jméno účtu s právy Domain Administrator
+  user: bakalari
+  # Heslo uživatelského účtu
+  password: ""
+
+policies:
+  # Ročníky s přístupem k externímu e-mailu
+  ext_mail_allowed: [6, 7, 8, 9]
+  # Ročníky bez přístupu ke změně hesla
+  pwd_no_change: [1, 2, 3, 4, 5]
+  # Ročníky se stálým heslem
+  pwd_no_expire: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+# Deklarativní pravidla synchronizace
+# Příklad:
+# rules:
+#   - scope: CLASS
+#     match: "6.A"
+#     attribute: extensionAttribute5
+#     value: "TRUE"
+rules: []
