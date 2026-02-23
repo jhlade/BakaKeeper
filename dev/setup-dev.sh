@@ -41,7 +41,26 @@ source .env
 # Krok 0: Příprava datových adresářů pro bind-mount volumes
 # Adresáře musí existovat před spuštěním compose.
 # Poznámka: mssql data jsou v pojmenovaném Podman svazku (ne bind-mount).
-mkdir -p .data/samba .data/keytabs
+mkdir -p .data/samba .data/keytabs .data/mssql-tls
+
+# Krok 0b: TLS certifikát pro MSSQL
+# Azure SQL Edge generuje self-signed cert s negativním sériovým číslem.
+# Go 1.23+ (go-sqlcmd) odmítá takový certifikát (x509: negative serial number)
+# i při SQLCMDENCRYPT=false. Vygenerujeme vlastní cert s validním sériovým číslem.
+if [ ! -f .data/mssql-tls/mssql.pem ]; then
+    echo -e "${INFO} Generuji TLS certifikát pro MSSQL (sql.skola.local)..."
+    openssl req -x509 -nodes -newkey rsa:2048 \
+        -keyout .data/mssql-tls/mssql.key \
+        -out .data/mssql-tls/mssql.pem \
+        -days 3650 \
+        -subj "/CN=sql.skola.local" \
+        2>/dev/null
+    # Čitelný pro UID 10001 (mssql) uvnitř kontejneru
+    chmod 644 .data/mssql-tls/mssql.pem .data/mssql-tls/mssql.key
+    echo -e "${OK} TLS certifikát vygenerován."
+else
+    echo -e "  [=] TLS certifikát pro MSSQL již existuje – přeskakuji."
+fi
 
 # Ujistíme se, že DOCKER_HOST ukazuje na Podman socket.
 # podman-compose / docker-compose hledají Docker socket; na macOS bez Docker Desktopu
@@ -188,12 +207,18 @@ echo -e "${OK} Keytab uložen do sdíleného svazku (keytabs:/keytabs/mssql.keyt
 # Azure SQL Edge při prvním startu inicializuje systémové databáze – dáme mu až 6 minut
 wait_for_healthy "bakadev-mssql" 360
 
-echo -e "${INFO} Inicializuji databázi '${SQL_DB}'..."
+echo -e "${INFO} Inicializuji databázi '${SQL_DB}' a SQL login 'bakalari'..."
 # go-sqlcmd v1.9.0 v /usr/local/bin/sqlcmd (mssql-tools není pro ARM64 dostupný přes apt)
 # SQLCMDENCRYPT=false: úplně vypne TLS na straně klienta (disable, nikoli optional).
 # go-sqlcmd (Go ≥1.21) odmítá self-signed certifikát SQL Serveru s negativním sériovým číslem
 # (x509: negative serial number); v dev prostředí (loopback) je plaintext v pořádku.
 # Serverová strana doplněna forceencryption=0 v mssql.conf.
+
+# init-db.sql obsahuje placeholder __BAKALARI_PASSWORD__ – nahradíme skutečným heslem.
+# Pracujeme s kopií, aby šablona zůstala čistá.
+podman exec bakadev-mssql bash -c \
+    "sed 's/__BAKALARI_PASSWORD__/${BAKALARI_PASSWORD}/g' /init-db.sql > /tmp/init-db-resolved.sql"
+
 podman exec \
     -e SQLCMDENCRYPT=false \
     bakadev-mssql \
@@ -201,10 +226,10 @@ podman exec \
         -S localhost \
         -U sa \
         -P "${SQL_SA_PASSWORD}" \
-        -i /init-db.sql \
+        -i /tmp/init-db-resolved.sql \
         -b
 
-echo -e "${OK} Databáze '${SQL_DB}' inicializována."
+echo -e "${OK} Databáze '${SQL_DB}' inicializována (SQL login bakalari = db_owner)."
 echo ""
 
 # ---------------------------------------------------------------------------

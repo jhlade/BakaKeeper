@@ -54,8 +54,9 @@ if ${CLEAN}; then
     # Čištění bind-mount adresářů .data/
     # Samba data vlastní root:root → vyžaduje sudo
     echo "Mažu data z .data/ (vyžaduje sudo pro soubory vlastněné rootem)..."
-    sudo find .data/samba   -mindepth 1 -delete 2>/dev/null || true
-    sudo find .data/keytabs -mindepth 1 -delete 2>/dev/null || true
+    sudo find .data/samba     -mindepth 1 -delete 2>/dev/null || true
+    sudo find .data/keytabs   -mindepth 1 -delete 2>/dev/null || true
+    rm -rf .data/mssql-tls 2>/dev/null || true
     # Obnova prázdných adresářů a .gitkeep (zachování struktury v gitu)
     mkdir -p .data/samba .data/keytabs
     touch .data/samba/.gitkeep .data/keytabs/.gitkeep

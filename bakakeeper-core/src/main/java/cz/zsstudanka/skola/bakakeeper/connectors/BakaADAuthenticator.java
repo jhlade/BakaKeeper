@@ -146,7 +146,13 @@ public class BakaADAuthenticator implements LDAPConnector {
             userLDAPquery.put(EBakaLDAPAttributes.OC_USER.attribute(), EBakaLDAPAttributes.OC_USER.value());
             userLDAPquery.put(EBakaLDAPAttributes.LOGIN.attribute(), user);
 
-            this.authUser = getObjectInfo(Settings.getInstance().getLDAP_base(), userLDAPquery, new String[]{
+            // Hledáme přihlášeného uživatele v celé doméně (ne jen v uživatelské OU),
+            // protože servisní účet může být v jiné OU (např. OU=Sluzby).
+            String domainRootDn = java.util.Arrays.stream(Settings.getInstance().getLDAP_domain().split("\\."))
+                    .map(part -> "DC=" + part)
+                    .collect(java.util.stream.Collectors.joining(","));
+
+            this.authUser = getObjectInfo(domainRootDn, userLDAPquery, new String[]{
                     EBakaLDAPAttributes.UPN.attribute(),
                     EBakaLDAPAttributes.NAME_DISPLAY.attribute()
             });

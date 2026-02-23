@@ -143,7 +143,10 @@ services:
       - mssql-data:/var/opt/mssql/data
       # Keytab generovaný Samba4 (čtení) – sdílený bind-mount z .data/keytabs
       - ./.data/keytabs:/var/opt/mssql/keytabs:ro
-      # Konfigurace MSSQL (jazyk, keytab cesta)
+      # TLS certifikát – generuje setup-dev.sh (náhrada za Azure SQL Edge self-signed
+      # cert, který má negativní sériové číslo odmítané go-sqlcmd/Go 1.23+)
+      - ./.data/mssql-tls:/var/opt/mssql/tls:ro
+      # Konfigurace MSSQL (jazyk, keytab cesta, TLS)
       - ./mssql/mssql.conf:/var/opt/mssql/mssql.conf:ro
       # Inicializační SQL skript pro vytvoření schématu
       - ./mssql/init-db.sql:/init-db.sql:ro
