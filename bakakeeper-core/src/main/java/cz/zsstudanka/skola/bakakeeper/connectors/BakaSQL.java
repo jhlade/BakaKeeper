@@ -13,7 +13,7 @@ import java.sql.*;
  *
  * @author Jan Hladěna
  */
-public class BakaSQL {
+public class BakaSQL implements SQLConnector {
 
     /** instance SQL konektoru */
     private static BakaSQL instance = null;

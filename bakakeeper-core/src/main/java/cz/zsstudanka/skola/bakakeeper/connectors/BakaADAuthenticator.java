@@ -26,7 +26,7 @@ import java.util.*;
  *
  * @author Jan Hladěna
  */
-public class BakaADAuthenticator {
+public class BakaADAuthenticator implements LDAPConnector {
 
     /** maximální limit pro přejmenování objektu během přesunu */
     private final int MOVE_LIMIT = 99;
