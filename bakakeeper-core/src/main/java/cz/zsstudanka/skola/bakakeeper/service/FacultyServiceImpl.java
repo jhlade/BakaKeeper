@@ -41,7 +41,9 @@ public class FacultyServiceImpl implements FacultyService {
                 .filter(f -> f.getClassLabel() != null)
                 .collect(Collectors.toMap(FacultyRecord::getClassLabel, f -> f, (a, b) -> a));
 
-        // LDAP adresář zaměstnanců pro vyhledání DN učitele
+        // LDAP adresář zaměstnanců pro vyhledání DN učitele.
+        // Používáme findAllStudents() – vrací StudentRecord, ale protože potřebujeme
+        // jen email a DN (zděděno z Person), funguje to i pro zaměstnanecké účty.
         List<StudentRecord> facultyLdap = ldapRepo.findAllStudents(
                 config.getLdapBaseFaculty(), null);
         Map<String, StudentRecord> facultyByEmail = facultyLdap.stream()

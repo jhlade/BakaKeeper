@@ -86,9 +86,10 @@ public class RuleServiceImpl implements RuleService {
             }
             case LEVEL_1 -> student.getClassYear() >= 1 && student.getClassYear() <= 5;
             case LEVEL_2 -> student.getClassYear() >= 6 && student.getClassYear() <= 9;
-            case ALL_STUDENTS -> true;
+            case ALL_STUDENTS, WHOLE_SCHOOL -> true;
             case INDIVIDUAL -> match != null && match.equals(student.getInternalId());
-            default -> false;
+            // TEACHERS – pravidla se aplikují pouze na žáky, učitelé vyžadují jiný datový tok
+            case TEACHERS -> false;
         };
     }
 

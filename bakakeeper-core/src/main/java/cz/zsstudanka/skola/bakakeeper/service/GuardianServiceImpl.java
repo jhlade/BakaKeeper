@@ -119,38 +119,96 @@ public class GuardianServiceImpl implements GuardianService {
 
     /**
      * Synchronizuje data jednoho kontaktu (příjmení, jméno, email, telefon).
+     * SQL evidence je autoritativní zdroj – při neshodě se LDAP data opraví.
      */
     private SyncResult syncSingleGuardian(StudentRecord sql, GuardianRecord existing,
                                            boolean repair, SyncProgressListener listener) {
         String dn = existing.getDn();
-        boolean changed = false;
-
-        // příjmení z SQL guardian polí
-        String expectedSurname = sql.getSurname(); // fallback; reálně by bylo z guardianSurname
-        String expectedPhone = null; // budeme mít z rozšířeného SQL
-
-        // porovnat a opravit e-mail
-        String expectedEmail = existing.getEmail();
-        // zde se data synchronizují – pokud jsou v SQL jiné, zapíší se
-
-        if (!changed) {
+        if (dn == null) {
             return SyncResult.noChange(existing.getInternalId());
         }
-        return SyncResult.updated(existing.getInternalId(), "Kontakt aktualizován.");
+
+        List<String> changes = new ArrayList<>();
+
+        // příjmení
+        String expectedSurname = sql.getGuardianSurname();
+        if (expectedSurname != null && !expectedSurname.equals(existing.getSurname())) {
+            changes.add("sn: " + existing.getSurname() + " → " + expectedSurname);
+            if (repair) {
+                ldapRepo.updateAttribute(dn, EBakaLDAPAttributes.NAME_LAST, expectedSurname);
+            }
+        }
+
+        // jméno
+        String expectedGivenName = sql.getGuardianGivenName();
+        if (expectedGivenName != null && !expectedGivenName.equals(existing.getGivenName())) {
+            changes.add("givenName: " + existing.getGivenName() + " → " + expectedGivenName);
+            if (repair) {
+                ldapRepo.updateAttribute(dn, EBakaLDAPAttributes.NAME_FIRST, expectedGivenName);
+            }
+        }
+
+        // displayName (odvozený z příjmení + jméno)
+        if (expectedSurname != null) {
+            String expectedDisplay = (expectedGivenName != null && !expectedGivenName.isBlank())
+                    ? expectedSurname + " " + expectedGivenName : expectedSurname;
+            if (!expectedDisplay.equals(existing.getDisplayName())) {
+                if (repair) {
+                    ldapRepo.updateAttribute(dn, EBakaLDAPAttributes.NAME_DISPLAY, expectedDisplay);
+                }
+            }
+        }
+
+        // e-mail
+        String expectedEmail = sql.getGuardianEmail();
+        if (expectedEmail != null && !expectedEmail.isBlank()
+                && !expectedEmail.equals(existing.getEmail())) {
+            changes.add("mail: " + existing.getEmail() + " → " + expectedEmail);
+            if (repair) {
+                ldapRepo.updateAttribute(dn, EBakaLDAPAttributes.MAIL, expectedEmail);
+            }
+        }
+
+        // telefon
+        String expectedPhone = sql.getGuardianPhone();
+        if (expectedPhone != null && !expectedPhone.isBlank()
+                && !expectedPhone.equals(existing.getPhone())) {
+            changes.add("tel: " + existing.getPhone() + " → " + expectedPhone);
+            if (repair) {
+                ldapRepo.updateAttribute(dn, EBakaLDAPAttributes.MOBILE, expectedPhone);
+            }
+        }
+
+        if (changes.isEmpty()) {
+            return SyncResult.noChange(existing.getInternalId());
+        }
+
+        String desc = String.join(", ", changes);
+        if (!repair) {
+            return SyncResult.skipped(existing.getInternalId(), "Suchý běh – změny: " + desc);
+        }
+        return SyncResult.updated(existing.getInternalId(), "Kontakt aktualizován: " + desc);
     }
 
     /**
-     * Vytvoří nový kontakt v AD.
+     * Vytvoří nový kontakt zákonného zástupce v AD.
      */
     private SyncResult createGuardianContact(StudentRecord sql) {
         String guardianId = sql.getGuardianInternalId();
-        String surname = sql.getSurname(); // placeholder – reálně guardian surname
-        String givenName = sql.getGivenName(); // placeholder
+        String surname = sql.getGuardianSurname();
+        String givenName = sql.getGuardianGivenName();
+
+        if (surname == null || surname.isBlank()) {
+            return SyncResult.error(guardianId, "Chybí příjmení zákonného zástupce v evidenci.");
+        }
+        if (givenName == null || givenName.isBlank()) {
+            givenName = ""; // jméno může chybět
+        }
 
         // vygenerovat DN
         String targetOu = config.getLdapBaseContacts();
-        String cn = surname + " " + givenName;
-        String dn = "CN=" + cn + "," + targetOu;
+        String displayName = (givenName.isBlank()) ? surname : surname + " " + givenName;
+        String dn = "CN=" + displayName + "," + targetOu;
 
         for (int attempt = 0; attempt < MAX_DN_ATTEMPTS; attempt++) {
             if (!ldapRepo.checkDN(dn)) {
@@ -167,17 +225,29 @@ public class GuardianServiceImpl implements GuardianService {
         }
 
         DataLDAP data = new DataLDAP();
-        data.put(EBakaLDAPAttributes.NAME_DISPLAY.attribute(), surname + " " + givenName);
+        data.put(EBakaLDAPAttributes.NAME_DISPLAY.attribute(), displayName);
         data.put(EBakaLDAPAttributes.NAME_LAST.attribute(), surname);
-        data.put(EBakaLDAPAttributes.NAME_FIRST.attribute(), givenName);
+        if (!givenName.isBlank()) {
+            data.put(EBakaLDAPAttributes.NAME_FIRST.attribute(), givenName);
+        }
         data.put(EBakaLDAPAttributes.EXT01.attribute(), guardianId);
         data.put(EBakaLDAPAttributes.MSXCH_GAL_HIDDEN.attribute(), "TRUE");
         data.put(EBakaLDAPAttributes.MSXCH_REQ_AUTH.attribute(), "TRUE");
 
-        cn = BakaUtils.parseCN(dn);
+        // e-mail a telefon (pokud jsou k dispozici)
+        String email = sql.getGuardianEmail();
+        if (email != null && !email.isBlank()) {
+            data.put(EBakaLDAPAttributes.MAIL.attribute(), email);
+        }
+        String phone = sql.getGuardianPhone();
+        if (phone != null && !phone.isBlank()) {
+            data.put(EBakaLDAPAttributes.MOBILE.attribute(), phone);
+        }
+
+        String cn = BakaUtils.parseCN(dn);
         guardianRepo.createContact(cn, data);
 
-        return SyncResult.created(guardianId, surname + " " + givenName);
+        return SyncResult.created(guardianId, displayName);
     }
 
     /**

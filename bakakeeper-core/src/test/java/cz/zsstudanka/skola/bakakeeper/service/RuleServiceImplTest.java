@@ -156,4 +156,20 @@ class RuleServiceImplTest {
         // jen s1 (ročník 3, 1. stupeň)
         assertEquals(1, results.size());
     }
+
+    @Test
+    void pravidloCeláŠkola_odpovídáVšemŽákům() {
+        SyncRule rule = new SyncRule(SyncScope.WHOLE_SCHOOL, null,
+                EBakaLDAPAttributes.TITLE.attribute(), "Žák školy");
+
+        StudentRecord s1 = student("001", "3.A", 3, "CN=N,OU=Zaci");
+        StudentRecord s2 = student("002", "7.A", 7, "CN=S,OU=Zaci");
+
+        when(ldapRepo.updateAttribute(anyString(), any(), anyString())).thenReturn(true);
+
+        List<SyncResult> results = service.applyRules(
+                List.of(rule), List.of(s1, s2), true, SyncProgressListener.SILENT);
+
+        assertEquals(2, results.size());
+    }
 }
