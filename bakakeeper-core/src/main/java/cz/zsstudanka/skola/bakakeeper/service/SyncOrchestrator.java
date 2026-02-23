@@ -17,6 +17,7 @@ import java.util.List;
  * Koordinuje služby ve správném pořadí a agreguje výsledky.
  *
  * Pořadí fází:
+ * 0. Kontrola a oprava AD struktury (StructureService)
  * 1. Synchronizace třídních distribučních seznamů (FacultyService)
  * 2. Inicializace nových žáků – vytvoření účtů (StudentService)
  * 3. Kontrola a srovnání dat spárovaných žáků (StudentService)
@@ -34,6 +35,7 @@ public class SyncOrchestrator {
     private final FacultyRepository facultyRepo;
     private final GuardianRepository guardianRepo;
 
+    private final StructureService structureService;
     private final StudentService studentService;
     private final FacultyService facultyService;
     private final GuardianService guardianService;
@@ -44,6 +46,7 @@ public class SyncOrchestrator {
                             LDAPUserRepository ldapUserRepo,
                             FacultyRepository facultyRepo,
                             GuardianRepository guardianRepo,
+                            StructureService structureService,
                             StudentService studentService,
                             FacultyService facultyService,
                             GuardianService guardianService,
@@ -53,6 +56,7 @@ public class SyncOrchestrator {
         this.ldapUserRepo = ldapUserRepo;
         this.facultyRepo = facultyRepo;
         this.guardianRepo = guardianRepo;
+        this.structureService = structureService;
         this.studentService = studentService;
         this.facultyService = facultyService;
         this.guardianService = guardianService;
@@ -69,6 +73,9 @@ public class SyncOrchestrator {
     public List<SyncResult> runFullSync(boolean repair, SyncProgressListener listener) {
         listener.onPhaseStart("Kompletní synchronizace");
         List<SyncResult> allResults = new ArrayList<>();
+
+        // 0. Kontrola a oprava AD struktury (OU, skupiny, distribuční seznamy)
+        allResults.addAll(structureService.checkAndRepairStructure(repair, listener));
 
         // --- Načtení dat z repozitářů ---
         listener.onProgress("Načítání dat z SQL evidence...");
@@ -172,6 +179,17 @@ public class SyncOrchestrator {
      */
     public List<SyncResult> runFacultyOnly(boolean repair, SyncProgressListener listener) {
         return syncFaculty(repair, listener);
+    }
+
+    /**
+     * Spustí pouze kontrolu a opravu AD struktury.
+     *
+     * @param repair provést opravu nebo jen kontrolu
+     * @param listener sledování průběhu
+     * @return výsledky kontroly/opravy
+     */
+    public List<SyncResult> runStructureOnly(boolean repair, SyncProgressListener listener) {
+        return structureService.checkAndRepairStructure(repair, listener);
     }
 
     // --- Interní pomocné metody ---

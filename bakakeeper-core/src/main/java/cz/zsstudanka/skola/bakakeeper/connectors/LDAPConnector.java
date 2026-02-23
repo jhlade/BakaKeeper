@@ -56,4 +56,22 @@ public interface LDAPConnector {
 
     /** Odebrání objektu z konkrétní skupiny. */
     Boolean removeObjectFromGroup(String objectDN, String groupDN);
+
+    // --- Správa struktury OU a skupin ---
+
+    /** Kontrola existence OU. Vrací počet položek v OU, nebo -1 pokud neexistuje. */
+    int checkOU(String ou);
+
+    /** Vytvoření nové organizační jednotky. */
+    void createOU(String name, String base);
+
+    /** Získání informací o skupině (DN, displayName, groupType, memberOf, mail atd.). */
+    @SuppressWarnings("rawtypes")
+    Map getGroupInfo(String cn, String ou);
+
+    /** Vytvoření skupiny s atributy a případným členstvím v nadřazených skupinách. */
+    void createGroup(String cn, String targetOU, String[] memberOf, HashMap<String, String> data);
+
+    /** Nastavení/oprava atributu existující skupiny. */
+    Boolean setGroupInfo(String ou, String groupCN, EBakaLDAPAttributes attribute, String value);
 }
