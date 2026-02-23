@@ -31,6 +31,7 @@ class SyncOrchestratorTest {
     @Mock private LDAPUserRepository ldapUserRepo;
     @Mock private FacultyRepository facultyRepo;
     @Mock private GuardianRepository guardianRepo;
+    @Mock private StructureService structureService;
     @Mock private StudentService studentService;
     @Mock private FacultyService facultyService;
     @Mock private GuardianService guardianService;
@@ -41,12 +42,18 @@ class SyncOrchestratorTest {
     @BeforeEach
     void setUp() {
         orchestrator = new SyncOrchestrator(config, studentRepo, ldapUserRepo,
-                facultyRepo, guardianRepo, studentService, facultyService,
-                guardianService, ruleService);
+                facultyRepo, guardianRepo, structureService, studentService,
+                facultyService, guardianService, ruleService);
+    }
+
+    /** Společné stubování pro testy runFullSync – strukturní kontrola vrací prázdno. */
+    private void stubStructureOk() {
+        when(structureService.checkAndRepairStructure(anyBoolean(), any())).thenReturn(List.of());
     }
 
     @Test
     void runFullSync_voláVšechnyFáze() {
+        stubStructureOk();
         // příprava dat
         StudentRecord sqlStudent = new StudentRecord();
         sqlStudent.setInternalId("001");
@@ -72,6 +79,7 @@ class SyncOrchestratorTest {
         List<SyncResult> results = orchestrator.runFullSync(false, SyncProgressListener.SILENT);
 
         assertNotNull(results);
+        verify(structureService).checkAndRepairStructure(eq(false), any());
         verify(facultyService).syncClassTeachers(any(), eq(false), any());
         verify(studentService).initializeNewStudents(any(), any(), eq(false), any());
         verify(studentService).syncStudentData(any(), any(), eq(false), any());
@@ -83,6 +91,7 @@ class SyncOrchestratorTest {
 
     @Test
     void runFullSync_sRepair_znoveNačítáLDAP() {
+        stubStructureOk();
         StudentRecord sqlStudent = new StudentRecord();
         StudentRecord ldapStudent = new StudentRecord();
 
@@ -118,6 +127,9 @@ class SyncOrchestratorTest {
         when(facultyRepo.findActive(true)).thenReturn(List.of());
         when(guardianRepo.findAllContacts(any())).thenReturn(List.of());
 
+        // strukturní kontrola vrátí jeden výsledek
+        when(structureService.checkAndRepairStructure(anyBoolean(), any()))
+                .thenReturn(List.of(SyncResult.noChange("OU=Skupiny")));
         when(facultyService.syncClassTeachers(any(), anyBoolean(), any()))
                 .thenReturn(List.of(SyncResult.updated("T1", "ok")));
         when(studentService.initializeNewStudents(any(), any(), anyBoolean(), any()))
@@ -131,8 +143,8 @@ class SyncOrchestratorTest {
 
         List<SyncResult> results = orchestrator.runFullSync(false, SyncProgressListener.SILENT);
 
-        assertEquals(3, results.size());
-        assertEquals(2, results.stream().filter(SyncResult::isSuccess).count());
+        assertEquals(4, results.size());
+        assertEquals(3, results.stream().filter(SyncResult::isSuccess).count());
         assertEquals(1, results.stream().filter(r -> !r.isSuccess()).count());
     }
 

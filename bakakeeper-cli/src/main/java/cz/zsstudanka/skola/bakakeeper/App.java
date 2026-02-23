@@ -228,6 +228,7 @@ public class App {
         GuardianRepository guardianRepo = new BakaGuardianRepository(ldapConnector);
         FacultyRepository facultyRepo = new BakaFacultyRepository(sqlConnector);
 
+        StructureService structureService = new StructureServiceImpl(config, ldapConnector);
         PasswordService passwordService = new PasswordServiceImpl(ldapUserRepo);
         PairingService pairingService = new PairingServiceImpl(ldapUserRepo);
         StudentService studentService = new StudentServiceImpl(
@@ -238,7 +239,7 @@ public class App {
 
         SyncOrchestrator orchestrator = new SyncOrchestrator(
                 config, studentRepo, ldapUserRepo, facultyRepo, guardianRepo,
-                studentService, facultyService, guardianService, ruleService);
+                structureService, studentService, facultyService, guardianService, ruleService);
 
         // kontrola současného stavu
         if (params.containsKey("status")) {
