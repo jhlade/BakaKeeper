@@ -112,8 +112,12 @@ public class SyncOrchestrator {
         // 5. Synchronizace zákonných zástupců
         allResults.addAll(syncGuardians(sqlStudents, repair, listener));
 
-        // 6. Aplikace deklarativních pravidel
-        if (!config.getRules().isEmpty()) {
+        // 6. Aplikace deklarativních pravidel (konvergentní model)
+        //    Pravidla se spouští VŽDY – i když je seznam pravidel prázdný.
+        //    Konvergentní model rekonciluje stav: pokud se pravidlo odebere z konfigurace,
+        //    hodnoty atributů a skupinové členství nastavené tímto pravidlem se vyčistí
+        //    (za předpokladu, že alespoň jedno pravidlo pro daný atribut/skupinu zůstává).
+        {
             // znovu načíst žáky – po všech úpravách
             if (repair) {
                 ldapStudents = ldapUserRepo.findAllStudents(
