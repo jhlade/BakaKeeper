@@ -41,11 +41,11 @@ bakakeeper-parent/          (rodičovský POM)
 
 ### Prerekvizity
 
-* LDAP server (Microsoft Active Directory) s rozšířenými
+* LDAP server (řadič Microsoft Active Directory) s rozšířenými
   atributy Microsoft Exchange (správce s oprávněním skupiny Schema
-  Admins je snadno doinstaluje na řadič AD z balíčku pro Exchange Server).
+  Admins je snadno doinstaluje na řadič AD z balíčku pro Exchange Server, nebo pomocí `.ldif` shchématu, viz [dev/samba4](dev/samba4/)).
 * Microsoft SQL Server (nebo MS SQL kompatibilní server)
-  s daty aplikace Bakaláři s doménovým ověřováním uživatele (NTLM nebo Kerberos).
+  s daty aplikace Bakaláři s doménovým ověřováním uživatele (NTLM nebo Kerberos), nebo účtem správce `sa`.
 * Dedikovaný neinteraktivní doménový účet s přístupem k SMTP,
   právy minimálně Account Operator v AD nad žáky, právy ke čtení i zápisu
   v SQL databázi s Bakaláři.
@@ -57,7 +57,7 @@ bakakeeper-parent/          (rodičovský POM)
   `msExchRequireAuthToSendTo`.
 * *Nepovinně* – `cron` nebo podobný plánovač pro periodické spouštění.
 * *Nepovinně* – pro ověřování přístupu k SQL Serveru pomocí
-  protokolu Kerberos namísto integrovaného NTLM musí být
+  protokolu Kerberos namísto integrovaného NTLMv2 musí být
   manuálně delegována oprávnění výše
   zmíněnému účtu (`setspn -s MSSQLSvc/sql-server.domena.local domena\bakalari`).
 
@@ -71,21 +71,21 @@ bakakeeper-parent/          (rodičovský POM)
 ### Použití
 
 1) Rychlá inicializace – vytvoření persistentního nastavení:
-   `java -jar BakaKeeper-2.0-SNAPSHOT.jar --init --interactive [-passphrase <heslo>]`
+   `java -jar BakaKeeper.jar --init --interactive [-passphrase <heslo>]`
 
 2) Kontrola synchronizace:
-   `java -jar BakaKeeper-2.0-SNAPSHOT.jar --status [-passphrase <heslo>]`
+   `java -jar BakaKeeper.jar --status [-passphrase <heslo>]`
 
 3) Provedení synchronizace:
-   `java -jar BakaKeeper-2.0-SNAPSHOT.jar --sync [-passphrase <heslo>]`
+   `java -jar BakaKeeper.jar --sync [-passphrase <heslo>]`
 
 4) Identifikace účtu:
-   `java -jar BakaKeeper-2.0-SNAPSHOT.jar -id <login> [-passphrase <heslo>]`
+   `java -jar BakaKeeper.jar -id <login> [-passphrase <heslo>]`
 
 5) Reset hesla žáka:
-   `java -jar BakaKeeper-2.0-SNAPSHOT.jar -reset <login> [-passphrase <heslo>]`
+   `java -jar BakaKeeper.jar -reset <login> [-passphrase <heslo>]`
 
-6) Více viz `java -jar BakaKeeper-2.0-SNAPSHOT.jar --help`
+6) Více viz `java -jar BakaKeeper.jar --help`
 
 ### Závislosti
 
@@ -106,7 +106,7 @@ Podman-based dev environment se Samba4 AD, MSSQL a Mailpit:
 cd dev && ./setup-dev.sh
 ```
 
-Viz `dev/README.md` pro detaily.
+Viz [`dev/README.md`](dev/README.md) pro detaily.
 
 ---
-2019-2026 [ZS Pardubice - Studanka](https://www.zs-studanka.cz/)
+2019-2026 [ZŠ Pardubice – Studánka](https://www.zs-studanka.cz/)

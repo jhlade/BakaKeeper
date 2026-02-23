@@ -69,6 +69,14 @@ if ! grep -q "ldap server require strong auth" /etc/samba/smb.conf; then
     echo "[BakaDev] Přidáno 'ldap server require strong auth = No' do smb.conf"
 fi
 
+# Povolení modifikací schématu (potřebné pro import Exchange schema extension).
+# Bez tohoto nastavení Samba4 odmítá ldapadd do CN=Schema s chybou:
+#   "schema_data_add: updates are not allowed: reject add request"
+if ! grep -q "dsdb:schema update allowed" /etc/samba/smb.conf; then
+    sed -i '/^\[global\]/a \\tdsdb:schema update allowed = true' /etc/samba/smb.conf
+    echo "[BakaDev] Přidáno 'dsdb:schema update allowed = true' do smb.conf"
+fi
+
 echo "[BakaDev] Spouštím Samba4 AD DC pro ${REALM}..."
 
 # Přesměrujeme DNS na interní Samba4 DNS.
