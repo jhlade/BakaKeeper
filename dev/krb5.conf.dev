@@ -1,0 +1,48 @@
+# =============================================================================
+# Kerberos konfigurace pro hostitele (vývojový macOS)
+#
+# Použití:
+#   export KRB5_CONFIG=/Users/bakalari/Developer/BakaSync/dev/krb5.conf.dev
+#   kinit bakalari@SKOLA.LOCAL
+#   java -jar local/BakaKeeper.jar --check
+#
+# Předpoklady:
+#   - setup-dev.sh byl spuštěn a /etc/hosts obsahuje záznamy pro skola.local
+#   - Kontejner bakadev-samba4 běží a naslouchá na portu 88
+# =============================================================================
+
+[libdefaults]
+    # Výchozí doména musí odpovídat doméně v settings.dat (domain=skola.local)
+    default_realm           = SKOLA.LOCAL
+
+    # Bez DNS lookup – KDC hledáme explicitně v sekci [realms]
+    dns_lookup_realm        = false
+    dns_lookup_kdc          = false
+
+    # Životnost tiketu
+    ticket_lifetime         = 24h
+    forwardable             = yes
+
+    # UDP preferujeme pro kratší timeouty; 0 = vždy TCP (stabilnější v kontejnerech)
+    udp_preference_limit    = 0
+
+    # Bez adresního omezení tiketu (nutné při NAT / Podmanu na macOS)
+    noaddresses             = true
+
+    # Šifrovací algoritmy povolené pro vývojové prostředí
+    # (odpovídá šabloně src/main/resources/krb5.conf)
+    default_tgs_enctypes    = aes256-cts aes128-cts arcfour-hmac-md5
+    default_tkt_enctypes    = aes256-cts aes128-cts arcfour-hmac-md5
+    permitted_enctypes      = aes256-cts aes128-cts arcfour-hmac-md5
+
+[realms]
+    SKOLA.LOCAL = {
+        # KDC je Samba4 kontejner, přeposílaný na localhost:88
+        kdc          = dc.skola.local:88
+        admin_server = dc.skola.local
+        default_domain = skola.local
+    }
+
+[domain_realm]
+    .skola.local  = SKOLA.LOCAL
+    skola.local   = SKOLA.LOCAL
