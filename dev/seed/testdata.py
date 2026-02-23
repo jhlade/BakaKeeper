@@ -279,6 +279,47 @@ def email_zam(jmeno: str, prijmeni: str, domain: str) -> str:
     """Formát pro zaměstnance: jmeno.prijmeni@domain."""
     return f"{ascii_slug(jmeno)}.{ascii_slug(prijmeni)}@{domain}"
 
+
+def login_4p2(prijmeni: str, jmeno: str) -> str:
+    """
+    Generuje INDOŠ login 4+2: první 4 znaky příjmení + první 2 znaky jména.
+    Bez diakritiky, malými písmeny.
+
+    Projekt INDOŠ z roku 2001 formátoval přihlašovací jméno učitele
+    jako první čtyři písmena z příjmení a první dvě písmena z křestního jména.
+
+    Příklady:
+      Novák Josef  → novajo
+      Novák Jan    → novaja
+      Vomáčková Vyky → vomavy
+
+    Speciální případy:
+      - Pomlčka v příjmení → odstraní se, první část: Krkavoslav-Soumrák → krkav → krkav[:4]=krka
+      - Více křestních jmen → první: Jan Pavel → jan[:2]=ja
+      - Krátké příjmení (< 4 znaky) → použijí se všechny: Čáp → cap
+      - Krátké jméno (< 2 znaky) → použijí se všechny
+    """
+    # příjmení: pomlčka → mezera → první část → ASCII → lowercase
+    prijmeni_norm = prijmeni.replace("-", " ").split()[0]
+    sn = ascii_slug(prijmeni_norm)
+    # jméno: první křestní → ASCII → lowercase
+    gn = ascii_slug(jmeno.split()[0])
+    return sn[:4] + gn[:2]
+
+
+def assign_logins(zamestnanci: list[dict]) -> None:
+    """
+    Přiřadí unikátní 4+2 login každému zaměstnanci.
+    Kolize se řeší číselnou příponou: novajo, novajo2, novajo3 ...
+    Výsledek se zapíše do klíče 'LOGIN' v každém slovníku.
+    """
+    seen: dict[str, int] = {}
+    for u in zamestnanci:
+        base = login_4p2(u["PRIJMENI"], u["JMENO"])
+        n = seen.get(base, 0) + 1
+        seen[base] = n
+        u["LOGIN"] = base if n == 1 else f"{base}{n}"
+
 def pick(lst: list, idx: int):
     """Cyklicky vybere prvek ze seznamu dle indexu."""
     return lst[idx % len(lst)]
@@ -420,7 +461,10 @@ def load_zamestnanci(path: str = None, domain: str = "skola.local") -> list[dict
     """
     Načte seznam zaměstnanců ze souboru data/zamestnanci.txt.
     Vrací list slovníků s klíči:
-      INTERN_KOD, JMENO, PRIJMENI, OU, FUNKCE, UCI_LETOS, TRIDNI_PRO, E_MAIL
+      INTERN_KOD, JMENO, PRIJMENI, OU, FUNKCE, UCI_LETOS, TRIDNI_PRO, E_MAIL, LOGIN
+
+    LOGIN se generuje automaticky jako 4+2 INDOŠ login (příjmení 4 + jméno 2)
+    a slouží jako sAMAccountName / CN v Active Directory.
     """
     if path is None:
         path = os.path.join(DATA_DIR, "zamestnanci.txt")
@@ -443,6 +487,8 @@ def load_zamestnanci(path: str = None, domain: str = "skola.local") -> list[dict
                 "TRIDNI_PRO":  parts[6].strip() or None,
                 "E_MAIL":      email_zam(parts[1].strip(), parts[2].strip(), domain),
             })
+    # vygenerovat unikátní 4+2 loginy
+    assign_logins(zamestnanci)
     return zamestnanci
 
 # =============================================================================
@@ -782,14 +828,19 @@ def build_sql(domain: str, sql_db: str, per_class: int, variance: int = 0) -> st
 # =============================================================================
 
 def ou_dn(ou: str, base_dn: str) -> str:
-    """Sestaví plné DN cílové OU zaměstnance v AD."""
-    return f"OU={ou},OU=Zamestnanci,OU=Uzivatele,OU=Skola,{base_dn}"
+    """Sestaví relativní cestu k cílové OU zaměstnance v AD.
+    samba-tool --userou vyžaduje cestu BEZ DC= části (relativní od base DN)."""
+    return f"OU={ou},OU=Zamestnanci,OU=Uzivatele,OU=Skola"
 
 
 def build_ad_sh(domain: str, base_dn: str, ad_password: str) -> str:
     """
     Generuje shell skript se samba-tool příkazy pro AD účty zaměstnanců.
     Žáky vytváří BakaKeeper synchronizací – zde je nevytváříme.
+
+    Každý zaměstnanec dostane realistický 4+2 INDOŠ login jako sAMAccountName
+    (odpovídá praxi českých škol – učitelské účty od roku 2001).
+    UPN = login@doména, e-mail = jmeno.prijmeni@doména.
     """
     zamestnanci = load_zamestnanci(domain=domain)
 
@@ -797,6 +848,7 @@ def build_ad_sh(domain: str, base_dn: str, ad_password: str) -> str:
         "#!/bin/bash",
         "# Automaticky generováno skriptem testdata.py – NEUPRAVUJTE RUČNĚ",
         "# Vytváří AD účty zaměstnanců v Samba4 AD DC",
+        "# Login = 4+2 INDOŠ (příjmení 4 + jméno 2), e-mail = jmeno.prijmeni@doména",
         "set -euo pipefail",
         "",
         f'BASE_DN="{base_dn}"',
@@ -806,21 +858,26 @@ def build_ad_sh(domain: str, base_dn: str, ad_password: str) -> str:
 
     for u in zamestnanci:
         ou_path  = ou_dn(u["OU"], base_dn)
+        login    = u["LOGIN"]
         kod      = u["INTERN_KOD"]
         jmeno    = u["JMENO"]
         prijmeni = u["PRIJMENI"]
         mail     = u["E_MAIL"]
         funkce   = u["FUNKCE"].upper()
+        # displayName v českém formátu: Příjmení Jméno
+        display  = f"{prijmeni} {jmeno}"
         lines += [
-            f"# {funkce}: {jmeno} {prijmeni} ({kod})",
-            f"samba-tool user create '{kod}' \"${{AD_PASSWORD}}\" \\",
+            f"# {funkce}: {display} ({kod}) → login: {login}",
+            f"_out=$(samba-tool user create '{login}' \"${{AD_PASSWORD}}\" \\",
             f"    --given-name='{jmeno}' \\",
             f"    --surname='{prijmeni}' \\",
             f"    --mail-address='{mail}' \\",
-            f"    --userou='{ou_path}' 2>/dev/null \\",
-            f"    && echo '  [+] {kod}' \\",
-            f"    || echo '  [=] {kod} (již existuje)'",
-            f"samba-tool user setpassword '{kod}'"
+            f"    --userou='{ou_path}' 2>&1) \\",
+            f"    && echo '  [+] {login} ({kod})' \\",
+            f"    || {{ if echo \"$_out\" | grep -qi 'already exists'; then "
+            f"echo '  [=] {login} ({kod}) (již existuje)'; "
+            f"else echo \"  [!] {login} ({kod}): $_out\" >&2; fi; }}",
+            f"samba-tool user setpassword '{login}'"
             f" --newpassword=\"${{AD_PASSWORD}}\" 2>/dev/null || true",
             "",
         ]
@@ -891,6 +948,9 @@ def main() -> None:
         print(f"Vychovatelky:   {len(vychovatelky)}")
         print(f"Provoz:         {len(provoz)}")
         print(f"Zaměstnanci Σ:  {len(zamestnanci)}")
+        # loginové kolize (4+2)
+        login_kolize = sum(1 for u in zamestnanci if any(c.isdigit() for c in u["LOGIN"]))
+        print(f"Login kolize:   {login_kolize}  (4+2 s číselnou příponou)")
         print(f"Statičtí žáci:  {len(staticti)}")
         print(f"Žáci aktivní:   {len(aktivni)}  (vč. {sum(1 for z in staticti if z['EVID_DO'] is None)} statických)")
         print(f"Žáci absol.:    {len(absolventi)}  (vč. {sum(1 for z in staticti if z['EVID_DO'] is not None)} statických)")
