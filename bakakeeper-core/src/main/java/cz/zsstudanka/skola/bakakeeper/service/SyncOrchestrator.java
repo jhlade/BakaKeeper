@@ -1,9 +1,11 @@
 package cz.zsstudanka.skola.bakakeeper.service;
 
 import cz.zsstudanka.skola.bakakeeper.config.AppConfig;
+import cz.zsstudanka.skola.bakakeeper.config.SyncRule;
 import cz.zsstudanka.skola.bakakeeper.model.FacultyRecord;
 import cz.zsstudanka.skola.bakakeeper.model.GuardianRecord;
 import cz.zsstudanka.skola.bakakeeper.model.StudentRecord;
+import cz.zsstudanka.skola.bakakeeper.model.SyncScope;
 import cz.zsstudanka.skola.bakakeeper.repository.FacultyRepository;
 import cz.zsstudanka.skola.bakakeeper.repository.GuardianRepository;
 import cz.zsstudanka.skola.bakakeeper.repository.LDAPUserRepository;
@@ -11,6 +13,7 @@ import cz.zsstudanka.skola.bakakeeper.repository.StudentRepository;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Orchestrátor synchronizace – nahrazuje Sync.actionSync().
@@ -111,13 +114,18 @@ public class SyncOrchestrator {
 
         // 6. Aplikace deklarativních pravidel
         if (!config.getRules().isEmpty()) {
-            // znovu načíst – po všech úpravách
+            // znovu načíst žáky – po všech úpravách
             if (repair) {
                 ldapStudents = ldapUserRepo.findAllStudents(
                         config.getLdapBaseStudents(), config.getLdapBaseAlumni());
             }
+
+            // sestavit cílový seznam – žáci + zaměstnanci (pokud pravidla vyžadují)
+            List<StudentRecord> ruleTargets = buildRuleTargets(
+                    config.getRules(), ldapStudents, listener);
+
             allResults.addAll(ruleService.applyRules(
-                    config.getRules(), ldapStudents, repair, listener));
+                    config.getRules(), ruleTargets, repair, listener));
         }
 
         // --- Souhrn ---
@@ -210,5 +218,38 @@ public class SyncOrchestrator {
         List<GuardianRecord> contacts = guardianRepo.findAllContacts(
                 config.getLdapBaseContacts());
         return guardianService.syncGuardians(sqlStudents, contacts, repair, listener);
+    }
+
+    /**
+     * Sestaví cílový seznam uživatelů pro pravidla.
+     * Pokud některé pravidlo cílí na zaměstnance (USER, CATEGORY, TEACHERS, WHOLE_SCHOOL),
+     * načte i zaměstnanecké účty z LDAP.
+     */
+    private List<StudentRecord> buildRuleTargets(List<SyncRule> rules,
+                                                  List<StudentRecord> ldapStudents,
+                                                  SyncProgressListener listener) {
+        Set<SyncScope> staffScopes = Set.of(
+                SyncScope.USER, SyncScope.CATEGORY,
+                SyncScope.TEACHERS, SyncScope.WHOLE_SCHOOL);
+
+        boolean needsStaff = rules.stream()
+                .anyMatch(r -> staffScopes.contains(r.getScope()));
+
+        if (!needsStaff) {
+            return ldapStudents;
+        }
+
+        // načíst zaměstnance (učitele, vedení, provoz, ...) z Faculty base
+        listener.onProgress("Načítání zaměstnanců pro pravidla...");
+        List<StudentRecord> staff = ldapUserRepo.findAllStudents(
+                config.getLdapBaseFaculty(), null);
+        listener.onProgress("Nalezeno " + staff.size() + " zaměstnanců v LDAP.");
+
+        // spojit žáky + zaměstnance (bez duplicit – StudentRecord nemá equals,
+        // ale DN je unikátní a LDAP base se nepřekrývají)
+        List<StudentRecord> combined = new ArrayList<>(ldapStudents.size() + staff.size());
+        combined.addAll(ldapStudents);
+        combined.addAll(staff);
+        return combined;
     }
 }

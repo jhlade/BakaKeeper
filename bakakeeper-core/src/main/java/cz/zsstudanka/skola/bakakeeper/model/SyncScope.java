@@ -25,6 +25,15 @@ public enum SyncScope {
     /** všichni žáci */
     ALL_STUDENTS("Všichni žáci"),
 
+    /** konkrétní uživatel dle přihlašovacího jména (sAMAccountName / UPN prefix) */
+    USER("Uživatel"),
+
+    /** kategorie uživatele (ZAK, UCITEL, VEDENI, PROVOZ, ASISTENT, VYCHOVATELKA) */
+    CATEGORY("Kategorie"),
+
+    /** stupeň školy – match "1" (ročníky 1–5) nebo "2" (ročníky 6–9) */
+    LEVEL("Stupeň"),
+
     /** učitelé */
     TEACHERS("Učitelé"),
 

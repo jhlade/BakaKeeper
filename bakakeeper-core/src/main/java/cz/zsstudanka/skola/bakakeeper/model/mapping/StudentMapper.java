@@ -5,6 +5,7 @@ import cz.zsstudanka.skola.bakakeeper.constants.EBakaSQL;
 import cz.zsstudanka.skola.bakakeeper.model.StudentRecord;
 import cz.zsstudanka.skola.bakakeeper.model.entities.DataLDAP;
 import cz.zsstudanka.skola.bakakeeper.model.entities.DataSQL;
+import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
 
 /**
  * Mapper pro převod dat žáka z DataSQL a DataLDAP na typovaný StudentRecord.
@@ -85,7 +86,21 @@ public class StudentMapper {
         record.setGivenName(MapperUtils.getStringAttr(ldap, EBakaLDAPAttributes.NAME_FIRST));
         record.setDisplayName(MapperUtils.getStringAttr(ldap, EBakaLDAPAttributes.NAME_DISPLAY));
         record.setEmail(MapperUtils.getStringAttr(ldap, EBakaLDAPAttributes.MAIL));
-        record.setDn(MapperUtils.getStringAttr(ldap, EBakaLDAPAttributes.DN));
+
+        String dn = MapperUtils.getStringAttr(ldap, EBakaLDAPAttributes.DN);
+        record.setDn(dn);
+
+        // derivace třídy z DN – např. CN=novak.jan,OU=Trida-A,OU=Rocnik-6,...
+        if (dn != null && dn.contains("Trida-") && dn.contains("Rocnik-")) {
+            try {
+                record.setClassYear(BakaUtils.classYearFromDn(dn));
+                record.setClassLetter(BakaUtils.classLetterFromDn(dn));
+                record.setClassName(BakaUtils.classStringFromDN(dn));
+            } catch (Exception ignored) {
+                // DN neobsahuje standardní strukturu (např. alumni) – ponechat výchozí
+            }
+        }
+
         record.setSamAccountName(MapperUtils.getStringAttr(ldap, EBakaLDAPAttributes.LOGIN));
         record.setUpn(MapperUtils.getStringAttr(ldap, EBakaLDAPAttributes.UPN));
         record.setTitle(MapperUtils.getStringAttr(ldap, EBakaLDAPAttributes.TITLE));

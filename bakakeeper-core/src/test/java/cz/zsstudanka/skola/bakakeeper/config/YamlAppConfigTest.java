@@ -299,6 +299,165 @@ class YamlAppConfigTest {
         assertTrue(template.isValid());
     }
 
+    // --- Nový formát pravidel (pole atributů a skupin) ---
+
+    @Test
+    void newFormatRulesWithAttributesAndGroups() {
+        String yaml = """
+                ldap:
+                  domain: t.local
+                  server: dc.t.local
+                  ssl: false
+                  base: "DC=t,DC=local"
+                  students: "OU=S,DC=t,DC=local"
+                  alumni: "OU=A,DC=t,DC=local"
+                  faculty: "OU=F,DC=t,DC=local"
+                  teachers: "OU=T,DC=t,DC=local"
+                  management: "OU=M,DC=t,DC=local"
+                  student_groups: "OU=SG,DC=t,DC=local"
+                  global_groups: "OU=GG,DC=t,DC=local"
+                  distribution_lists: "OU=DL,DC=t,DC=local"
+                  contacts: "OU=C,DC=t,DC=local"
+                sql:
+                  host: sql.t.local
+                  database: db
+                  method: ntlm
+                mail:
+                  domain: t.ext
+                  smtp_host: m.t.ext
+                  admin: a@t.ext
+                credentials:
+                  user: u
+                  password: p
+                policies:
+                  ext_mail_allowed: []
+                  pwd_no_change: []
+                  pwd_no_expire: []
+                rules:
+                  - scope: CLASS
+                    match: "6.A"
+                    attributes:
+                      - attribute: extensionAttribute5
+                        value: "Zaci"
+                      - attribute: title
+                        value: "Žák 6.A"
+                    groups:
+                      - "CN=Skupina-Zaci,OU=Skupiny,DC=t,DC=local"
+                  - scope: USER
+                    match: "novak.jan"
+                    attributes:
+                      - attribute: extensionAttribute5
+                        value: "Speciální"
+                  - scope: CATEGORY
+                    match: "UCITEL"
+                    attributes:
+                      - attribute: title
+                        value: "Učitel"
+                  - scope: LEVEL
+                    match: "2"
+                    attributes:
+                      - attribute: extensionAttribute3
+                        value: "2stupen"
+                """;
+        YamlAppConfig c = new YamlAppConfig(
+                new ByteArrayInputStream(yaml.getBytes(StandardCharsets.UTF_8)));
+
+        List<SyncRule> rules = c.getRules();
+        assertEquals(4, rules.size());
+
+        // první pravidlo – CLASS s 2 atributy a 1 skupinou
+        SyncRule r0 = rules.get(0);
+        assertEquals(SyncScope.CLASS, r0.getScope());
+        assertEquals("6.A", r0.getMatch());
+        assertEquals(2, r0.getAttributes().size());
+        assertEquals("extensionAttribute5", r0.getAttributes().get(0).attribute());
+        assertEquals("Zaci", r0.getAttributes().get(0).value());
+        assertEquals("title", r0.getAttributes().get(1).attribute());
+        assertEquals("Žák 6.A", r0.getAttributes().get(1).value());
+        assertEquals(1, r0.getGroups().size());
+        assertEquals("CN=Skupina-Zaci,OU=Skupiny,DC=t,DC=local", r0.getGroups().get(0));
+
+        // zpětná kompatibilita – getAttribute()/getValue() vrací první atribut
+        assertEquals("extensionAttribute5", r0.getAttribute());
+        assertEquals("Zaci", r0.getValue());
+
+        // USER scope
+        SyncRule r1 = rules.get(1);
+        assertEquals(SyncScope.USER, r1.getScope());
+        assertEquals("novak.jan", r1.getMatch());
+        assertEquals(1, r1.getAttributes().size());
+        assertTrue(r1.getGroups().isEmpty());
+
+        // CATEGORY scope
+        SyncRule r2 = rules.get(2);
+        assertEquals(SyncScope.CATEGORY, r2.getScope());
+        assertEquals("UCITEL", r2.getMatch());
+
+        // LEVEL scope
+        SyncRule r3 = rules.get(3);
+        assertEquals(SyncScope.LEVEL, r3.getScope());
+        assertEquals("2", r3.getMatch());
+    }
+
+    @Test
+    void roundTripNewFormatPreservesAttributesAndGroups() {
+        String yaml = """
+                ldap:
+                  domain: t.local
+                  server: dc.t.local
+                  ssl: false
+                  base: "DC=t,DC=local"
+                  students: "OU=S,DC=t,DC=local"
+                  alumni: "OU=A,DC=t,DC=local"
+                  faculty: "OU=F,DC=t,DC=local"
+                  teachers: "OU=T,DC=t,DC=local"
+                  management: "OU=M,DC=t,DC=local"
+                  student_groups: "OU=SG,DC=t,DC=local"
+                  global_groups: "OU=GG,DC=t,DC=local"
+                  distribution_lists: "OU=DL,DC=t,DC=local"
+                  contacts: "OU=C,DC=t,DC=local"
+                sql:
+                  host: sql.t.local
+                  database: db
+                  method: ntlm
+                mail:
+                  domain: t.ext
+                  smtp_host: m.t.ext
+                  admin: a@t.ext
+                credentials:
+                  user: u
+                  password: p
+                policies:
+                  ext_mail_allowed: []
+                  pwd_no_change: []
+                  pwd_no_expire: []
+                rules:
+                  - scope: CLASS
+                    match: "6.A"
+                    attributes:
+                      - attribute: extensionAttribute5
+                        value: "Zaci"
+                    groups:
+                      - "CN=Skupina,DC=t,DC=local"
+                """;
+        YamlAppConfig c = new YamlAppConfig(
+                new ByteArrayInputStream(yaml.getBytes(StandardCharsets.UTF_8)));
+
+        // serializovat a znovu načíst
+        StringWriter sw = new StringWriter();
+        c.writeTo(sw);
+        YamlAppConfig reloaded = new YamlAppConfig(
+                new ByteArrayInputStream(sw.toString().getBytes(StandardCharsets.UTF_8)));
+
+        assertEquals(1, reloaded.getRules().size());
+        SyncRule rule = reloaded.getRules().get(0);
+        assertEquals(SyncScope.CLASS, rule.getScope());
+        assertEquals("6.A", rule.getMatch());
+        assertEquals(1, rule.getAttributes().size());
+        assertEquals("extensionAttribute5", rule.getAttributes().get(0).attribute());
+        assertEquals(1, rule.getGroups().size());
+    }
+
     // --- Neplatné pravidlo (neznámý scope) ---
 
     @Test

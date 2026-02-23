@@ -55,7 +55,7 @@ public class FacultyServiceImpl implements FacultyService {
         for (int year = 1; year <= 9; year++) {
             for (char letter = 'A'; letter <= 'E'; letter++) {
                 String classLabel = year + "." + letter;
-                String dlDn = "CN=Ucitele-Trida-" + year + letter
+                String dlDn = "CN=Ucitele-Tridni-" + year + letter
                         + "," + config.getLdapBaseDistributionLists();
 
                 FacultyRecord teacher = teacherByClass.get(classLabel);
