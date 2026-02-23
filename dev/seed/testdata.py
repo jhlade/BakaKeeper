@@ -106,6 +106,7 @@ def _f(s: str) -> str:
     if s.endswith("ký"):  return s[:-2] + "ká"
     if s.endswith("ý"):   return s[:-1] + "á"
     if s.endswith("ek"):  return s[:-2] + "ková"
+    if s.endswith("ec"):  return s[:-2] + "cová"
     if s.endswith("a"):   return s[:-1] + "ová"
     return s + "ová"
 
