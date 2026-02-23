@@ -7,31 +7,41 @@ import cz.zsstudanka.skola.bakakeeper.model.StudentRecord;
 import cz.zsstudanka.skola.bakakeeper.model.SyncScope;
 import cz.zsstudanka.skola.bakakeeper.repository.LDAPUserRepository;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
- * Implementace aplikace deklarativních pravidel.
+ * Konvergentní implementace aplikace deklarativních pravidel.
  *
- * Podporované scopes:
- * <ul>
- *   <li>USER – jednotlivec dle přihlašovacího jména (sAMAccountName / UPN prefix)</li>
- *   <li>INDIVIDUAL – jednotlivec dle interního ID</li>
- *   <li>CATEGORY – kategorie uživatele (ZAK, UCITEL, VEDENI, PROVOZ, ASISTENT, VYCHOVATELKA)</li>
- *   <li>CLASS – třída (např. "6.A")</li>
- *   <li>GRADE – ročník (např. "6")</li>
- *   <li>LEVEL – stupeň ("1" = ročníky 1–5, "2" = ročníky 6–9)</li>
- *   <li>LEVEL_1, LEVEL_2 – stupeň (explicitní, zpětná kompatibilita)</li>
- *   <li>ALL_STUDENTS – všichni žáci</li>
- *   <li>TEACHERS – učitelé</li>
- *   <li>WHOLE_SCHOOL – celá škola</li>
- * </ul>
+ * <p>Pravidla definují CÍLOVÝ stav – jaké atributy a skupinové členství má každý
+ * uživatel mít. Služba zajistí konvergenci k cílovému stavu:</p>
+ * <ol>
+ *   <li><b>Sestavení cílového stavu</b> – pro každého uživatele: které atributy
+ *       a hodnoty, do jakých skupin patří</li>
+ *   <li><b>Aplikace</b> – nastavení atributů, přidání do skupin</li>
+ *   <li><b>Rekonciliace atributů</b> – vyčištění hodnot, které žádné pravidlo nepřiřazuje
+ *       (při odebrání pravidla z konfigurace)</li>
+ *   <li><b>Rekonciliace skupin</b> – odebrání členů, kteří do skupiny dle pravidel nepatří</li>
+ * </ol>
  *
- * Pravidlo může nastavit více atributů a přidat uživatele do více skupin najednou.
+ * <p>Spravované atributy (= atributy zmíněné v alespoň jednom pravidle) se rekoncilují
+ * na VŠECH uživatelích – pokud uživateli žádné pravidlo atribut nepřiřazuje, hodnota
+ * se vyčistí. Atributy extensionAttribute1 a extensionAttribute2 se nerekoncilují
+ * (jsou spravovány jinými fázemi synchronizace), ale mohou být pravidly nastaveny.</p>
+ *
+ * <p>Podporované scopes:
+ * USER, INDIVIDUAL, CATEGORY, CLASS, GRADE, LEVEL, LEVEL_1, LEVEL_2,
+ * ALL_STUDENTS, TEACHERS, WHOLE_SCHOOL</p>
  *
  * @author Jan Hladěna
  */
 public class RuleServiceImpl implements RuleService {
+
+    /** Atributy spravované jinými sync fázemi – NIKDY se nerekoncilují přes pravidla. */
+    private static final Set<String> PROTECTED_ATTRIBUTES = Set.of(
+            "extensionAttribute1",  // INTERN_KOD – StudentService, FacultyService
+            "extensionAttribute2"   // mail restriction – StudentService
+    );
 
     private final LDAPUserRepository ldapRepo;
 
@@ -45,64 +55,227 @@ public class RuleServiceImpl implements RuleService {
         listener.onPhaseStart("Aplikace deklarativních pravidel");
         List<SyncResult> results = new ArrayList<>();
 
+        // 1. Sbírat spravované atributy a skupiny ze VŠECH pravidel
+        Set<String> managedAttrs = collectManagedAttributes(rules);
+        Set<String> managedGroups = collectManagedGroups(rules);
+
+        listener.onProgress("Spravované atributy: " + managedAttrs);
+        if (!managedGroups.isEmpty()) {
+            listener.onProgress("Spravované skupiny: " + managedGroups.size());
+        }
+
+        // 2. Sestavit požadovaný (cílový) stav pro každého uživatele
+        //    desiredAttrs: dn → (attrName → value) – poslední pravidlo v pořadí vyhrává
+        //    desiredGroupMembers: groupDn → Set<memberDn>
+        Map<String, Map<String, String>> desiredAttrs = new HashMap<>();
+        Map<String, Set<String>> desiredGroupMembers = new HashMap<>();
+
+        // inicializovat skupiny (i prázdné – pro rekonciliaci)
+        for (String groupDn : managedGroups) {
+            desiredGroupMembers.put(groupDn, new HashSet<>());
+        }
+
         for (SyncRule rule : rules) {
             List<StudentRecord> matching = filterByRule(rule, users);
             listener.onProgress("Pravidlo " + rule + " → " + matching.size() + " záznamů.");
 
             for (StudentRecord user : matching) {
                 if (user.getDn() == null) continue;
+                String dn = user.getDn();
 
-                if (repair) {
-                    results.addAll(applyRuleToUser(rule, user));
-                } else {
-                    // suchý běh – reportovat co by se stalo
-                    results.add(SyncResult.skipped(user.getInternalId(),
-                            "Pravidlo by nastavilo: " + rule));
+                // atributy – poslední pravidlo v pořadí vyhrává při konfliktu
+                if (rule.getAttributes() != null) {
+                    for (SyncRuleAttribute attr : rule.getAttributes()) {
+                        desiredAttrs.computeIfAbsent(dn, k -> new HashMap<>())
+                                .put(attr.attribute(), attr.value());
+                    }
+                }
+
+                // skupiny
+                if (rule.getGroups() != null) {
+                    for (String groupDn : rule.getGroups()) {
+                        desiredGroupMembers.computeIfAbsent(groupDn, k -> new HashSet<>())
+                                .add(dn);
+                    }
                 }
             }
         }
 
+        // 3. Aplikovat požadovaný stav a rekoncilovat atributy
+        results.addAll(reconcileAttributes(users, managedAttrs, desiredAttrs, repair, listener));
+
+        // 4. Aplikovat a rekoncilovat skupiny
+        results.addAll(reconcileGroups(managedGroups, desiredGroupMembers, repair, listener));
+
+        // souhrn
         int ok = (int) results.stream().filter(SyncResult::isSuccess).count();
         int err = (int) results.stream().filter(r -> !r.isSuccess()).count();
         listener.onPhaseEnd("Aplikace deklarativních pravidel", ok, err);
         return results;
     }
 
-    // ---- Interní metody ----
+    // ---- Rekonciliace atributů ----
 
     /**
-     * Aplikuje pravidlo na jednoho uživatele – nastaví atributy a přidá do skupin.
+     * Porovná požadovaný stav atributů s aktuálním a provede nastavení/vyčištění.
+     * <p>
+     * Pro každý spravovaný atribut a každého uživatele:
+     * <ul>
+     *   <li>Pokud pravidlo přiřazuje hodnotu a ta se liší od aktuální → nastavit</li>
+     *   <li>Pokud žádné pravidlo nepřiřazuje hodnotu a aktuální je neprázdná → vyčistit</li>
+     *   <li>Pokud je atribut chráněný (EXT01, EXT02) → nikdy nevyčistit</li>
+     * </ul>
      */
-    private List<SyncResult> applyRuleToUser(SyncRule rule, StudentRecord user) {
+    private List<SyncResult> reconcileAttributes(List<StudentRecord> users,
+                                                   Set<String> managedAttrs,
+                                                   Map<String, Map<String, String>> desiredAttrs,
+                                                   boolean repair,
+                                                   SyncProgressListener listener) {
         List<SyncResult> results = new ArrayList<>();
-        String dn = user.getDn();
-        String id = user.getInternalId() != null ? user.getInternalId() : dn;
 
-        // nastavení atributů
-        if (rule.getAttributes() != null) {
-            for (SyncRuleAttribute attr : rule.getAttributes()) {
-                EBakaLDAPAttributes resolved = resolveAttribute(attr.attribute());
-                if (resolved != null) {
-                    ldapRepo.updateAttribute(dn, resolved, attr.value());
-                    results.add(SyncResult.updated(id,
-                            "Pravidlo: " + attr.attribute() + " = " + attr.value()));
+        for (StudentRecord user : users) {
+            if (user.getDn() == null) continue;
+            String dn = user.getDn();
+            String id = user.getInternalId() != null ? user.getInternalId() : dn;
+
+            Map<String, String> userDesired = desiredAttrs.getOrDefault(dn, Map.of());
+
+            for (String attrName : managedAttrs) {
+                String desiredValue = userDesired.get(attrName);
+                String currentValue = getCurrentValue(user, attrName);
+                EBakaLDAPAttributes resolved = resolveAttribute(attrName);
+
+                if (resolved == null) {
+                    results.add(SyncResult.error(id, "Neznámý atribut: " + attrName));
+                    continue;
+                }
+
+                if (desiredValue != null) {
+                    // pravidlo přiřazuje hodnotu – nastavit, pokud se liší
+                    if (!desiredValue.equals(currentValue)) {
+                        if (repair) {
+                            ldapRepo.updateAttribute(dn, resolved, desiredValue);
+                        }
+                        results.add(SyncResult.updated(id,
+                                "Pravidlo: " + attrName + " = " + desiredValue
+                                        + (currentValue != null ? " (bylo: " + currentValue + ")" : "")));
+                    }
+                    // shodná hodnota → žádná akce (NO_CHANGE se nereportuje pro každý atribut)
                 } else {
-                    results.add(SyncResult.error(id,
-                            "Neznámý atribut: " + attr.attribute()));
+                    // žádné pravidlo nepřiřazuje – vyčistit, pokud je nastaven
+                    if (currentValue != null && !currentValue.isEmpty()) {
+                        // chráněné atributy se nerekoncilují
+                        if (PROTECTED_ATTRIBUTES.contains(attrName)) {
+                            continue;
+                        }
+                        if (repair) {
+                            ldapRepo.updateAttribute(dn, resolved, "");
+                        }
+                        results.add(SyncResult.updated(id,
+                                "Rekonciliace: " + attrName + " vyčištěn (bylo: " + currentValue + ")"));
+                    }
                 }
             }
         }
 
-        // přidání do skupin
-        if (rule.getGroups() != null) {
-            for (String groupDn : rule.getGroups()) {
-                ldapRepo.addToGroup(dn, groupDn);
-                results.add(SyncResult.updated(id,
-                        "Přidán do skupiny: " + groupDn));
+        return results;
+    }
+
+    // ---- Rekonciliace skupin ----
+
+    /**
+     * Porovná požadované členství ve spravovaných skupinách s aktuálním a přidá/odebere členy.
+     */
+    private List<SyncResult> reconcileGroups(Set<String> managedGroups,
+                                               Map<String, Set<String>> desiredGroupMembers,
+                                               boolean repair,
+                                               SyncProgressListener listener) {
+        List<SyncResult> results = new ArrayList<>();
+
+        for (String groupDn : managedGroups) {
+            Set<String> desired = desiredGroupMembers.getOrDefault(groupDn, Set.of());
+
+            // načíst aktuální členy (i v suchém běhu – pro reportování)
+            List<String> currentMembers = ldapRepo.listDirectMembers(groupDn);
+
+            // přidat chybějící členy
+            for (String memberDn : desired) {
+                boolean present = currentMembers.stream()
+                        .anyMatch(m -> m.equalsIgnoreCase(memberDn));
+                if (!present) {
+                    if (repair) {
+                        ldapRepo.addToGroup(memberDn, groupDn);
+                    }
+                    results.add(SyncResult.updated(memberDn,
+                            "Přidán do skupiny: " + shortGroupName(groupDn)));
+                }
+            }
+
+            // odebrat přebytečné členy
+            for (String member : currentMembers) {
+                boolean shouldBeMember = desired.stream()
+                        .anyMatch(d -> d.equalsIgnoreCase(member));
+                if (!shouldBeMember) {
+                    if (repair) {
+                        ldapRepo.removeFromGroup(member, groupDn);
+                    }
+                    results.add(SyncResult.updated(member,
+                            "Odebrán ze skupiny: " + shortGroupName(groupDn)));
+                }
             }
         }
 
         return results;
+    }
+
+    // ---- Sběr spravovaných atributů a skupin ----
+
+    /**
+     * Vrátí množinu názvů atributů zmíněných v jakémkoli pravidle.
+     */
+    private Set<String> collectManagedAttributes(List<SyncRule> rules) {
+        Set<String> attrs = new LinkedHashSet<>();
+        for (SyncRule rule : rules) {
+            if (rule.getAttributes() != null) {
+                for (SyncRuleAttribute attr : rule.getAttributes()) {
+                    attrs.add(attr.attribute());
+                }
+            }
+        }
+        return attrs;
+    }
+
+    /**
+     * Vrátí množinu DN skupin zmíněných v jakémkoli pravidle.
+     */
+    private Set<String> collectManagedGroups(List<SyncRule> rules) {
+        Set<String> groups = new LinkedHashSet<>();
+        for (SyncRule rule : rules) {
+            if (rule.getGroups() != null) {
+                groups.addAll(rule.getGroups());
+            }
+        }
+        return groups;
+    }
+
+    // ---- Pomocné metody ----
+
+    /**
+     * Zjistí aktuální hodnotu atributu z LDAP dat uloženého v StudentRecord.
+     * Pro title a extensionAttribute1/2 vrací hodnoty ze standardních polí,
+     * pro extensionAttribute3-15 z mapy ruleAttributes.
+     */
+    private String getCurrentValue(StudentRecord user, String attrName) {
+        if ("extensionAttribute1".equalsIgnoreCase(attrName)) {
+            return user.getInternalId();
+        }
+        if ("extensionAttribute2".equalsIgnoreCase(attrName)) {
+            return user.isExtMailRestricted() ? "TRUE" : null;
+        }
+        if ("title".equalsIgnoreCase(attrName)) {
+            return user.getTitle();
+        }
+        return user.getRuleAttribute(attrName);
     }
 
     /**
@@ -206,5 +379,16 @@ public class RuleServiceImpl implements RuleService {
             }
         }
         return null;
+    }
+
+    /**
+     * Zkrátí DN skupiny na CN pro čitelnější výpis.
+     */
+    private String shortGroupName(String groupDn) {
+        if (groupDn != null && groupDn.startsWith("CN=")) {
+            int comma = groupDn.indexOf(',');
+            return comma > 0 ? groupDn.substring(3, comma) : groupDn.substring(3);
+        }
+        return groupDn;
     }
 }

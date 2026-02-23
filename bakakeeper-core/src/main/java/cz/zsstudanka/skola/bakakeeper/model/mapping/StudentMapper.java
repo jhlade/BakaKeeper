@@ -7,6 +7,10 @@ import cz.zsstudanka.skola.bakakeeper.model.entities.DataLDAP;
 import cz.zsstudanka.skola.bakakeeper.model.entities.DataSQL;
 import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 /**
  * Mapper pro převod dat žáka z DataSQL a DataLDAP na typovaný StudentRecord.
  *
@@ -120,8 +124,37 @@ public class StudentMapper {
         record.setExtMailRestricted(
                 EBakaLDAPAttributes.BK_LITERAL_TRUE.value().equalsIgnoreCase(ext02));
 
+        // aktuální hodnoty atributů pro konvergentní rekonciliaci pravidel
+        // (extensionAttribute3-15 + title) – umožňuje zjistit, zda atribut
+        // potřebuje vyčistit při odebrání pravidla z konfigurace
+        Map<String, String> ruleAttrs = new HashMap<>();
+        for (EBakaLDAPAttributes ext : RULE_ELIGIBLE_ATTRIBUTES) {
+            String val = MapperUtils.getStringAttr(ldap, ext);
+            if (val != null && !val.isEmpty()) {
+                ruleAttrs.put(ext.attribute(), val);
+            }
+        }
+        // title je samostatné pole, ale pro rekonciliaci potřebujeme i jeho hodnotu v mapě
+        if (record.getTitle() != null && !record.getTitle().isEmpty()) {
+            ruleAttrs.put(EBakaLDAPAttributes.TITLE.attribute(), record.getTitle());
+        }
+        record.setRuleAttributes(ruleAttrs);
+
         return record;
     }
+
+    /**
+     * Atributy spravovatelné pravidly – extensionAttribute3-15.
+     * EXT01 (INTERN_KOD) a EXT02 (mail restriction) jsou spravovány jinými fázemi
+     * synchronizace a NEREKONCILUJÍ se přes pravidla.
+     */
+    private static final List<EBakaLDAPAttributes> RULE_ELIGIBLE_ATTRIBUTES = List.of(
+            EBakaLDAPAttributes.EXT03, EBakaLDAPAttributes.EXT04, EBakaLDAPAttributes.EXT05,
+            EBakaLDAPAttributes.EXT06, EBakaLDAPAttributes.EXT07, EBakaLDAPAttributes.EXT08,
+            EBakaLDAPAttributes.EXT09, EBakaLDAPAttributes.EXT10, EBakaLDAPAttributes.EXT11,
+            EBakaLDAPAttributes.EXT12, EBakaLDAPAttributes.EXT13, EBakaLDAPAttributes.EXT14,
+            EBakaLDAPAttributes.EXT15
+    );
 
     /**
      * Vrátí hodnotu z DataSQL, přičemž sentinel "(NULL)" nahrazuje skutečným null.

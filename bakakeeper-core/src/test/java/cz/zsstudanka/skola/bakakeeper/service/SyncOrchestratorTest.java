@@ -75,6 +75,8 @@ class SyncOrchestratorTest {
         when(studentService.syncStudentData(any(), any(), anyBoolean(), any())).thenReturn(List.of());
         when(studentService.retireOrphanedStudents(any(), any(), anyBoolean(), any())).thenReturn(List.of());
         when(guardianService.syncGuardians(any(), any(), anyBoolean(), any())).thenReturn(List.of());
+        // konvergentní model – pravidla se volají vždy (kvůli rekonciliaci)
+        when(ruleService.applyRules(any(), any(), anyBoolean(), any())).thenReturn(List.of());
 
         List<SyncResult> results = orchestrator.runFullSync(false, SyncProgressListener.SILENT);
 
@@ -85,8 +87,8 @@ class SyncOrchestratorTest {
         verify(studentService).syncStudentData(any(), any(), eq(false), any());
         verify(studentService).retireOrphanedStudents(any(), any(), eq(false), any());
         verify(guardianService).syncGuardians(any(), any(), eq(false), any());
-        // pravidla prázdná → ruleService by neměl být volán
-        verifyNoInteractions(ruleService);
+        // konvergentní model – pravidla se volají vždy (i s prázdnými rules – kvůli rekonciliaci)
+        verify(ruleService).applyRules(eq(List.of()), any(), eq(false), any());
     }
 
     @Test
@@ -109,11 +111,12 @@ class SyncOrchestratorTest {
         when(studentService.syncStudentData(any(), any(), anyBoolean(), any())).thenReturn(List.of());
         when(studentService.retireOrphanedStudents(any(), any(), anyBoolean(), any())).thenReturn(List.of());
         when(guardianService.syncGuardians(any(), any(), anyBoolean(), any())).thenReturn(List.of());
+        when(ruleService.applyRules(any(), any(), anyBoolean(), any())).thenReturn(List.of());
 
         orchestrator.runFullSync(true, SyncProgressListener.SILENT);
 
-        // s repair=true se LDAP načítá vícekrát (po inicializaci)
-        verify(ldapUserRepo, atLeast(2)).findAllStudents(any(), any());
+        // s repair=true se LDAP načítá vícekrát (po inicializaci + před pravidly)
+        verify(ldapUserRepo, atLeast(3)).findAllStudents(any(), any());
     }
 
     @Test
@@ -140,6 +143,7 @@ class SyncOrchestratorTest {
                 .thenReturn(List.of());
         when(guardianService.syncGuardians(any(), any(), anyBoolean(), any()))
                 .thenReturn(List.of());
+        when(ruleService.applyRules(any(), any(), anyBoolean(), any())).thenReturn(List.of());
 
         List<SyncResult> results = orchestrator.runFullSync(false, SyncProgressListener.SILENT);
 

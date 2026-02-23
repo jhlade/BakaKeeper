@@ -3,6 +3,9 @@ package cz.zsstudanka.skola.bakakeeper.model;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Záznam žáka – typovaná entita slučující data z SQL evidence a LDAP.
  *
@@ -39,6 +42,13 @@ public class StudentRecord extends Person {
     /** omezení příjmu externí pošty (extensionAttribute2 = TRUE) */
     private boolean extMailRestricted;
 
+    /**
+     * Aktuální hodnoty atributů spravovaných pravidly (extensionAttribute3-15, title).
+     * Naplněno z LDAP při fromLDAP() pro konvergentní rekonciliaci –
+     * umožňuje zjistit, zda je potřeba atribut vyčistit.
+     */
+    private Map<String, String> ruleAttributes = new HashMap<>();
+
     /** interní ID primárního zákonného zástupce */
     private String guardianInternalId;
 
@@ -56,4 +66,14 @@ public class StudentRecord extends Person {
 
     /** datum konce evidence (EVID_DO) */
     private String expired;
+
+    /**
+     * Vrátí aktuální hodnotu atributu spravovaného pravidly z LDAP.
+     *
+     * @param attrName název LDAP atributu (např. "extensionAttribute5")
+     * @return aktuální hodnota, nebo null pokud atribut není nastaven
+     */
+    public String getRuleAttribute(String attrName) {
+        return ruleAttributes != null ? ruleAttributes.get(attrName) : null;
+    }
 }

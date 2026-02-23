@@ -36,6 +36,20 @@ public class BakaLDAPUserRepository implements LDAPUserRepository {
             EBakaLDAPAttributes.EXT01.attribute(),
             EBakaLDAPAttributes.EXT02.attribute(),
             EBakaLDAPAttributes.TITLE.attribute(),
+            // extensionAttribute3-15 – pro konvergentní rekonciliaci pravidel
+            EBakaLDAPAttributes.EXT03.attribute(),
+            EBakaLDAPAttributes.EXT04.attribute(),
+            EBakaLDAPAttributes.EXT05.attribute(),
+            EBakaLDAPAttributes.EXT06.attribute(),
+            EBakaLDAPAttributes.EXT07.attribute(),
+            EBakaLDAPAttributes.EXT08.attribute(),
+            EBakaLDAPAttributes.EXT09.attribute(),
+            EBakaLDAPAttributes.EXT10.attribute(),
+            EBakaLDAPAttributes.EXT11.attribute(),
+            EBakaLDAPAttributes.EXT12.attribute(),
+            EBakaLDAPAttributes.EXT13.attribute(),
+            EBakaLDAPAttributes.EXT14.attribute(),
+            EBakaLDAPAttributes.EXT15.attribute(),
     };
 
     public BakaLDAPUserRepository(LDAPConnector ldap) {
