@@ -2,6 +2,7 @@
 /local/
 
 /.*/
+!/.github/
 
 /cz.zsstudanka.skola.iml
 *.iml
