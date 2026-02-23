@@ -1,0 +1,43 @@
+ldap:
+  domain: test.local
+  server: dc.test.local
+  ssl: true
+  base: "OU=Uzivatele,DC=test,DC=local"
+  students: "OU=Zaci,OU=Uzivatele,DC=test,DC=local"
+  alumni: "OU=Alumni,OU=Zaci,OU=Uzivatele,DC=test,DC=local"
+  faculty: "OU=Zamestnanci,OU=Uzivatele,DC=test,DC=local"
+  teachers: "OU=Ucitele,OU=Zamestnanci,OU=Uzivatele,DC=test,DC=local"
+  management: "OU=Vedeni,OU=Zamestnanci,OU=Uzivatele,DC=test,DC=local"
+  student_groups: "OU=Zaci,OU=Skupiny,DC=test,DC=local"
+  global_groups: "OU=Uzivatele,OU=Skupiny,DC=test,DC=local"
+  distribution_lists: "OU=DL,OU=Skupiny,DC=test,DC=local"
+  contacts: "OU=Kontakty,DC=test,DC=local"
+
+sql:
+  host: sql.test.local
+  database: testdb
+  method: ntlm
+
+mail:
+  domain: test.ext
+  smtp_host: mail.test.ext
+  admin: admin@test.ext
+
+credentials:
+  user: testuser
+  password: heslo123
+
+policies:
+  ext_mail_allowed: [6, 7, 8, 9]
+  pwd_no_change: [1, 2, 3]
+  pwd_no_expire: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+rules:
+  - scope: CLASS
+    match: "6.A"
+    attribute: extensionAttribute5
+    value: "TRUE"
+  - scope: GRADE
+    match: "9"
+    attribute: extensionAttribute3
+    value: "ABSOLVENT"
