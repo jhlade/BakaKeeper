@@ -14,3 +14,6 @@
 /dev/.data/keytabs/*
 !/dev/.data/samba/.gitkeep
 !/dev/.data/keytabs/.gitkeep
+
+/bakakeeper-core/target/
+/bakakeeper-cli/target/

@@ -5,155 +5,167 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>cz.zsstudanka.skola</groupId>
-    <artifactId>bakakeeper</artifactId>
-    <version>1.1-SNAPSHOT</version>
+    <artifactId>bakakeeper-parent</artifactId>
+    <version>2.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
 
     <name>BakaKeeper</name>
     <description>Synchronizační nástroj evidence žáků v programu Bakaláři s uživatelskými účty v Active Directory.</description>
     <inceptionYear>2019</inceptionYear>
     <url>https://github.com/jhlade/BakaKeeper</url>
 
+    <modules>
+        <module>bakakeeper-core</module>
+        <module>bakakeeper-cli</module>
+    </modules>
+
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.app.mainClass>cz.zsstudanka.skola.bakakeeper.App</project.app.mainClass>
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
+
+        <!-- verze závislostí -->
+        <lombok.version>1.18.42</lombok.version>
+        <javax.mail.version>1.6.2</javax.mail.version>
+        <mssql-jdbc.version>10.2.4.jre8</mssql-jdbc.version>
+        <jtds.version>1.3.1</jtds.version>
+        <adsddl.version>1.9</adsddl.version>
+        <slf4j.version>1.7.10</slf4j.version>
+        <snakeyaml.version>2.3</snakeyaml.version>
+
+        <!-- verze testovacích závislostí -->
+        <junit-jupiter.version>5.11.4</junit-jupiter.version>
+        <mockito.version>5.14.2</mockito.version>
+
+        <!-- verze pluginů -->
+        <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
+        <maven-surefire-plugin.version>3.5.2</maven-surefire-plugin.version>
+        <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
+        <maven-shade-plugin.version>3.6.0</maven-shade-plugin.version>
     </properties>
 
-    <packaging>jar</packaging>
+    <dependencyManagement>
+        <dependencies>
+            <!-- interní moduly -->
+            <dependency>
+                <groupId>cz.zsstudanka.skola</groupId>
+                <artifactId>bakakeeper-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- JavaMail -->
+            <dependency>
+                <groupId>com.sun.mail</groupId>
+                <artifactId>javax.mail</artifactId>
+                <version>${javax.mail.version}</version>
+            </dependency>
+
+            <!-- MS SQL JDBC -->
+            <dependency>
+                <groupId>com.microsoft.sqlserver</groupId>
+                <artifactId>mssql-jdbc</artifactId>
+                <version>${mssql-jdbc.version}</version>
+            </dependency>
+
+            <!-- jTDS -->
+            <dependency>
+                <groupId>net.sourceforge.jtds</groupId>
+                <artifactId>jtds</artifactId>
+                <version>${jtds.version}</version>
+            </dependency>
+
+            <!-- ADSDDL -->
+            <dependency>
+                <groupId>net.tirasa</groupId>
+                <artifactId>adsddl</artifactId>
+                <version>${adsddl.version}</version>
+            </dependency>
+
+            <!-- Lombok -->
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+                <scope>provided</scope>
+            </dependency>
+
+            <!-- SLF4J NOP (vypnutí logování od ADSDDL) -->
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-nop</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
+
+            <!-- SnakeYAML -->
+            <dependency>
+                <groupId>org.yaml</groupId>
+                <artifactId>snakeyaml</artifactId>
+                <version>${snakeyaml.version}</version>
+            </dependency>
+
+            <!-- JUnit 5 -->
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter</artifactId>
+                <version>${junit-jupiter.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <!-- Mockito -->
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-core</artifactId>
+                <version>${mockito.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-junit-jupiter</artifactId>
+                <version>${mockito.version}</version>
+                <scope>test</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <build>
-        <finalName>${project.name}</finalName>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>${maven-compiler-plugin.version}</version>
+                    <configuration>
+                        <source>${maven.compiler.source}</source>
+                        <target>${maven.compiler.target}</target>
+                        <annotationProcessorPaths>
+                            <path>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                                <version>${lombok.version}</version>
+                            </path>
+                        </annotationProcessorPaths>
+                    </configuration>
+                </plugin>
 
-        <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>${maven-surefire-plugin.version}</version>
+                </plugin>
 
-            <!--
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
-                    <finalName>${project.name}-${project.version}</finalName>
-                    <archive>
-                        <manifest>
-                            <addClasspath>true</addClasspath>
-                            <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>cz.zsstudanka.skola.bakakeeper.App</mainClass>
-                        </manifest>
-                        <manifestEntries>
-                            <Built-By>${user.name}</Built-By>
-                            <Build-Jdk>${java.version} (${java.vendor} ${java.vm.version})</Build-Jdk>
-                            <Build-Timestamp>${maven.build.timestamp}}</Build-Timestamp>
-                            <Build-OS>${os.name} ${os.arch} ${os.version}</Build-OS>
-                        </manifestEntries>
-                    </archive>
-                    <appendAssemblyId>false</appendAssemblyId>
-                </configuration>
-            </plugin> -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>${maven-jar-plugin.version}</version>
+                </plugin>
 
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.1</version>
-                <configuration>
-                    <source>${maven.compiler.source}</source>
-                    <target>${maven.compiler.target}</target>
-                    <annotationProcessorPaths>
-                        <path>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                            <version>1.18.42</version>
-                        </path>
-                    </annotationProcessorPaths>
-                </configuration>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>3.1.2</version>
-                <configuration>
-                    <finalName>${project.name}-${project.version}-stripped</finalName>
-                    <archive>
-                        <manifest>
-                            <addClasspath>true</addClasspath>
-                            <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>${project.app.mainClass}</mainClass>
-                        </manifest>
-                        <manifestEntries>
-                            <Built-By>${user.name}</Built-By>
-                            <Build-Jdk>${java.version} (${java.vendor} ${java.vm.version})</Build-Jdk>
-                            <Build-Timestamp>${maven.build.timestamp}}</Build-Timestamp>
-                            <Build-OS>${os.name} ${os.arch} ${os.version}</Build-OS>
-                        </manifestEntries>
-                    </archive>
-                </configuration>
-            </plugin>
-
-        </plugins>
-
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-shade-plugin</artifactId>
+                    <version>${maven-shade-plugin.version}</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
     </build>
 
-    <dependencies>
-        <dependency>
-            <groupId>com.sun.mail</groupId>
-            <artifactId>javax.mail</artifactId>
-            <version>1.6.2</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.microsoft.sqlserver</groupId>
-            <artifactId>mssql-jdbc</artifactId>
-            <version>10.2.4.jre8</version>
-            <scope>compile</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>net.sourceforge.jtds</groupId>
-            <artifactId>jtds</artifactId>
-            <version>1.3.1</version>
-        </dependency>
-
-        <!-- ADSDDL -->
-        <dependency>
-            <groupId>net.tirasa</groupId>
-            <artifactId>adsddl</artifactId>
-            <version>1.9</version>
-        </dependency>
-
-        <!-- Lombok -->
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <version>1.18.42</version>
-        </dependency>
-
-        <!-- vypnutí SLF4J API od ADSDDL; NOP logger musí být v classpath ./lib-->
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-nop</artifactId>
-            <version>1.7.10</version>
-        </dependency>
-
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.13.1</version>
-            <!-- pouze pro testy -->
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
-
-
 </project>
-

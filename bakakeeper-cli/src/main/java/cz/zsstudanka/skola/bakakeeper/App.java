@@ -1,5 +1,6 @@
 package cz.zsstudanka.skola.bakakeeper;
 
+import cz.zsstudanka.skola.bakakeeper.RuntimeContext;
 import cz.zsstudanka.skola.bakakeeper.components.HelpManager;
 import cz.zsstudanka.skola.bakakeeper.components.KeyStoreManager;
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
@@ -24,21 +25,6 @@ import java.util.*;
  */
 public class App {
 
-    /** příznak vývoajářského režimu - neprobíhá zápis do ostrých dat evidence */
-    public static Boolean FLAG_DEVEL = false;
-
-    /** příznak pro nezapisování žádných ostrých dat */
-    public static Boolean FLAG_DRYRUN = false;
-
-    /** příznak inicializace */
-    public static Boolean FLAG_INIT = false;
-
-    /** globální heslo pro sezení */
-    public static String PASSPHRASE = "";
-    /** příznak podrobností */
-    public static Boolean FLAG_VERBOSE = false;
-    /** příznak ladění */
-    public static Boolean FLAG_DEBUG = false;
 
     /**
      * Chod programu.
@@ -85,21 +71,21 @@ public class App {
 
             // přepnutí do vývojového režimu
             if (params.containsKey("develmode")) {
-                FLAG_DEVEL = true;
+                RuntimeContext.FLAG_DEVEL = true;
                 // TODO změna hlášení
                 ReportManager.log(EBakaLogType.LOG_DEVEL, "Je aktivní vývojový režim. Nebude se zapisovat do ostrých dat evidence.");
             }
 
             // TODO - nezapisování ostrých dat
             if (params.containsKey("dryrun")) {
-                FLAG_DRYRUN = true;
+                RuntimeContext.FLAG_DRYRUN = true;
                 // TODO - hlášení + implementace
             }
 
             // společná nastavení - podrobný režim
             if (params.containsKey("verbose")) {
-                FLAG_VERBOSE = true;
-                Settings.getInstance().verbosity(FLAG_VERBOSE);
+                RuntimeContext.FLAG_VERBOSE = true;
+                Settings.getInstance().verbosity(RuntimeContext.FLAG_VERBOSE);
                 ReportManager.log(EBakaLogType.LOG_ERR_VERBOSE, "Aktivován výstup podrobných informací.");
             }
 
@@ -107,11 +93,11 @@ public class App {
             if (params.containsKey("debug")) {
 
                 // automatické přidání --verbose
-                FLAG_VERBOSE = true;
-                Settings.getInstance().verbosity(FLAG_VERBOSE);
+                RuntimeContext.FLAG_VERBOSE = true;
+                Settings.getInstance().verbosity(RuntimeContext.FLAG_VERBOSE);
 
-                FLAG_DEBUG = true;
-                Settings.getInstance().debug(FLAG_DEBUG);
+                RuntimeContext.FLAG_DEBUG = true;
+                Settings.getInstance().debug(RuntimeContext.FLAG_DEBUG);
 
                 ReportManager.log(EBakaLogType.LOG_DEBUG, "Aktivován výstup ladících informací.");
             }
@@ -127,8 +113,8 @@ public class App {
             // společná nastavení - heslo ke konfiguraci
             if (params.containsKey("passphrase")) {
                 if (params.get("passphrase").size() == 1) {
-                    PASSPHRASE = params.get("passphrase").get(0);
-                    Settings.getInstance().setPassphrase(PASSPHRASE);
+                    RuntimeContext.PASSPHRASE = params.get("passphrase").get(0);
+                    Settings.getInstance().setPassphrase(RuntimeContext.PASSPHRASE);
                 } else {
                     ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný parametr -passphrase.");
                     return;
@@ -151,7 +137,7 @@ public class App {
             if (params.containsKey("init")) {
 
                 // probíhá inicializace - dočasně se důvěřuje všem předaným certifikátům
-                App.FLAG_INIT = true;
+                RuntimeContext.FLAG_INIT = true;
 
                 // inicializace se zadaným textovým souborem -f init.conf
                 if (params.containsKey("f")) {
@@ -172,7 +158,7 @@ public class App {
                 }
 
                 // inicializace s výchozím souborem ./settings.conf
-                if (FLAG_VERBOSE) {
+                if (RuntimeContext.FLAG_VERBOSE) {
                     ReportManager.log(EBakaLogType.LOG_VERBOSE, "Probíhá pokus o inicializaci s výchozím souborem settings.conf.");
                 }
                 actionInitialize("./settings.conf");
@@ -186,7 +172,7 @@ public class App {
             }
 
             // vývojový režim - propagace do globálního nastavení
-            Settings.getInstance().setDevelMode(FLAG_DEVEL);
+            Settings.getInstance().setDevelMode(RuntimeContext.FLAG_DEVEL);
 
             /* jednotlivé rutiny */
 
@@ -320,7 +306,7 @@ public class App {
             }
 
             // TODO vývojový test
-            if (params.containsKey("test") && FLAG_DEVEL) {
+            if (params.containsKey("test") && RuntimeContext.FLAG_DEVEL) {
                 System.out.println("====== [ TEST ] ======");
                 //Test.test_16();
                 System.out.println("====== [ /TEST ] ======");
@@ -395,7 +381,7 @@ public class App {
                 }
             }
 
-            if (PASSPHRASE.length() > 0) {
+            if (RuntimeContext.PASSPHRASE.length() > 0) {
                 ReportManager.log(EBakaLogType.LOG_OK, "Šifrovaný datový soubor s nastavením byl úspěšně vytvořen.");
             } else {
                 ReportManager.log(EBakaLogType.LOG_OK, "Datový soubor s nastavením byl úspěšně vytvořen.");
@@ -445,7 +431,7 @@ public class App {
         if (!Settings.getInstance().isValid()) {
             ReportManager.logResult(EBakaLogType.LOG_ERR);
 
-            if (FLAG_VERBOSE) {
+            if (RuntimeContext.FLAG_VERBOSE) {
                 ReportManager.log(EBakaLogType.LOG_ERR_VERBOSE, "Načtená nastavení nejsou platná.");
             }
 
@@ -453,7 +439,7 @@ public class App {
         } else {
             ReportManager.logResult(EBakaLogType.LOG_OK);
 
-            if (FLAG_VERBOSE) {
+            if (RuntimeContext.FLAG_VERBOSE) {
                 ReportManager.log(EBakaLogType.LOG_VERBOSE, "Načtená nastavení nejsou platná.");
             }
 

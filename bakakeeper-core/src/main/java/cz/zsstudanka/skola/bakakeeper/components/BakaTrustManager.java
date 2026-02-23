@@ -1,6 +1,6 @@
 package cz.zsstudanka.skola.bakakeeper.components;
 
-import cz.zsstudanka.skola.bakakeeper.App;
+import cz.zsstudanka.skola.bakakeeper.RuntimeContext;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 
 import javax.net.ssl.TrustManagerFactory;
@@ -86,7 +86,7 @@ public class BakaTrustManager implements X509TrustManager {
     public void checkServerTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException {
 
         // probíhá manuální inicializace - certifikát se bude automaticky přijat
-        if (App.FLAG_INIT) {
+        if (RuntimeContext.FLAG_INIT) {
             return;
         }
 

@@ -1,6 +1,6 @@
 package cz.zsstudanka.skola.bakakeeper.components;
 
-import cz.zsstudanka.skola.bakakeeper.App;
+import cz.zsstudanka.skola.bakakeeper.RuntimeContext;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaEvents;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
@@ -48,7 +48,7 @@ public class ReportManager {
     public void setLogfile(String filename) {
         this.logfile = filename;
 
-        if (App.FLAG_DEBUG) {
+        if (RuntimeContext.FLAG_DEBUG) {
             ReportManager.log(EBakaLogType.LOG_DEBUG, "Byl nastaven výstupní soubor " + filename + " pro protokolování.");
         }
     }
@@ -71,9 +71,9 @@ public class ReportManager {
         // výpis na standardní výstupy
         if (
             type.verbosityLevel().equals(EBakaVerbosityLevel.NORMAL)
-        || (type.verbosityLevel().equals(EBakaVerbosityLevel.VERBOSE) && App.FLAG_VERBOSE)
-        || (type.verbosityLevel().equals(EBakaVerbosityLevel.DEBUG) && App.FLAG_DEBUG)
-        || (type.verbosityLevel().equals(EBakaVerbosityLevel.DEVEL) && App.FLAG_DEVEL)
+        || (type.verbosityLevel().equals(EBakaVerbosityLevel.VERBOSE) && RuntimeContext.FLAG_VERBOSE)
+        || (type.verbosityLevel().equals(EBakaVerbosityLevel.DEBUG) && RuntimeContext.FLAG_DEBUG)
+        || (type.verbosityLevel().equals(EBakaVerbosityLevel.DEVEL) && RuntimeContext.FLAG_DEVEL)
         )
         if (type.isError()) {
             System.err.print(messageBuilder.toString());
@@ -104,11 +104,11 @@ public class ReportManager {
             } catch (Exception e) {
                 System.err.println("[ CHYBA ] Došlo k závažné chybě při pokusu o zápis do protokolu.");
 
-                if (App.FLAG_VERBOSE) {
+                if (RuntimeContext.FLAG_VERBOSE) {
                     System.err.println("[ CHYBA ] " + e.getLocalizedMessage());
                 }
 
-                if (App.FLAG_DEBUG) {
+                if (RuntimeContext.FLAG_DEBUG) {
                     e.printStackTrace(System.err);
                 }
             }
