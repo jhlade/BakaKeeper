@@ -42,6 +42,18 @@ public class StudentRecord extends Person {
     /** interní ID primárního zákonného zástupce */
     private String guardianInternalId;
 
+    /** příjmení zákonného zástupce (z SQL joinu) */
+    private String guardianSurname;
+
+    /** jméno zákonného zástupce (z SQL joinu) */
+    private String guardianGivenName;
+
+    /** telefon zákonného zástupce (z SQL joinu) */
+    private String guardianPhone;
+
+    /** e-mail zákonného zástupce (z SQL joinu) */
+    private String guardianEmail;
+
     /** datum konce evidence (EVID_DO) */
     private String expired;
 }

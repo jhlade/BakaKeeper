@@ -46,6 +46,10 @@ class StudentMapperTest {
         assertEquals("A", r.getClassLetter());
         assertEquals("12", r.getClassNumber());
         assertEquals("67890", r.getGuardianInternalId());
+        assertEquals("Nováková", r.getGuardianSurname());
+        assertEquals("Marie", r.getGuardianGivenName());
+        assertEquals("novakova@email.cz", r.getGuardianEmail());
+        assertEquals("777111222", r.getGuardianPhone());
         assertNull(r.getDn());
     }
 
@@ -139,6 +143,25 @@ class StudentMapperTest {
     }
 
     @Test
+    void fromSQL_nullSentinel_guardianPolaNejsouNastavena() {
+        DataSQL sql = createTestSQL();
+        // simulace LEFT JOIN bez zákonného zástupce – hodnota je sentinel "(NULL)"
+        sql.put(EBakaSQL.F_GUA_BK_ID.basename(), EBakaSQL.NULL.basename());
+        sql.put(EBakaSQL.F_GUA_BK_SURNAME.basename(), EBakaSQL.NULL.basename());
+        sql.put(EBakaSQL.F_GUA_BK_GIVENNAME.basename(), EBakaSQL.NULL.basename());
+        sql.put(EBakaSQL.F_GUA_BK_MAIL.basename(), EBakaSQL.NULL.basename());
+        sql.put(EBakaSQL.F_GUA_BK_MOBILE.basename(), EBakaSQL.NULL.basename());
+
+        StudentRecord r = StudentMapper.fromSQL(sql);
+
+        assertNull(r.getGuardianInternalId());
+        assertNull(r.getGuardianSurname());
+        assertNull(r.getGuardianGivenName());
+        assertNull(r.getGuardianEmail());
+        assertNull(r.getGuardianPhone());
+    }
+
+    @Test
     void extMailNotRestricted() {
         DataLDAP ldap = createTestLDAP();
         ldap.put(EBakaLDAPAttributes.EXT02.attribute(), "FALSE");
@@ -161,6 +184,10 @@ class StudentMapperTest {
         sql.put(EBakaSQL.F_STU_BK_CLASSYEAR.basename(), "5");
         sql.put(EBakaSQL.F_STU_BK_CLASSLETTER.basename(), "A");
         sql.put(EBakaSQL.F_GUA_BK_ID.basename(), "67890");
+        sql.put(EBakaSQL.F_GUA_BK_SURNAME.basename(), "Nováková");
+        sql.put(EBakaSQL.F_GUA_BK_GIVENNAME.basename(), "Marie");
+        sql.put(EBakaSQL.F_GUA_BK_MAIL.basename(), "novakova@email.cz");
+        sql.put(EBakaSQL.F_GUA_BK_MOBILE.basename(), "777111222");
         return sql;
     }
 

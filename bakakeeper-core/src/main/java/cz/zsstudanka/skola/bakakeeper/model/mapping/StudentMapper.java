@@ -55,11 +55,12 @@ public class StudentMapper {
 
         record.setClassLetter(sql.get(EBakaSQL.F_STU_BK_CLASSLETTER.basename()));
 
-        // ID zákonného zástupce (pokud je v SQL joinu)
-        String guaId = sql.get(EBakaSQL.F_GUA_BK_ID.basename());
-        if (guaId != null) {
-            record.setGuardianInternalId(guaId);
-        }
+        // data zákonného zástupce (pokud je v SQL joinu)
+        record.setGuardianInternalId(sqlValue(sql, EBakaSQL.F_GUA_BK_ID));
+        record.setGuardianSurname(sqlValue(sql, EBakaSQL.F_GUA_BK_SURNAME));
+        record.setGuardianGivenName(sqlValue(sql, EBakaSQL.F_GUA_BK_GIVENNAME));
+        record.setGuardianPhone(sqlValue(sql, EBakaSQL.F_GUA_BK_MOBILE));
+        record.setGuardianEmail(sqlValue(sql, EBakaSQL.F_GUA_BK_MAIL));
 
         return record;
     }
@@ -105,6 +106,17 @@ public class StudentMapper {
                 EBakaLDAPAttributes.BK_LITERAL_TRUE.value().equalsIgnoreCase(ext02));
 
         return record;
+    }
+
+    /**
+     * Vrátí hodnotu z DataSQL, přičemž sentinel "(NULL)" nahrazuje skutečným null.
+     */
+    private static String sqlValue(DataSQL sql, EBakaSQL field) {
+        String val = sql.get(field.basename());
+        if (val == null || EBakaSQL.NULL.basename().equals(val)) {
+            return null;
+        }
+        return val;
     }
 
     /**
