@@ -453,18 +453,59 @@ public class YamlAppConfig implements AppConfig {
 
     /**
      * Parsuje jedno pravidlo z YAML mapy.
+     * Podporuje nový formát (pole atributů) i starý formát (jeden atribut).
      */
+    @SuppressWarnings("unchecked")
     private SyncRule parseRule(Map<?, ?> map) {
         try {
             String scopeStr = Objects.toString(map.get("scope"), null);
             String match = Objects.toString(map.get("match"), null);
-            String attribute = Objects.toString(map.get("attribute"), null);
-            String value = Objects.toString(map.get("value"), null);
 
-            if (scopeStr == null || attribute == null) return null;
+            if (scopeStr == null) return null;
 
             SyncScope scope = SyncScope.valueOf(scopeStr.toUpperCase());
-            return new SyncRule(scope, match, attribute, value);
+
+            // --- Atributy ---
+            List<SyncRuleAttribute> attributes = new ArrayList<>();
+
+            // nový formát: pole attributes
+            Object rawAttrs = map.get("attributes");
+            if (rawAttrs instanceof List<?> attrList) {
+                for (Object item : attrList) {
+                    if (item instanceof Map<?, ?> attrMap) {
+                        String attr = Objects.toString(attrMap.get("attribute"), null);
+                        String val = Objects.toString(attrMap.get("value"), null);
+                        if (attr != null) {
+                            attributes.add(new SyncRuleAttribute(attr, val));
+                        }
+                    }
+                }
+            }
+
+            // zpětná kompatibilita: jednoduchý attribute + value
+            if (attributes.isEmpty()) {
+                String attribute = Objects.toString(map.get("attribute"), null);
+                String value = Objects.toString(map.get("value"), null);
+                if (attribute != null) {
+                    attributes.add(new SyncRuleAttribute(attribute, value));
+                }
+            }
+
+            // alespoň jeden atribut nebo skupiny musí existovat
+            // --- Skupiny ---
+            List<String> groups = new ArrayList<>();
+            Object rawGroups = map.get("groups");
+            if (rawGroups instanceof List<?> groupList) {
+                for (Object item : groupList) {
+                    if (item != null) {
+                        groups.add(item.toString());
+                    }
+                }
+            }
+
+            if (attributes.isEmpty() && groups.isEmpty()) return null;
+
+            return new SyncRule(scope, match, attributes, groups);
         } catch (IllegalArgumentException e) {
             return null;
         }
@@ -558,9 +599,25 @@ public class YamlAppConfig implements AppConfig {
         for (SyncRule rule : getRules()) {
             Map<String, Object> r = new LinkedHashMap<>();
             r.put("scope", rule.getScope().name());
-            r.put("match", rule.getMatch());
-            r.put("attribute", rule.getAttribute());
-            r.put("value", rule.getValue());
+            if (rule.getMatch() != null) r.put("match", rule.getMatch());
+
+            // pole atributů
+            if (rule.getAttributes() != null && !rule.getAttributes().isEmpty()) {
+                List<Map<String, Object>> attrsOut = new ArrayList<>();
+                for (SyncRuleAttribute attr : rule.getAttributes()) {
+                    Map<String, Object> a = new LinkedHashMap<>();
+                    a.put("attribute", attr.attribute());
+                    a.put("value", attr.value());
+                    attrsOut.add(a);
+                }
+                r.put("attributes", attrsOut);
+            }
+
+            // pole skupin
+            if (rule.getGroups() != null && !rule.getGroups().isEmpty()) {
+                r.put("groups", new ArrayList<>(rule.getGroups()));
+            }
+
             rulesOut.add(r);
         }
         output.put("rules", rulesOut);

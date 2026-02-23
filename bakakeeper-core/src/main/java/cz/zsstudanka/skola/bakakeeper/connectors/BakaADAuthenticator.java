@@ -901,6 +901,14 @@ public class BakaADAuthenticator implements LDAPConnector {
             }
 
             bakaContext.modifyAttributes(dn, mod);
+        } catch (AttributeInUseException e) {
+            // LDAP error 68 – atribut (např. member) již existuje.
+            // Při ADD_ATTRIBUTE je to očekávaný stav (idempotentní operace).
+            if (Settings.getInstance().debugMode()) {
+                ReportManager.log(EBakaLogType.LOG_DEBUG,
+                        "Atribut [" + attribute.attribute() + "] již existuje na objektu [" + dn + "] – přeskakuji.");
+            }
+            return true;
         } catch (Exception e) {
             ReportManager.handleException("Nebylo možné modifikovat atribut objektu.", e);
             return false;
