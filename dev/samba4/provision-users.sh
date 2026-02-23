@@ -39,7 +39,7 @@ echo "[BakaDev] =========================================="
 #   OU=Skola,DC=skola,DC=local
 #   ├── OU=Uzivatele
 #   │   ├── OU=Zaci
-#   │   │   ├── OU=Rocnik-1 / Trida-A..E  (vytvářejí se v seed/)
+#   │   │   ├── OU=Rocnik-1 … Rocnik-9 (každý s OU=Trida-A … Trida-E)
 #   │   │   └── OU=StudiumUkonceno
 #   │   └── OU=Zamestnanci
 #   │       ├── OU=Ucitele
@@ -69,6 +69,15 @@ create_ou "Zaci"        "${UZIV_BASE}"
 ZACI_BASE="OU=Zaci,${UZIV_BASE}"
 create_ou "StudiumUkonceno" "${ZACI_BASE}"
 
+# Ročníky 1–9, každý s třídami A–E (odpovídá produkčnímu AD na zsstu.local)
+for ROCNIK in $(seq 1 9); do
+    ROCNIK_BASE="OU=Rocnik-${ROCNIK},${ZACI_BASE}"
+    create_ou "Rocnik-${ROCNIK}" "${ZACI_BASE}"
+    for TRIDA in A B C D E; do
+        create_ou "Trida-${TRIDA}" "${ROCNIK_BASE}"
+    done
+done
+
 create_ou "Zamestnanci"   "${UZIV_BASE}"
 ZAMEST_BASE="OU=Zamestnanci,${UZIV_BASE}"
 create_ou "Ucitele"       "${ZAMEST_BASE}"
@@ -97,23 +106,141 @@ echo "[BakaDev] OU struktura vytvořena."
 # ---------------------------------------------------------------------------
 # Exchange schema extension
 #
-# Přidáme atributy msExchHideFromAddressLists a msExchRequireAuthToSendTo,
-# které Samba4 standardně neobsahuje, ale BakaKeeper je používá.
-# Přidání se provede jako schema modification – pokud atributy již existují,
-# ldapadd s -c je přeskočí a pokračuje dál (exit kód ignorujeme).
+# Přidáme atributy, které Samba4 standardně neobsahuje, ale BakaKeeper je
+# používá (jsou součástí MS Exchange / rozšířeného AD schématu):
+#   - extensionAttribute1-15 (ID uživatele, sync flagy, metadata)
+#   - proxyAddresses (seznam proxy-adres)
+#   - msExchHideFromAddressLists, msExchRequireAuthToSendTo
+#
+# Po přidání atributů vynutíme reload schématu a přidáme je do mayContain
+# tříd User a Contact, aby je bylo možné použít na uživatelských účtech
+# i kontaktech zákonných zástupců.
 # ---------------------------------------------------------------------------
 echo ""
 echo "[BakaDev] Importuji Exchange schema extension..."
 
-# Dynamicky doplníme Base DN do LDIF šablony a importujeme
+LDAP_ADMIN_DN="CN=Administrator,CN=Users,${BASE_DN}"
+
+# 1) Přidání attributeSchema definic (ldapadd -c přeskočí existující)
 sed "s/DC=skola,DC=local/${BASE_DN}/g" /exchange-schema.ldif \
     | ldapadd -H ldap://localhost \
-              -D "CN=Administrator,CN=Users,${BASE_DN}" \
+              -D "${LDAP_ADMIN_DN}" \
               -w "${ADMIN_PASSWORD}" \
               -c 2>&1 \
     | grep -v "^$" \
     | sed 's/^/  /' \
     || true    # chyba "Already exists" je v pořádku
+
+# 2) Vynutíme reload schématu, aby nové atributy byly viditelné
+echo "  [*] Reload schématu (schemaUpdateNow)..."
+ldapmodify -H ldap://localhost \
+           -D "${LDAP_ADMIN_DN}" \
+           -w "${ADMIN_PASSWORD}" 2>/dev/null <<SCHEMA_RELOAD || true
+dn:
+changetype: modify
+add: schemaUpdateNow
+schemaUpdateNow: 1
+SCHEMA_RELOAD
+
+# Krátká pauza pro dokončení reload schématu
+sleep 2
+
+# 3) Přidáme nové atributy do mayContain tříd User a Contact,
+#    aby je bylo možné nastavovat na uživatelských účtech a kontaktech.
+#    ldapmodify -c pokračuje, pokud atribut v mayContain již existuje.
+echo "  [*] Přidávám atributy do třídy User..."
+ldapmodify -H ldap://localhost \
+           -D "${LDAP_ADMIN_DN}" \
+           -w "${ADMIN_PASSWORD}" \
+           -c 2>/dev/null <<MAYCONTAIN_USER || true
+dn: CN=User,CN=Schema,CN=Configuration,${BASE_DN}
+changetype: modify
+add: mayContain
+mayContain: extensionAttribute1
+mayContain: extensionAttribute2
+mayContain: extensionAttribute3
+mayContain: extensionAttribute4
+mayContain: extensionAttribute5
+mayContain: extensionAttribute6
+mayContain: extensionAttribute7
+mayContain: extensionAttribute8
+mayContain: extensionAttribute9
+mayContain: extensionAttribute10
+mayContain: extensionAttribute11
+mayContain: extensionAttribute12
+mayContain: extensionAttribute13
+mayContain: extensionAttribute14
+mayContain: extensionAttribute15
+mayContain: proxyAddresses
+mayContain: msExchHideFromAddressLists
+mayContain: msExchRequireAuthToSendTo
+MAYCONTAIN_USER
+
+echo "  [*] Přidávám atributy do třídy Contact..."
+ldapmodify -H ldap://localhost \
+           -D "${LDAP_ADMIN_DN}" \
+           -w "${ADMIN_PASSWORD}" \
+           -c 2>/dev/null <<MAYCONTAIN_CONTACT || true
+dn: CN=Contact,CN=Schema,CN=Configuration,${BASE_DN}
+changetype: modify
+add: mayContain
+mayContain: extensionAttribute1
+mayContain: extensionAttribute2
+mayContain: extensionAttribute3
+mayContain: extensionAttribute4
+mayContain: extensionAttribute5
+mayContain: extensionAttribute6
+mayContain: extensionAttribute7
+mayContain: extensionAttribute8
+mayContain: extensionAttribute9
+mayContain: extensionAttribute10
+mayContain: extensionAttribute11
+mayContain: extensionAttribute12
+mayContain: extensionAttribute13
+mayContain: extensionAttribute14
+mayContain: extensionAttribute15
+mayContain: proxyAddresses
+mayContain: msExchHideFromAddressLists
+mayContain: msExchRequireAuthToSendTo
+MAYCONTAIN_CONTACT
+
+echo "  [*] Přidávám atributy do třídy Group..."
+ldapmodify -H ldap://localhost \
+           -D "${LDAP_ADMIN_DN}" \
+           -w "${ADMIN_PASSWORD}" \
+           -c 2>/dev/null <<MAYCONTAIN_GROUP || true
+dn: CN=Group,CN=Schema,CN=Configuration,${BASE_DN}
+changetype: modify
+add: mayContain
+mayContain: extensionAttribute1
+mayContain: extensionAttribute2
+mayContain: extensionAttribute3
+mayContain: extensionAttribute4
+mayContain: extensionAttribute5
+mayContain: extensionAttribute6
+mayContain: extensionAttribute7
+mayContain: extensionAttribute8
+mayContain: extensionAttribute9
+mayContain: extensionAttribute10
+mayContain: extensionAttribute11
+mayContain: extensionAttribute12
+mayContain: extensionAttribute13
+mayContain: extensionAttribute14
+mayContain: extensionAttribute15
+mayContain: proxyAddresses
+mayContain: msExchHideFromAddressLists
+mayContain: msExchRequireAuthToSendTo
+MAYCONTAIN_GROUP
+
+# Finální reload schématu po úpravě tříd
+ldapmodify -H ldap://localhost \
+           -D "${LDAP_ADMIN_DN}" \
+           -w "${ADMIN_PASSWORD}" 2>/dev/null <<SCHEMA_RELOAD2 || true
+dn:
+changetype: modify
+add: schemaUpdateNow
+schemaUpdateNow: 1
+SCHEMA_RELOAD2
 
 echo "[BakaDev] Exchange schema extension hotova."
 echo ""

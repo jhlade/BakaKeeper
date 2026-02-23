@@ -1,30 +1,276 @@
 # =============================================================================
-# Samba4 – Exchange schema extension (vývojové prostředí)
+# Samba4 – Exchange schema extension (vyvojove prostredi)
 #
-# Přidává atributy, které BakaKeeper používá a které nejsou ve výchozím
-# Samba4 schématu (jsou součástí MS Exchange / rozšířeného AD schématu):
+# Pridava atributy, ktere BakaKeeper pouziva a ktere nejsou ve vychozim
+# Samba4 schematu (jsou soucasti MS Exchange / rozsireneho AD schematu).
 #
-#   msExchHideFromAddressLists   – skrytí kontaktu v Global Address Listu
-#   msExchRequireAuthToSendTo    – distribuční skupiny přijímají poštu jen z domény
+# Atributy:
+#   extensionAttribute1-15   – rozsirene atributy (ID, sync flagy, metadata)
+#   proxyAddresses           – seznam proxy-adres (SMTP, smtp, X400 atp.)
+#   msExchHideFromAddressLists   – skryti kontaktu v GAL
+#   msExchRequireAuthToSendTo    – distribucni skupiny prijimaji postu jen z domeny
 #
-# Importuje se automaticky z provision-users.sh pomocí:
-#   samba-tool schema attribute modify nebo ldapadd
-#
-# OID poznámky:
-#   Atributy jsou definovány pod OID arc 1.2.840.113556.1.4.* (MS AD base schema).
-#   Přesné OID jsou vzaty z dokumentace MS-ADSC a ověřeny v reálném AD.
+# OID poznamky:
+#   extensionAttribute1-10:  1.2.840.113556.1.2.557 az .566 (MS AD base OID arc)
+#   extensionAttribute11-15: 1.2.840.113556.1.4.374 az .378
+#   proxyAddresses:          1.2.840.113556.1.2.210
 #   msExchHideFromAddressLists:  1.2.840.113556.1.4.609
-#   msExchRequireAuthToSendTo:   1.2.840.113556.1.4.2398  (aproximace pro dev)
+#   msExchRequireAuthToSendTo:   1.2.840.113556.1.4.2398 (aproximace pro dev)
 #
-# Pro načtení je potřeba LDAP bind jako Administrator:
+# Import z provision-users.sh:
 #   ldapadd -H ldap://localhost -D "CN=Administrator,CN=Users,DC=skola,DC=local"
-#          -w "$ADMIN_PASSWORD" -f /exchange-schema.ldif
+#           -w "$ADMIN_PASSWORD" -c -f /exchange-schema.ldif
 # =============================================================================
 
 # ---------------------------------------------------------------------------
+# extensionAttribute1
+# ID uzivatele v evidenci Bakalari (INTERN_KOD)
+# ---------------------------------------------------------------------------
+dn: CN=ms-Exch-Extension-Attribute-1,CN=Schema,CN=Configuration,DC=skola,DC=local
+changetype: add
+objectClass: attributeSchema
+cn: ms-Exch-Extension-Attribute-1
+attributeID: 1.2.840.113556.1.2.557
+attributeSyntax: 2.5.5.12
+isSingleValued: TRUE
+oMSyntax: 64
+lDAPDisplayName: extensionAttribute1
+adminDisplayName: ms-Exch-Extension-Attribute-1
+adminDescription: Rozsireny atribut Exchange 1 (ID v evidenci Bakalari)
+searchFlags: 1
+
+# ---------------------------------------------------------------------------
+# extensionAttribute2
+# Omezeni prijmu externi posty (TRUE/FALSE)
+# ---------------------------------------------------------------------------
+dn: CN=ms-Exch-Extension-Attribute-2,CN=Schema,CN=Configuration,DC=skola,DC=local
+changetype: add
+objectClass: attributeSchema
+cn: ms-Exch-Extension-Attribute-2
+attributeID: 1.2.840.113556.1.2.558
+attributeSyntax: 2.5.5.12
+isSingleValued: TRUE
+oMSyntax: 64
+lDAPDisplayName: extensionAttribute2
+adminDisplayName: ms-Exch-Extension-Attribute-2
+adminDescription: Rozsireny atribut Exchange 2
+
+# ---------------------------------------------------------------------------
+# extensionAttribute3
+# ---------------------------------------------------------------------------
+dn: CN=ms-Exch-Extension-Attribute-3,CN=Schema,CN=Configuration,DC=skola,DC=local
+changetype: add
+objectClass: attributeSchema
+cn: ms-Exch-Extension-Attribute-3
+attributeID: 1.2.840.113556.1.2.559
+attributeSyntax: 2.5.5.12
+isSingleValued: TRUE
+oMSyntax: 64
+lDAPDisplayName: extensionAttribute3
+adminDisplayName: ms-Exch-Extension-Attribute-3
+adminDescription: Rozsireny atribut Exchange 3
+
+# ---------------------------------------------------------------------------
+# extensionAttribute4
+# ---------------------------------------------------------------------------
+dn: CN=ms-Exch-Extension-Attribute-4,CN=Schema,CN=Configuration,DC=skola,DC=local
+changetype: add
+objectClass: attributeSchema
+cn: ms-Exch-Extension-Attribute-4
+attributeID: 1.2.840.113556.1.2.560
+attributeSyntax: 2.5.5.12
+isSingleValued: TRUE
+oMSyntax: 64
+lDAPDisplayName: extensionAttribute4
+adminDisplayName: ms-Exch-Extension-Attribute-4
+adminDescription: Rozsireny atribut Exchange 4
+
+# ---------------------------------------------------------------------------
+# extensionAttribute5
+# ---------------------------------------------------------------------------
+dn: CN=ms-Exch-Extension-Attribute-5,CN=Schema,CN=Configuration,DC=skola,DC=local
+changetype: add
+objectClass: attributeSchema
+cn: ms-Exch-Extension-Attribute-5
+attributeID: 1.2.840.113556.1.2.561
+attributeSyntax: 2.5.5.12
+isSingleValued: TRUE
+oMSyntax: 64
+lDAPDisplayName: extensionAttribute5
+adminDisplayName: ms-Exch-Extension-Attribute-5
+adminDescription: Rozsireny atribut Exchange 5
+
+# ---------------------------------------------------------------------------
+# extensionAttribute6
+# ---------------------------------------------------------------------------
+dn: CN=ms-Exch-Extension-Attribute-6,CN=Schema,CN=Configuration,DC=skola,DC=local
+changetype: add
+objectClass: attributeSchema
+cn: ms-Exch-Extension-Attribute-6
+attributeID: 1.2.840.113556.1.2.562
+attributeSyntax: 2.5.5.12
+isSingleValued: TRUE
+oMSyntax: 64
+lDAPDisplayName: extensionAttribute6
+adminDisplayName: ms-Exch-Extension-Attribute-6
+adminDescription: Rozsireny atribut Exchange 6
+
+# ---------------------------------------------------------------------------
+# extensionAttribute7
+# ---------------------------------------------------------------------------
+dn: CN=ms-Exch-Extension-Attribute-7,CN=Schema,CN=Configuration,DC=skola,DC=local
+changetype: add
+objectClass: attributeSchema
+cn: ms-Exch-Extension-Attribute-7
+attributeID: 1.2.840.113556.1.2.563
+attributeSyntax: 2.5.5.12
+isSingleValued: TRUE
+oMSyntax: 64
+lDAPDisplayName: extensionAttribute7
+adminDisplayName: ms-Exch-Extension-Attribute-7
+adminDescription: Rozsireny atribut Exchange 7
+
+# ---------------------------------------------------------------------------
+# extensionAttribute8
+# ---------------------------------------------------------------------------
+dn: CN=ms-Exch-Extension-Attribute-8,CN=Schema,CN=Configuration,DC=skola,DC=local
+changetype: add
+objectClass: attributeSchema
+cn: ms-Exch-Extension-Attribute-8
+attributeID: 1.2.840.113556.1.2.564
+attributeSyntax: 2.5.5.12
+isSingleValued: TRUE
+oMSyntax: 64
+lDAPDisplayName: extensionAttribute8
+adminDisplayName: ms-Exch-Extension-Attribute-8
+adminDescription: Rozsireny atribut Exchange 8
+
+# ---------------------------------------------------------------------------
+# extensionAttribute9
+# ---------------------------------------------------------------------------
+dn: CN=ms-Exch-Extension-Attribute-9,CN=Schema,CN=Configuration,DC=skola,DC=local
+changetype: add
+objectClass: attributeSchema
+cn: ms-Exch-Extension-Attribute-9
+attributeID: 1.2.840.113556.1.2.565
+attributeSyntax: 2.5.5.12
+isSingleValued: TRUE
+oMSyntax: 64
+lDAPDisplayName: extensionAttribute9
+adminDisplayName: ms-Exch-Extension-Attribute-9
+adminDescription: Rozsireny atribut Exchange 9
+
+# ---------------------------------------------------------------------------
+# extensionAttribute10
+# ---------------------------------------------------------------------------
+dn: CN=ms-Exch-Extension-Attribute-10,CN=Schema,CN=Configuration,DC=skola,DC=local
+changetype: add
+objectClass: attributeSchema
+cn: ms-Exch-Extension-Attribute-10
+attributeID: 1.2.840.113556.1.2.566
+attributeSyntax: 2.5.5.12
+isSingleValued: TRUE
+oMSyntax: 64
+lDAPDisplayName: extensionAttribute10
+adminDisplayName: ms-Exch-Extension-Attribute-10
+adminDescription: Rozsireny atribut Exchange 10
+
+# ---------------------------------------------------------------------------
+# extensionAttribute11
+# ---------------------------------------------------------------------------
+dn: CN=ms-Exch-Extension-Attribute-11,CN=Schema,CN=Configuration,DC=skola,DC=local
+changetype: add
+objectClass: attributeSchema
+cn: ms-Exch-Extension-Attribute-11
+attributeID: 1.2.840.113556.1.4.374
+attributeSyntax: 2.5.5.12
+isSingleValued: TRUE
+oMSyntax: 64
+lDAPDisplayName: extensionAttribute11
+adminDisplayName: ms-Exch-Extension-Attribute-11
+adminDescription: Rozsireny atribut Exchange 11
+
+# ---------------------------------------------------------------------------
+# extensionAttribute12
+# ---------------------------------------------------------------------------
+dn: CN=ms-Exch-Extension-Attribute-12,CN=Schema,CN=Configuration,DC=skola,DC=local
+changetype: add
+objectClass: attributeSchema
+cn: ms-Exch-Extension-Attribute-12
+attributeID: 1.2.840.113556.1.4.375
+attributeSyntax: 2.5.5.12
+isSingleValued: TRUE
+oMSyntax: 64
+lDAPDisplayName: extensionAttribute12
+adminDisplayName: ms-Exch-Extension-Attribute-12
+adminDescription: Rozsireny atribut Exchange 12
+
+# ---------------------------------------------------------------------------
+# extensionAttribute13
+# ---------------------------------------------------------------------------
+dn: CN=ms-Exch-Extension-Attribute-13,CN=Schema,CN=Configuration,DC=skola,DC=local
+changetype: add
+objectClass: attributeSchema
+cn: ms-Exch-Extension-Attribute-13
+attributeID: 1.2.840.113556.1.4.376
+attributeSyntax: 2.5.5.12
+isSingleValued: TRUE
+oMSyntax: 64
+lDAPDisplayName: extensionAttribute13
+adminDisplayName: ms-Exch-Extension-Attribute-13
+adminDescription: Rozsireny atribut Exchange 13
+
+# ---------------------------------------------------------------------------
+# extensionAttribute14
+# ---------------------------------------------------------------------------
+dn: CN=ms-Exch-Extension-Attribute-14,CN=Schema,CN=Configuration,DC=skola,DC=local
+changetype: add
+objectClass: attributeSchema
+cn: ms-Exch-Extension-Attribute-14
+attributeID: 1.2.840.113556.1.4.377
+attributeSyntax: 2.5.5.12
+isSingleValued: TRUE
+oMSyntax: 64
+lDAPDisplayName: extensionAttribute14
+adminDisplayName: ms-Exch-Extension-Attribute-14
+adminDescription: Rozsireny atribut Exchange 14
+
+# ---------------------------------------------------------------------------
+# extensionAttribute15
+# ---------------------------------------------------------------------------
+dn: CN=ms-Exch-Extension-Attribute-15,CN=Schema,CN=Configuration,DC=skola,DC=local
+changetype: add
+objectClass: attributeSchema
+cn: ms-Exch-Extension-Attribute-15
+attributeID: 1.2.840.113556.1.4.378
+attributeSyntax: 2.5.5.12
+isSingleValued: TRUE
+oMSyntax: 64
+lDAPDisplayName: extensionAttribute15
+adminDisplayName: ms-Exch-Extension-Attribute-15
+adminDescription: Rozsireny atribut Exchange 15
+
+# ---------------------------------------------------------------------------
+# proxyAddresses
+# Seznam proxy-adres (SMTP:user@domain, smtp:alias@domain, X400:... atp.)
+# V Samba4 muze jiz existovat – ldapadd -c to preskoci.
+# ---------------------------------------------------------------------------
+dn: CN=Proxy-Addresses,CN=Schema,CN=Configuration,DC=skola,DC=local
+changetype: add
+objectClass: attributeSchema
+cn: Proxy-Addresses
+attributeID: 1.2.840.113556.1.2.210
+attributeSyntax: 2.5.5.12
+isSingleValued: FALSE
+oMSyntax: 64
+lDAPDisplayName: proxyAddresses
+adminDisplayName: Proxy-Addresses
+adminDescription: Seznam proxy-adres (SMTP, smtp, X400 atp.)
+
+# ---------------------------------------------------------------------------
 # msExchHideFromAddressLists
-# Skryje kontakt nebo poštovní skupinu v Global Address Listu Exchange / O365.
-# BakaKeeper ho nastavuje na kontakty zákonných zástupců.
+# Skryje kontakt nebo postovni skupinu v Global Address Listu Exchange / O365.
+# BakaKeeper ho nastavuje na kontakty zakonnych zastupcu.
 # ---------------------------------------------------------------------------
 dn: CN=ms-Exch-Hide-From-Address-Lists,CN=Schema,CN=Configuration,DC=skola,DC=local
 changetype: add
@@ -36,12 +282,12 @@ isSingleValued: TRUE
 oMSyntax: 1
 lDAPDisplayName: msExchHideFromAddressLists
 adminDisplayName: ms-Exch-Hide-From-Address-Lists
-adminDescription: Skrytí objektu v Global Address Listu Exchange/O365
+adminDescription: Skryti objektu v Global Address Listu Exchange/O365
 
 # ---------------------------------------------------------------------------
 # msExchRequireAuthToSendTo
-# Zajistí, že distribuční skupina přijímá e-mail pouze od ověřených odesílatelů
-# uvnitř organizace. BakaKeeper ho nastavuje na třídní distribuční skupiny.
+# Zajisti, ze distribucni skupina prijima e-mail pouze od overenych odesilatelu
+# uvnitr organizace. BakaKeeper ho nastavuje na tridni distribucni skupiny.
 # ---------------------------------------------------------------------------
 dn: CN=ms-Exch-Require-Auth-To-Send-To,CN=Schema,CN=Configuration,DC=skola,DC=local
 changetype: add
@@ -53,4 +299,4 @@ isSingleValued: TRUE
 oMSyntax: 1
 lDAPDisplayName: msExchRequireAuthToSendTo
 adminDisplayName: ms-Exch-Require-Auth-To-Send-To
-adminDescription: Omezení příjmu e-mailu skupiny pouze na ověřené odesílatele
+adminDescription: Omezeni prijmu e-mailu skupiny pouze na overene odesilatele

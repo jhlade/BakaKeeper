@@ -60,6 +60,15 @@ else
     mkdir -p /run/samba /keytabs
 fi
 
+# Zajistíme, že plain LDAP bind je povolený (potřebné pro vývoj).
+# samba-tool domain provision --option tuto hodnotu do generovaného smb.conf
+# nezapíše – musíme ji přidat explicitně. Bez tohoto nastavení phpLDAPadmin
+# i BakaKeeper dostávají LDAP error code 8 (Strong(er) authentication required).
+if ! grep -q "ldap server require strong auth" /etc/samba/smb.conf; then
+    sed -i '/^\[global\]/a \\tldap server require strong auth = No' /etc/samba/smb.conf
+    echo "[BakaDev] Přidáno 'ldap server require strong auth = No' do smb.conf"
+fi
+
 echo "[BakaDev] Spouštím Samba4 AD DC pro ${REALM}..."
 
 # Přesměrujeme DNS na interní Samba4 DNS.
