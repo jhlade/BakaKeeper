@@ -84,11 +84,13 @@ public class BakaSQL implements SQLConnector {
             // JTDS ovladač
             Class.forName("net.sourceforge.jtds.jdbc.Driver");
 
+            int port = Settings.getInstance().getSqlPort();
             String url = "jdbc:jtds:" + EBakaPorts.SRV_MSSQL.getScheme() + "://" + Settings.getInstance().getSQL_host()
-                    +"/" + Settings.getInstance().getSQL_database()
-                    +";domain=" + Settings.getInstance().getLocalDomain().toUpperCase() + ";useNTLMv2=true;CharacterSet=UTF-8";
+                    + ":" + port
+                    + "/" + Settings.getInstance().getSQL_database()
+                    + ";domain=" + Settings.getInstance().getLocalDomain().toUpperCase() + ";useNTLMv2=true;CharacterSet=UTF-8";
 
-            con = DriverManager.getConnection(url, Settings.getInstance().getUser(), Settings.getInstance().getPass());
+            con = DriverManager.getConnection(url, Settings.getInstance().getSqlUser(), Settings.getInstance().getSqlPass());
 
             if (this.con != null) {
                 this.debugInfo();
@@ -111,13 +113,14 @@ public class BakaSQL implements SQLConnector {
         StringBuilder conString = new StringBuilder();
 
         // připojovací řetězec integrovaného ověřování
+        int port = Settings.getInstance().getSqlPort();
         conString.append("jdbc:");
-        conString.append(EBakaPorts.SRV_MSSQL.getScheme() + "://" + Settings.getInstance().getSQL_host() + ":" + Integer.toString(EBakaPorts.SRV_MSSQL.getPort()) + "; ");
+        conString.append(EBakaPorts.SRV_MSSQL.getScheme() + "://" + Settings.getInstance().getSQL_host() + ":" + port + "; ");
         conString.append("DatabaseName=" + Settings.getInstance().getSQL_database() + "; ");
 
         // UPN + heslo pro Kerberos
         conString.append("user=" + Settings.getInstance().getKrb_user() + "; ");
-        conString.append("password=" + Settings.getInstance().getPass() + "; ");
+        conString.append("password=" + Settings.getInstance().getSqlPass() + "; ");
         // SPN
         conString.append("ServerSpn=" + Settings.getInstance().getSQL_SPN() + "; ");
 
@@ -183,6 +186,39 @@ public class BakaSQL implements SQLConnector {
     }
 
     /**
+     * Připojení přímým SQL Server ověřením (user/password bez doménového ověření).
+     * Používá Microsoft JDBC Driver.
+     */
+    private void connectSQL() {
+        try {
+            Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
+
+            int port = Settings.getInstance().getSqlPort();
+            SQLServerDataSource ds = new SQLServerDataSource();
+            ds.setServerName(Settings.getInstance().getSQL_host());
+            ds.setPortNumber(port);
+            ds.setDatabaseName(Settings.getInstance().getSQL_database());
+            ds.setUser(Settings.getInstance().getSqlUser());
+            ds.setPassword(Settings.getInstance().getSqlPass());
+            ds.setEncrypt(true);
+            ds.setTrustServerCertificate(true);
+
+            this.con = ds.getConnection();
+
+            if (this.con != null) {
+                debugInfo();
+                valid = true;
+            } else {
+                valid = false;
+            }
+
+        } catch (Exception e) {
+            ReportManager.handleException("Nebylo možné vytvořit SQL Server spojení.", e);
+            valid = false;
+        }
+    }
+
+    /**
      * Vyvoření spojení.
      */
     public void connect() {
@@ -197,6 +233,10 @@ public class BakaSQL implements SQLConnector {
 
         if (Settings.getInstance().sql_NTLM()) {
             connectNTLM();
+        }
+
+        if (Settings.getInstance().isSqlAuth()) {
+            connectSQL();
         }
     }
 

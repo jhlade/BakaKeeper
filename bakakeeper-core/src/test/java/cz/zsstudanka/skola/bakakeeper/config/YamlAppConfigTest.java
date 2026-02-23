@@ -292,7 +292,7 @@ class YamlAppConfigTest {
     @Test
     void emptyRules() {
         // template z resources nemá pravidla
-        InputStream is = YamlAppConfigTest.class.getResourceAsStream("/bakakeeper.yml");
+        InputStream is = YamlAppConfigTest.class.getResourceAsStream("/settings.yml");
         assertNotNull(is);
         YamlAppConfig template = new YamlAppConfig(is);
         assertTrue(template.getRules().isEmpty());

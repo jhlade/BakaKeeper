@@ -1,5 +1,10 @@
 # BakaKeeper – šablona konfigurace synchronizace AD/SQL
 # Tento soubor obsahuje výchozí hodnoty. Upravte dle prostředí školy.
+#
+# Použití:
+#   java -jar bakakeeper.jar --init -f settings.yml -passphrase heslo
+#   java -jar bakakeeper.jar --check -passphrase heslo
+#   java -jar bakakeeper.jar --sync -passphrase heslo --verbose
 
 ldap:
   # Lokální doména Active Directory
@@ -8,6 +13,11 @@ ldap:
   server: dc.skola.local
   # Používat SSL pro komunikaci s AD (vyžadováno pro práci s hesly)
   ssl: true
+  # Port LDAP serveru (volitelné; výchozí: ssl=true → 636, ssl=false → 389)
+  # port: 636
+  # Uživatel a heslo pro LDAP (volitelné; výchozí: credentials.user/password)
+  # user: bakalari
+  # password: ""
   # Základní OU uživatelů
   base: "OU=Uzivatele,OU=Skola,DC=skola,DC=local"
   # OU žáků
@@ -32,18 +42,32 @@ ldap:
 sql:
   # Jméno nebo IP SQL Serveru
   host: sql.skola.local
+  # Port SQL Serveru (volitelné; výchozí: 1433)
+  # port: 1433
   # Název databáze Bakaláři
   database: bakalari
-  # Metoda připojení (ntlm / kerberos)
-  method: ntlm
+  # Metoda připojení (ntlm / kerberos / sql)
+  method: kerberos
+  # Uživatel a heslo pro SQL (volitelné; výchozí: credentials.user/password)
+  # user: bakalari
+  # password: ""
 
 mail:
   # Externí e-mailová doména školy
   domain: skola.ext
   # Jméno nebo IP SMTP serveru
   smtp_host: mail.skola.ext
+  # Port SMTP serveru (volitelné; výchozí: 587)
+  # port: 587
   # E-mailová adresa správce ICT
   admin: ict@skola.ext
+  # Uživatel a heslo pro SMTP (volitelné; výchozí: credentials.user/password)
+  # user: bakalari
+  # password: ""
+  # SMTP autentizace (výchozí: true)
+  # auth: true
+  # SMTP STARTTLS (výchozí: true)
+  # starttls: true
 
 credentials:
   # Uživatelské jméno účtu s právy Domain Administrator

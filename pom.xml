@@ -6,7 +6,7 @@
 
     <groupId>cz.zsstudanka.skola</groupId>
     <artifactId>bakakeeper-parent</artifactId>
-    <version>2.0-SNAPSHOT</version>
+    <version>26.2.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>BakaKeeper</name>
@@ -27,7 +27,7 @@
         <!-- verze závislostí -->
         <lombok.version>1.18.42</lombok.version>
         <javax.mail.version>1.6.2</javax.mail.version>
-        <mssql-jdbc.version>10.2.4.jre8</mssql-jdbc.version>
+        <mssql-jdbc.version>13.2.1.jre11</mssql-jdbc.version>
         <jtds.version>1.3.1</jtds.version>
         <adsddl.version>1.9</adsddl.version>
         <slf4j.version>1.7.10</slf4j.version>

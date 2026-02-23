@@ -1,0 +1,49 @@
+# BakaKeeper – konfigurace pro vývojové prostředí (Podman devenv)
+# Odpovídá setup-dev.sh a podman-compose.yml
+#
+# Použití:
+#   java -jar bakakeeper.jar --init -f settings.yml -passphrase heslo
+#   java -jar bakakeeper.jar --check -passphrase heslo
+#   java -jar bakakeeper.jar --sync -passphrase heslo --verbose
+
+ldap:
+  domain: skola.local
+  server: dc.skola.local
+  ssl: true
+  port: 636
+  base: "OU=Uzivatele,OU=Skola,DC=skola,DC=local"
+  students: "OU=Zaci,OU=Uzivatele,OU=Skola,DC=skola,DC=local"
+  alumni: "OU=StudiumUkonceno,OU=Zaci,OU=Uzivatele,OU=Skola,DC=skola,DC=local"
+  faculty: "OU=Zamestnanci,OU=Uzivatele,OU=Skola,DC=skola,DC=local"
+  teachers: "OU=Ucitele,OU=Zamestnanci,OU=Uzivatele,OU=Skola,DC=skola,DC=local"
+  management: "OU=Vedeni,OU=Zamestnanci,OU=Uzivatele,OU=Skola,DC=skola,DC=local"
+  student_groups: "OU=Zaci,OU=Skupiny,OU=Skola,DC=skola,DC=local"
+  global_groups: "OU=Uzivatele,OU=Skupiny,OU=Skola,DC=skola,DC=local"
+  distribution_lists: "OU=Distribucni,OU=Skupiny,OU=Skola,DC=skola,DC=local"
+  contacts: "OU=Kontakty,OU=Skola,DC=skola,DC=local"
+
+sql:
+  host: sql.skola.local
+  database: bakalari
+  method: sql
+  user: sa
+  password: "SqlServer.Dev2026"
+
+mail:
+  domain: skola.ext
+  smtp_host: mail.skola.ext
+  port: 1025
+  admin: ict@skola.ext
+  auth: false
+  starttls: false
+
+credentials:
+  user: bakalari
+  password: "Baka1234.2026"
+
+policies:
+  ext_mail_allowed: [6, 7, 8, 9]
+  pwd_no_change: [1, 2, 3, 4, 5]
+  pwd_no_expire: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+rules: []

@@ -75,7 +75,7 @@ public class BakaADAuthenticator implements LDAPConnector {
     public BakaADAuthenticator() {
         this.domain = Settings.getInstance().getLDAP_domain();
         this.host = Settings.getInstance().getLDAP_host();
-        authenticate(Settings.getInstance().getUser(), Settings.getInstance().getPass());
+        authenticate(Settings.getInstance().getLdapUser(), Settings.getInstance().getLdapPass());
     }
 
     /**
@@ -90,23 +90,18 @@ public class BakaADAuthenticator implements LDAPConnector {
         this.env = new Hashtable();
 
         // FQDN LDAP serveru
-        String fqdn;
-
-        if (!host.toLowerCase().contains(domain.toLowerCase())) {
-            fqdn = host + "." + domain;
-        } else {
-            fqdn = host;
-        }
+        String fqdn = Settings.getInstance().getLDAP_fqdn();
+        int port = Settings.getInstance().getLdapPort();
 
         env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
         env.put("com.sun.jndi.ldap.connect.pool", "true");
         if (Settings.getInstance().useSSL()) {
             env.put(Context.SECURITY_PROTOCOL, "ssl");
-            // ověřování certifikátu ve vlasním úložišti klíčů
+            // ověřování certifikátu ve vlastním úložišti klíčů
             env.put("java.naming.ldap.factory.socket", "cz.zsstudanka.skola.bakakeeper.components.BakaSSLSocketFactory");
-            env.put(Context.PROVIDER_URL, EBakaPorts.SRV_LDAPS.getScheme() + "://" + fqdn + ":" + EBakaPorts.SRV_LDAPS.getPort() + "/"); // 3269 pro AD GC
+            env.put(Context.PROVIDER_URL, "ldaps://" + fqdn + ":" + port + "/");
         } else {
-            env.put(Context.PROVIDER_URL, EBakaPorts.SRV_LDAP.getScheme() + "://" + fqdn + ":" + EBakaPorts.SRV_LDAP.getPort() + "/"); // 3268 pro AD GC
+            env.put(Context.PROVIDER_URL, "ldap://" + fqdn + ":" + port + "/");
         }
         env.put(Context.SECURITY_AUTHENTICATION, "simple");
         env.put(Context.SECURITY_PRINCIPAL, user + "@" + domain);
@@ -157,7 +152,11 @@ public class BakaADAuthenticator implements LDAPConnector {
             });
 
             if (Settings.getInstance().debugMode()) {
-                ReportManager.log(EBakaLogType.LOG_DEBUG, "Přihlášení do Active Directory pod účtem " + authUserInfo().get(EBakaLDAPAttributes.NAME_DISPLAY.attribute()) + " (" + authUserInfo().get(EBakaLDAPAttributes.UPN.attribute()) + ").");
+                if (authUserInfo() != null) {
+                    ReportManager.log(EBakaLogType.LOG_DEBUG, "Přihlášení do Active Directory pod účtem " + authUserInfo().get(EBakaLDAPAttributes.NAME_DISPLAY.attribute()) + " (" + authUserInfo().get(EBakaLDAPAttributes.UPN.attribute()) + ").");
+                } else {
+                    ReportManager.log(EBakaLogType.LOG_DEBUG, "Přihlášení do Active Directory proběhlo, ale uživatel nebyl nalezen v LDAP stromu.");
+                }
             }
         } catch (Exception e) {
             ReportManager.handleException("Ověření proti Active Directory se nezdařilo.", e);

@@ -20,12 +20,13 @@ import java.security.cert.X509Certificate;
  */
 public class KeyStoreManager {
 
-    // LDAPS port
-    static final Integer LDAPS_PORT = EBakaPorts.SRV_LDAPS.getPort();
-
     public static Boolean initialize() {
 
         final String jks_passphrase = new String("BakaKeeper");
+
+        // FQDN a port z konfigurace
+        String ldapFqdn = Settings.getInstance().getLDAP_fqdn();
+        int ldapPort = Settings.getInstance().getLdapPort();
 
         try {
             KeyStore jks = KeyStore.getInstance(KeyStore.getDefaultType());
@@ -35,8 +36,11 @@ public class KeyStoreManager {
 
             SocketFactory factory = BakaSSLSocketFactory.getDefault();
             try {
-                // navázání SSL spojení na výchozí LDAPS port 636
-                SSLSocket socket = (SSLSocket) factory.createSocket(Settings.getInstance().getLDAP_host(), LDAPS_PORT);
+                // navázání SSL spojení na LDAPS port z konfigurace
+                if (Settings.getInstance().beVerbose()) {
+                    ReportManager.log(EBakaLogType.LOG_VERBOSE, "Připojuji se na " + ldapFqdn + ":" + ldapPort + " pro získání certifikátu.");
+                }
+                SSLSocket socket = (SSLSocket) factory.createSocket(ldapFqdn, ldapPort);
 
                 socket.startHandshake();
                 Certificate[] certs = socket.getSession().getPeerCertificates();
@@ -47,13 +51,13 @@ public class KeyStoreManager {
 
                 for (Certificate cert : certs) {
                     if (cert instanceof X509Certificate) {
-                        // zápis certifikátu do úložiště
-                        jks.setCertificateEntry(Settings.getInstance().getLDAP_host(), cert);
+                        // zápis certifikátu do úložiště pod FQDN
+                        jks.setCertificateEntry(ldapFqdn, cert);
                     }
                 }
 
             } catch (Exception e) {
-                ReportManager.handleException("Nebylo možné navázast spojení se serverem.", e);
+                ReportManager.handleException("Nebylo možné navázat spojení se serverem " + ldapFqdn + ":" + ldapPort + ".", e);
                 return false;
             }
 
