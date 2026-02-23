@@ -150,6 +150,35 @@ BEGIN
 END
 GO
 
-PRINT 'Databáze bakalari inicializována – tabulky připraveny pro seed generator.';
+-- =============================================================================
+-- SQL login pro servisní účet BakaKeeperu
+-- Heslo __BAKALARI_PASSWORD__ se nahradí v setup-dev.sh při kopírování do kontejneru.
+-- =============================================================================
+
+USE master;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.server_principals WHERE name = N'bakalari')
+BEGIN
+    CREATE LOGIN [bakalari] WITH PASSWORD = N'__BAKALARI_PASSWORD__', CHECK_POLICY = OFF;
+    PRINT 'SQL login bakalari vytvořen.';
+END
+ELSE
+    PRINT 'SQL login bakalari již existuje.';
+GO
+
+USE bakalari;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'bakalari')
+BEGIN
+    CREATE USER [bakalari] FOR LOGIN [bakalari];
+END
+GO
+
+ALTER ROLE db_owner ADD MEMBER [bakalari];
+GO
+
+PRINT 'Databáze bakalari inicializována – tabulky a login připraveny.';
 PRINT 'Testovací data se vkládají separátně přes dev/seed/run-seed.sh.';
 GO

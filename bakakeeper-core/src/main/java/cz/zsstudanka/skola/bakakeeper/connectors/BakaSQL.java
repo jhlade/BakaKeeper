@@ -200,7 +200,7 @@ public class BakaSQL implements SQLConnector {
             ds.setDatabaseName(Settings.getInstance().getSQL_database());
             ds.setUser(Settings.getInstance().getSqlUser());
             ds.setPassword(Settings.getInstance().getSqlPass());
-            ds.setEncrypt(true);
+            ds.setEncrypt("true");
             ds.setTrustServerCertificate(true);
 
             this.con = ds.getConnection();

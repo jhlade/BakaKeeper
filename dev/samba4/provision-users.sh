@@ -34,11 +34,12 @@ echo "[BakaDev] Provisioning OU struktury pro ${DOMAIN}"
 echo "[BakaDev] =========================================="
 
 # ------------------------------------------
-# OU struktura odpovídající settings.conf:
+# OU struktura odpovídající produkčnímu AD (zsstu.local):
 #
 #   OU=Skola,DC=skola,DC=local
 #   ├── OU=Uzivatele
 #   │   ├── OU=Zaci
+#   │   │   ├── OU=Rocnik-1 / Trida-A..E  (vytvářejí se v seed/)
 #   │   │   └── OU=StudiumUkonceno
 #   │   └── OU=Zamestnanci
 #   │       ├── OU=Ucitele
@@ -46,6 +47,8 @@ echo "[BakaDev] =========================================="
 #   │       ├── OU=Asistenti    ← asistenti pedagoga
 #   │       ├── OU=Vychovatelky ← vychovatelé školní družiny
 #   │       └── OU=Provoz       ← hospodářský/provozní personál
+#   │           └── OU=ICT
+#   │               └── OU=GlobalniSystemoveUcty  ← servisní účet bakalari
 #   ├── OU=Skupiny
 #   │   ├── OU=Zaci
 #   │   ├── OU=Uzivatele
@@ -73,6 +76,10 @@ create_ou "Vedeni"        "${ZAMEST_BASE}"
 create_ou "Asistenti"     "${ZAMEST_BASE}"
 create_ou "Vychovatelky"  "${ZAMEST_BASE}"
 create_ou "Provoz"        "${ZAMEST_BASE}"
+PROVOZ_BASE="OU=Provoz,${ZAMEST_BASE}"
+create_ou "ICT"           "${PROVOZ_BASE}"
+ICT_BASE="OU=ICT,${PROVOZ_BASE}"
+create_ou "GlobalniSystemoveUcty" "${ICT_BASE}"
 
 # Skupiny
 create_ou "Skupiny"     "${SKOLA_BASE}"
@@ -112,12 +119,18 @@ echo "[BakaDev] Exchange schema extension hotova."
 echo ""
 echo "[BakaDev] Vytváření servisního účtu 'bakalari'..."
 
-# Servisní účet pro synchronizaci (odpovídá user= v settings.conf)
+# --userou očekává relativní cestu od base DN (bez DC= části)
+# V produkci: OU=GlobalniSystemoveUcty,OU=ICT,OU=Provoz,OU=Zamestnanci,OU=Uzivatele,OU=Skola
+BAKA_OU="OU=GlobalniSystemoveUcty,OU=ICT,OU=Provoz,OU=Zamestnanci,OU=Uzivatele,OU=Skola"
+BAKA_DN="OU=GlobalniSystemoveUcty,${ICT_BASE}"
+
+# Servisní účet pro synchronizaci – neinteraktivní systémový účet
 samba-tool user create bakalari "${BAKALARI_PASSWORD}" \
-    --given-name="Bakalari" \
+    --userou="${BAKA_OU}" \
+    --given-name="Bakaláři" \
     --surname="Sync" \
     --mail-address="bakalari@${DOMAIN}" 2>/dev/null \
-    && echo "  [+] uživatel bakalari" \
+    && echo "  [+] uživatel bakalari (v ${BAKA_DN})" \
     || echo "  [=] uživatel bakalari (již existuje)"
 
 # Explicitní reset hesla – samba-tool user create může nastavit hash v nekompatibilním
@@ -140,4 +153,5 @@ echo "[BakaDev]   Sync:     bakalari / ${BAKALARI_PASSWORD}"
 echo "[BakaDev]"
 echo "[BakaDev] Base DN:  ${BASE_DN}"
 echo "[BakaDev] Zaci:     OU=Zaci,OU=Uzivatele,OU=Skola,${BASE_DN}"
+echo "[BakaDev] Bakalari: ${BAKA_DN}"
 echo "[BakaDev] =========================================="
