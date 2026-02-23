@@ -120,6 +120,33 @@ public class BakaLDAPUserRepository implements LDAPUserRepository {
         return ldap.checkDN(dn);
     }
 
+    @Override
+    public boolean addToGroup(String dn, String groupDn) {
+        return ldap.addObjectToGroup(dn, groupDn);
+    }
+
+    @Override
+    public boolean removeFromAllGroups(String dn) {
+        return ldap.removeObjectFromAllGroups(dn);
+    }
+
+    @Override
+    public List<String> listMembership(String dn) {
+        ArrayList<String> membership = ldap.listMembership(dn);
+        return (membership != null) ? membership : new ArrayList<>();
+    }
+
+    @Override
+    public List<String> listDirectMembers(String groupDn) {
+        ArrayList<String> members = ldap.listDirectMembers(groupDn);
+        return (members != null) ? members : new ArrayList<>();
+    }
+
+    @Override
+    public boolean removeFromGroup(String dn, String groupDn) {
+        return ldap.removeObjectFromGroup(dn, groupDn);
+    }
+
     /**
      * Provede LDAP dotaz na uživatelské účty v dané OU.
      */
