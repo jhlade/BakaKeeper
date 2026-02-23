@@ -2,10 +2,12 @@
 # BakaKeeper – vývojové prostředí v Podmanu
 #
 # Služby:
-#   samba4   – simulace Microsoft AD (LDAP 389/636/3268/3269, Kerberos KDC 88)
-#   mssql    – MS SQL Server 2022 s Kerberos ověřováním (port 1433)
-#   mailpit  – mockup SMTP serveru, veškerá pošta viditelná jen lokálně
-#              SMTP: port 1025, webové rozhraní: http://localhost:8025
+#   samba4      – simulace Microsoft AD (LDAP 389/636/3268/3269, Kerberos KDC 88)
+#   mssql       – MS SQL Server 2022 s Kerberos ověřováním (port 1433)
+#   mailpit     – mockup SMTP serveru, veškerá pošta viditelná jen lokálně
+#                 SMTP: port 1025, webové rozhraní: http://localhost:8025
+#   ldapadmin   – phpLDAPadmin – webový LDAP prohlížeč/editor pro Samba4 AD
+#                 Web: http://localhost:8080
 #
 # Spuštění: viz setup-dev.sh
 # Statická podsíť: 172.20.0.0/24
@@ -193,6 +195,56 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # ---------------------------------------------------------------------------
+  # phpLDAPadmin – webový LDAP prohlížeč a editor pro Samba4 AD
+  #
+  # Umožňuje interaktivně procházet a upravovat obsah AD přes prohlížeč.
+  # Přihlášení:
+  #   Login DN:  CN=Administrator,CN=Users,DC=skola,DC=local
+  #   Heslo:     BakaKeeper.2026  (viz .env: ADMIN_PASSWORD)
+  #
+  # Obraz phpldapadmin/phpldapadmin je multi-arch (ARM64 nativní).
+  # Konfigurace výhradně přes env proměnné (phpLDAPadmin v2 / Laravel).
+  # LDAP_ALLOW_GUEST=true: přeskočí login – rovnou přihlásí jako LDAP_USERNAME.
+  #
+  # IP: 172.20.0.40, hostname: ldapadmin.skola.local
+  # Web: http://localhost:8080
+  # ---------------------------------------------------------------------------
+  ldapadmin:
+    image: phpldapadmin/phpldapadmin:latest
+    container_name: bakadev-ldapadmin
+    hostname: ldapadmin.skola.local
+    environment:
+      # Název LDAP serveru zobrazený v UI
+      - LDAP_NAME=Samba4 AD – skola.local
+      # Adresa Samba4 DC (hostname resolvuje přes extra_hosts)
+      - LDAP_HOST=dc.skola.local
+      - LDAP_PORT=389
+      # Base DN – odkud začíná prohledávání stromu
+      - LDAP_BASE_DN=DC=skola,DC=local
+      # Bez TLS (Samba4 dev: ldap server require strong auth = No)
+      - LDAP_SSL=false
+      - LDAP_TLS=false
+      # Servisní účet pro bind (admin) – používá se i pro guest přístup
+      - LDAP_USERNAME=CN=Administrator,CN=Users,DC=skola,DC=local
+      - LDAP_PASSWORD=${ADMIN_PASSWORD}
+      # Guest přístup: přeskočí login formulář, rovnou přihlásí jako LDAP_USERNAME
+      - LDAP_ALLOW_GUEST=true
+      # AD login atribut: dn (celé DN) místo výchozího uid (v AD neexistuje)
+      - LDAP_LOGIN_ATTR=dn
+      - LDAP_LOGIN_ATTR_DESC=DN
+    networks:
+      bakadev-net:
+        ipv4_address: 172.20.0.40
+    extra_hosts:
+      # phpLDAPadmin musí vidět Samba4 jako dc.skola.local
+      - "dc.skola.local:172.20.0.10"
+    ports:
+      - "8080:8080"
+    depends_on:
+      samba4:
+        condition: service_healthy
 
 # Pojmenované Podman svazky
 # mssql-data: databázové soubory MSSQL (Azure SQL Edge sqlservr UID 10001 potřebuje
