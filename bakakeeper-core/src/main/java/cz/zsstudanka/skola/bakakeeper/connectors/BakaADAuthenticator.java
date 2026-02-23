@@ -14,6 +14,7 @@ import net.tirasa.adsddl.ntsd.SDDL;
 import net.tirasa.adsddl.ntsd.controls.SDFlagsControl;
 
 import javax.naming.Context;
+import javax.naming.NameAlreadyBoundException;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.*;
@@ -901,8 +902,9 @@ public class BakaADAuthenticator implements LDAPConnector {
             }
 
             bakaContext.modifyAttributes(dn, mod);
-        } catch (AttributeInUseException e) {
-            // LDAP error 68 – atribut (např. member) již existuje.
+        } catch (AttributeInUseException | NameAlreadyBoundException e) {
+            // LDAP error 20 (AttributeInUseException) nebo 68 (NameAlreadyBoundException, Samba4) –
+            // atribut (např. member) již existuje.
             // Při ADD_ATTRIBUTE je to očekávaný stav (idempotentní operace).
             if (Settings.getInstance().debugMode()) {
                 ReportManager.log(EBakaLogType.LOG_DEBUG,
@@ -1158,10 +1160,8 @@ public class BakaADAuthenticator implements LDAPConnector {
     public ArrayList<String> listDirectMembers(String dn) {
         ArrayList<String> result = new ArrayList<>(0);
 
-        // dotaz na typ = uživatel
+        // dotaz na všechny přímé členy skupiny (uživatele i kontakty)
         HashMap<String, String> ldapQ = new HashMap<String, String>();
-        ldapQ.put(EBakaLDAPAttributes.OC_USER.attribute(), EBakaLDAPAttributes.OC_USER.value());
-        ldapQ.put(EBakaLDAPAttributes.ST_USER.attribute(), EBakaLDAPAttributes.ST_USER.value());
         ldapQ.put(EBakaLDAPAttributes.MEMBER_OF.attribute(), dn);
 
         // získat DN

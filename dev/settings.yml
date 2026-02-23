@@ -46,8 +46,8 @@ policies:
   pwd_no_change: [1, 2, 3, 4, 5]
   pwd_no_expire: [1, 2, 3, 4, 5, 6, 7, 8, 9]
 
-rules:
-   - scope: CLASS
-     match: "6.A"
-     attribute: extensionAttribute5
-     value: "Zaci"
+rules: []
+#   - scope: CLASS
+#     match: "6.A"
+#     attribute: extensionAttribute5
+#     value: "Zaci"

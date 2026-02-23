@@ -42,19 +42,19 @@ UTR05;Švestka;Červenková;Ucitele;učitel;1;1.E
 UTR06;Rybena;Kaprová;Ucitele;učitel;1;2.A
 UTR07;Žaludek;Dubový;Ucitele;učitel;1;2.B
 UTR08;Mlžena;Oblačná;Ucitele;učitel;1;2.C
-UTR09;Zlatoslav;Jehličková;Ucitele;učitel;1;2.D
+UTR09;Zlatoslava;Jehličková;Ucitele;učitel;1;2.D
 UTR10;Bříza;Kůrová;Ucitele;učitel;1;2.E
 
 # Třídní učitelé – ročník 3 (třídy 3.A–3.D)
 UTR11;Stonožka;Mnohonohová;Ucitele;učitel;1;3.A
 UTR12;Kvítek;Lupínkový;Ucitele;učitel;1;3.B
-UTR13;Noční;Motýlová;Ucitele;učitel;1;3.C
+UTR13;Můra;Motýlová;Ucitele;učitel;1;3.C
 UTR14;Bublina;Vodní;Ucitele;učitel;1;3.D
 
 # Třídní učitelé – ročník 4 (třídy 4.A–4.D)
 UTR15;Chrposlav;Polní;Ucitele;učitel;1;4.A
 UTR16;Muflona;Rohatá;Ucitele;učitel;1;4.B
-UTR17;Hvězdoslav;Souhvězdí;Ucitele;učitel;1;4.C
+UTR17;Hvězdoslav;Souhvězdík;Ucitele;učitel;1;4.C
 UTR18;Snězena;Vločková;Ucitele;učitel;1;4.D
 
 # Třídní učitelé – ročník 5 (třídy 5.A–5.D)
@@ -76,7 +76,7 @@ UTR28;Obluda;Příjemná;Ucitele;učitel;1;7.C
 # Třídní učitelé – ročník 8 (třídy 8.A–8.C)
 UTR29;Rákosník;Mokřadní;Ucitele;učitel;1;8.A
 UTR30;Zářivka;Fluorová;Ucitele;učitel;1;8.B
-UTR31;Pískoviště;Hravý;Ucitele;učitel;1;8.C
+UTR31;Pískovník;Hravý;Ucitele;učitel;1;8.C
 
 # Třídní učitelé – ročník 9 (třídy 9.A–9.C)
 UTR32;Soumrak;Šerý;Ucitele;učitel;1;9.A
@@ -90,9 +90,9 @@ UTR34;Příboj;Bouřlivý;Ucitele;učitel;1;9.C
 UNET1;Zubatec;Ostrý;Ucitele;učitel;1;
 UNET2;Plísňula;Houbová;Ucitele;učitel;1;
 UNET3;Světluška;Blikavá;Ucitele;učitel;1;
-UNET4;Šumaření;Tichý;Ucitele;učitel;1;
+UNET4;Šumař;Tichý;Ucitele;učitel;1;
 UNET5;Chloupek;Jemný;Ucitele;učitel;1;
-UNET6;Mlsavka;Sladká;Ucitele;učitel;1;
+UNET6;Mlsalka;Sladká;Ucitele;učitel;1;
 
 
 # -----------------------------------------------------------------------------
@@ -116,4 +116,4 @@ UVYC3;Broučena;Tečkovaná;Vychovatelky;vychovatelka;0;
 # -----------------------------------------------------------------------------
 UPRV1;Krtena;Podzemní;Provoz;hospodářka;0;
 UPRV2;Ještěr;Šupinatý;Provoz;správce;0;
-UPRV3;Sluníčko;Záříková;Provoz;sekretářka;0;
+UPRV3;Sluníčkyně;Záříková;Provoz;sekretářka;0;
