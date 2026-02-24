@@ -7,17 +7,19 @@ import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaSQL;
-import cz.zsstudanka.skola.bakakeeper.model.collections.LDAPrecords;
+import cz.zsstudanka.skola.bakakeeper.model.FacultyRecord;
+import cz.zsstudanka.skola.bakakeeper.model.StudentRecord;
 import cz.zsstudanka.skola.bakakeeper.model.collections.SQLrecords;
-import cz.zsstudanka.skola.bakakeeper.model.entities.DataLDAP;
 import cz.zsstudanka.skola.bakakeeper.model.entities.DataSQL;
-import cz.zsstudanka.skola.bakakeeper.model.entities.Student;
+import cz.zsstudanka.skola.bakakeeper.repository.FacultyRepository;
+import cz.zsstudanka.skola.bakakeeper.repository.StudentRepository;
+import cz.zsstudanka.skola.bakakeeper.service.RangeSelector;
+import cz.zsstudanka.skola.bakakeeper.service.ResolvedSelection;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
 import cz.zsstudanka.skola.bakakeeper.utils.PdfReportGenerator;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -25,7 +27,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
- * Práce s exporty.
+ * Práce s exporty a sestavami.
  *
  * @author Jan Hladěna
  */
@@ -36,56 +38,81 @@ public class Export {
 
     /**
      * Export žákovských informací ve formě CSV.
+     * Používá {@link RangeSelector} pro parsování rozsahu – stejný formát jako {@code --report}.
      *
-     * Pole obsahují
-     * INTERN_KOD  - interní ID žáka z Bakalářů
-     * ROCNIK      - číslo ročníku z Bakalářů
-     * TRIDA       - písmeno třídy z Bakalářů
-     * PRIJMENI    - příjméní žáka z Bakalářů
-     * JMENO       - jméno žáka z Bakalářů
-     * UPN         - přihlašovací jméno žáka z LDAP
-     * AD_RPWD     - výchozí heslo pro reset
-     * EMAIL       - e-mail žáka z Bakalářů
-     * ZZ_KOD      - interní ID primárního zákonného zástupce žáka z Bakalářů
-     * ZZ_JMENO    - jméno primárního zákonného zástupce žáka z Bakalářů
-     * ZZ_PRIJMENI - příjmení primárního zákonného zástupce žáka z Bakalářů
-     * ZZ_TELEFON  - telefon primárního zákonného zástupce žáka z Bakalářů
-     * ZZ_EMAIL    - e-mail primárního zákonného zástupce žáka z Bakalářů
-     *
-     * @param outFile výstupní soubor
+     * @param query rozsah výběru (ročník, třída, UPN – odděleno čárkou)
+     * @param outFile výstupní soubor (null = stdout)
+     * @param studentRepo repozitář žáků
+     * @param facultyRepo repozitář vyučujících
      */
-    public static void exportStudentCSVdata(String outFile) {
+    public static void exportStudentCSVdata(String query, String outFile,
+                                             StudentRepository studentRepo,
+                                             FacultyRepository facultyRepo) {
 
-        Settings.getInstance().load();
-
-        // rutina exportu
         if (Settings.getInstance().debugMode()) {
             ReportManager.log(EBakaLogType.LOG_DEBUG, "====== [ EXPORT ] ======");
         }
 
+        // parsování a vyhodnocení rozsahu
+        RangeSelector selector = RangeSelector.parse(query);
+        ResolvedSelection selection = selector.resolve(studentRepo, facultyRepo);
+
+        // varování pro nenalezené žáky
+        for (String nf : selection.notFound()) {
+            ReportManager.log(EBakaLogType.LOG_ERR, "Žák s UPN " + nf + " nebyl nalezen v evidenci.");
+        }
+
         StringBuilder outputBuffer = new StringBuilder();
 
-        // header
+        // hlavička CSV
         outputBuffer.append("INTERN_KOD;ROCNIK;TRIDA;C_TR_VYK;PRIJMENI;JMENO;UPN;AD_RPWD;EMAIL;ZZ_KOD;ZZ_JMENO;ZZ_PRIJMENI;ZZ_TELEFON;ZZ_EMAIL");
         outputBuffer.append("\n");
 
-        // TODO - naplnění bufferu daty
+        // data – iterace přes třídy a žáky
+        for (var entry : selection.studentsByClass().entrySet()) {
+            for (StudentRecord s : entry.getValue()) {
+                String email = s.getEmail();
+                if (email == null || email.isEmpty() || EBakaSQL.NULL.basename().equals(email)) {
+                    continue;
+                }
 
+                int classNum = 0;
+                try {
+                    classNum = Integer.parseInt(s.getClassNumber());
+                } catch (NumberFormatException ignored) {
+                    // žák bez čísla v třídním výkazu
+                }
+
+                String password = BakaUtils.createInitialPassword(
+                        s.getSurname(), s.getGivenName(), s.getClassYear(), classNum);
+
+                outputBuffer.append(csvField(s.getInternalId())).append(";");
+                outputBuffer.append(s.getClassYear()).append(";");
+                outputBuffer.append(csvField(s.getClassLetter())).append(";");
+                outputBuffer.append(csvField(s.getClassNumber())).append(";");
+                outputBuffer.append(csvField(s.getSurname())).append(";");
+                outputBuffer.append(csvField(s.getGivenName())).append(";");
+                outputBuffer.append(csvField(email)).append(";");
+                outputBuffer.append(csvField(password)).append(";");
+                outputBuffer.append(csvField(email)).append(";");
+                outputBuffer.append(csvField(s.getGuardianInternalId())).append(";");
+                outputBuffer.append(csvField(s.getGuardianGivenName())).append(";");
+                outputBuffer.append(csvField(s.getGuardianSurname())).append(";");
+                outputBuffer.append(csvField(s.getGuardianPhone())).append(";");
+                outputBuffer.append(csvField(s.getGuardianEmail()));
+                outputBuffer.append("\n");
+            }
+        }
 
         // uložení nebo výstup
         if (outFile != null) {
             File outputFile = new File(outFile);
-
-            try {
-                PrintStream outStream = new PrintStream(new FileOutputStream(outFile));
-                outStream.println(outputBuffer.toString());
-                outStream.close();
+            try (PrintStream outStream = new PrintStream(new FileOutputStream(outFile))) {
+                outStream.print(outputBuffer.toString());
             } catch (Exception e) {
                 ReportManager.handleException("Nebylo možné uložit výstup do souboru " + outputFile.getPath(), e);
             }
-
         } else {
-            // stdout
             ReportManager.log(EBakaLogType.LOG_STDOUT, outputBuffer.toString());
         }
 
@@ -187,175 +214,110 @@ public class Export {
 
     /**
      * Vygeneruje PDF sestavy s přístupovými údaji a odešle je e-mailem.
+     * Používá {@link RangeSelector} pro parsování rozsahu výběru.
+     * Podporuje celé třídy i individuální žáky.
      *
      * @param query dotazované objekty (ročník, třída, UPN žáka - seznam oddělený čárkami)
      * @param resetPassword provede okamžitý reset hesla nad danými objekty
+     * @param studentRepo repozitář žáků
+     * @param facultyRepo repozitář vyučujících
      */
-    public static void genericReport(String query, boolean resetPassword) {
+    public static void genericReport(String query, boolean resetPassword,
+                                      StudentRepository studentRepo,
+                                      FacultyRepository facultyRepo) {
 
-        // zpracovávané celé třídy
-        ArrayList<String> classes = new ArrayList<>();
+        // parsování a vyhodnocení rozsahu
+        RangeSelector selector = RangeSelector.parse(query);
+        ResolvedSelection selection = selector.resolve(studentRepo, facultyRepo);
 
-        // samostatní žáci
-        ArrayList<String> students = new ArrayList<>();
-
-        // zpracování dotazu
-        String[] queries = query.split(",");
-
-        for (String q : queries) {
-
-            // vše
-            if (q.length() == 1 && q.equals("*")) {
-                for (int yr = 1; yr <= 9; yr++) {
-                    for (char letter = 'A'; letter <= 'E'; letter++) {
-                        if (!classes.contains(yr + "." + letter)) {
-                            classes.add(yr + "." + letter);
-                        }
-                    }
-                }
-                break;
-            }
-
-            // ročník
-            if (q.length() == 1 && q.matches("[1-9]")) {
-                for (char letter = 'A'; letter <= 'E'; letter++) {
-                    classes.add(q + "." + letter);
-                }
-            }
-
-            // třída
-            if (q.length() == 3 && q.matches("[1-9]\\.[a-eA-E]") ) {
-                if (!classes.contains(q.toUpperCase())) {
-                    classes.add(q.toUpperCase());
-                }
-            }
-
-            // jeden žák
-            if (q.length() > 3 && q.contains(".")) {
-                if (!students.contains(q.toLowerCase())) {
-                    students.add(q.toLowerCase());
-                }
-            }
+        // varování pro nenalezené žáky
+        for (String nf : selection.notFound()) {
+            ReportManager.log(EBakaLogType.LOG_ERR, "Žák s UPN " + nf + " nebyl nalezen v evidenci.");
         }
-
-        // abecední seřazení seznamů
-        Collections.sort(classes);
-        Collections.sort(students);
 
         // sestavy <třída, data žáků>
         Map<String, List<PdfReportGenerator.StudentReportRow>> reportData = new LinkedHashMap<>();
-        // třídní učitelé
-        SQLrecords classTeachers = new SQLrecords(true);
 
-        // celé třídy
-        for (int mYr = 1; mYr <= 9; mYr++) {
-            for (char mLetter = 'A'; mLetter <= 'E'; mLetter++) {
+        for (var entry : selection.studentsByClass().entrySet()) {
+            String classLabel = entry.getKey();
+            List<StudentRecord> students = entry.getValue();
 
-                // generovaná třída není na seznamu požadavků
-                if (!classes.contains(mYr + "." + mLetter)) {
-                    continue;
+            List<PdfReportGenerator.StudentReportRow> classStudents = new ArrayList<>();
+
+            for (StudentRecord s : students) {
+                String studentUPN = s.getEmail();
+
+                int classNum = 0;
+                try {
+                    classNum = Integer.parseInt(s.getClassNumber());
+                } catch (NumberFormatException ignored) {
+                    // žák bez čísla v třídním výkazu
                 }
 
-                // třída v evidenci neexistuje
-                if (classTeachers.getBy(EBakaSQL.F_CLASS_LABEL, mYr + "." + mLetter) == null) {
-                    continue;
-                }
+                // výchozí heslo žáka
+                String newPassword = BakaUtils.createInitialPassword(
+                        s.getSurname(), s.getGivenName(), s.getClassYear(), classNum);
 
-                // SQL data třídy
-                SQLrecords classData = new SQLrecords(mYr, String.valueOf(mLetter));
-                // LDAP data třídy
-                LDAPrecords dataAD = new LDAPrecords("OU=Trida-"+String.valueOf(mLetter)+",OU=Rocnik-"+String.valueOf(mYr)+"," + Settings.getInstance().getLDAP_baseStudents(), EBakaLDAPAttributes.OC_USER);
+                // resetování hesla
+                if (resetPassword) {
+                    ReportManager.logWait(EBakaLogType.LOG_INFO,
+                            "Probíhá reset hesla žáka " + s.getSurname() + " " + s.getGivenName());
 
-                List<PdfReportGenerator.StudentReportRow> classStudents = new ArrayList<>();
+                    int attempt = 0;
+                    boolean passwordSet = false;
 
-                // získání dat žáků ze třídy - iterace nad evidencí
-                while (classData.iterator().hasNext()) {
+                    while (!passwordSet && attempt < MAX_PASSWORD_ATTEMPTS) {
+                        newPassword = BakaUtils.nextPassword(
+                                s.getSurname(), s.getGivenName(),
+                                s.getClassYear(), classNum, attempt);
 
-                    Map<String, String> classStudent = classData.get(classData.iterator().next());
-
-                    // data
-                    String bakaID = classStudent.get(EBakaSQL.F_STU_ID.basename());
-                    Integer classNum = Integer.parseInt(classStudent.get(EBakaSQL.F_STU_CLASS_ID.basename()));
-                    String studentSurname = classStudent.get(EBakaSQL.F_STU_SURNAME.basename());
-                    String studentName = classStudent.get(EBakaSQL.F_STU_GIVENNAME.basename());
-                    String studentUPN = classStudent.get(EBakaSQL.F_STU_MAIL.basename());
-
-                    DataSQL sqlStudent = classData.get(bakaID);
-                    DataLDAP ldapStudent = dataAD.get(studentUPN);
-                    Student studentObject = new Student(sqlStudent, ldapStudent);
-
-                    // výchozí heslo žáka
-                    String newPassword = BakaUtils.createInitialPassword(
-                            studentSurname, // příjmení
-                            studentName, // jméno
-                            mYr, // ročník
-                            classNum // číslo v třídním výkazu
-                    );
-
-                    // resetování hesla
-                    if (resetPassword) {
-
-                        ReportManager.logWait(EBakaLogType.LOG_INFO, "Probíhá reset hesla žáka " + studentSurname + " " + studentName);
-
-                        int attempt = 0;
-                        boolean passwordSet = false;
-
-                        while (!passwordSet && attempt < MAX_PASSWORD_ATTEMPTS) {
-
-                            newPassword = BakaUtils.nextPassword(
-                                    studentSurname, // příjmení
-                                    studentName, // jméno
-                                    mYr, // ročník
-                                    classNum, // číslo v třídním výkazu
-                                    attempt // pokus
-                            );
-
-                            if (!RuntimeContext.FLAG_DRYRUN) {
-                                passwordSet = studentObject.setPassword(newPassword, false);
-                            } else {
-                                passwordSet = true;
-                            }
-                            attempt++;
-                        }
-
-                        if (passwordSet) {
-                            ReportManager.logResult(EBakaLogType.LOG_OK);
-                            ReportManager.log(EBakaLogType.LOG_VERBOSE, "Heslo žáka " + studentSurname + " " + studentName + " bylo úspěšně změněno na " + newPassword);
+                        if (!RuntimeContext.FLAG_DRYRUN && s.getDn() != null) {
+                            passwordSet = BakaADAuthenticator.getInstance()
+                                    .replaceAttribute(s.getDn(),
+                                            EBakaLDAPAttributes.PW_UNICODE,
+                                            newPassword);
                         } else {
-                            ReportManager.logResult(EBakaLogType.LOG_ERR);
-                            ReportManager.log(EBakaLogType.LOG_ERR_VERBOSE, "Heslo žáka " + studentSurname + " " + studentName + " nebylo možné změnit ani po " + attempt + " pokusech.");
+                            passwordSet = true;
                         }
+                        attempt++;
                     }
 
-                    // záznam žáka pro sestavu
-                    // SQLrecords konvertuje SQL NULL na sentinel "(NULL)" – je nutné ho ošetřit
-                    if (studentUPN == null || studentUPN.isEmpty()
-                            || EBakaSQL.NULL.basename().equals(studentUPN)) {
+                    if (passwordSet) {
+                        ReportManager.logResult(EBakaLogType.LOG_OK);
+                        ReportManager.log(EBakaLogType.LOG_VERBOSE,
+                                "Heslo žáka " + s.getSurname() + " " + s.getGivenName()
+                                        + " bylo úspěšně změněno na " + newPassword);
+                    } else {
+                        ReportManager.logResult(EBakaLogType.LOG_ERR);
                         ReportManager.log(EBakaLogType.LOG_ERR_VERBOSE,
-                                "Žák " + studentSurname + " " + studentName
-                                        + " (č. " + classNum + ") nemá přiřazené UPN – přeskočen v sestavě.");
-                        continue;
+                                "Heslo žáka " + s.getSurname() + " " + s.getGivenName()
+                                        + " nebylo možné změnit ani po " + attempt + " pokusech.");
                     }
-
-                    classStudents.add(new PdfReportGenerator.StudentReportRow(
-                            classNum,
-                            studentSurname,
-                            studentName,
-                            studentUPN,
-                            newPassword,
-                            studentUPN + "\t" + newPassword
-                    ));
                 }
 
-                // seřazení dle příjmení
-                classStudents.sort(Comparator.comparing(PdfReportGenerator.StudentReportRow::surname));
-                reportData.put(mYr + "." + mLetter, classStudents);
+                // přeskočit žáky bez UPN
+                if (studentUPN == null || studentUPN.isEmpty()
+                        || EBakaSQL.NULL.basename().equals(studentUPN)) {
+                    ReportManager.log(EBakaLogType.LOG_ERR_VERBOSE,
+                            "Žák " + s.getSurname() + " " + s.getGivenName()
+                                    + " (č. " + classNum + ") nemá přiřazené UPN – přeskočen v sestavě.");
+                    continue;
+                }
 
-            } // celá třída
+                classStudents.add(new PdfReportGenerator.StudentReportRow(
+                        classNum,
+                        s.getSurname(),
+                        s.getGivenName(),
+                        studentUPN,
+                        newPassword,
+                        studentUPN + "\t" + newPassword
+                ));
+            }
 
-        } // ročník
-
-        // TODO jednotliví žáci zvlášť
+            // seřazení dle příjmení
+            classStudents.sort(Comparator.comparing(PdfReportGenerator.StudentReportRow::surname));
+            reportData.put(classLabel, classStudents);
+        }
 
         // inicializace generátoru PDF
         PdfReportGenerator pdfGen;
@@ -379,8 +341,10 @@ public class Export {
         for (String classN : reportData.keySet()) {
 
             // identifikace třídního učitele
-            String classTeacher = classTeachers.getBy(EBakaSQL.F_CLASS_LABEL, classN).get(EBakaSQL.F_FAC_GIVENNAME.basename())
-                    + " " + classTeachers.getBy(EBakaSQL.F_CLASS_LABEL, classN).get(EBakaSQL.F_FAC_SURNAME.basename());
+            FacultyRecord teacher = selection.classTeachers().get(classN);
+            String classTeacher = (teacher != null)
+                    ? teacher.getGivenName() + " " + teacher.getSurname()
+                    : "(neznámý)";
 
             SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
             Date date = new Date();
@@ -419,14 +383,12 @@ public class Export {
             }
 
             // identifikace třídního učitele - e-mail
-            String classTeacherEmail = classTeachers.getBy(EBakaSQL.F_CLASS_LABEL, classN).get(EBakaSQL.F_FAC_EMAIL.basename());
+            String classTeacherEmail = (teacher != null) ? teacher.getEmail() : null;
 
             String[] addresses;
-            if (!RuntimeContext.FLAG_DRYRUN) {
-                // e-mail pro třídního učitele a správce systému
+            if (!RuntimeContext.FLAG_DRYRUN && classTeacherEmail != null) {
                 addresses = new String[]{classTeacherEmail, Settings.getInstance().getAdminMail()};
             } else {
-                // pouze správcovský e-mail
                 addresses = new String[]{Settings.getInstance().getAdminMail()};
             }
 
@@ -438,7 +400,18 @@ public class Export {
             // úklid – pouze PDF
             new File(reportFile).delete();
         }
-
     }
 
+    /**
+     * Ošetří null / sentinel hodnotu pro CSV pole.
+     *
+     * @param value hodnota
+     * @return hodnota nebo prázdný řetězec
+     */
+    private static String csvField(String value) {
+        if (value == null || EBakaSQL.NULL.basename().equals(value)) {
+            return "";
+        }
+        return value;
+    }
 }

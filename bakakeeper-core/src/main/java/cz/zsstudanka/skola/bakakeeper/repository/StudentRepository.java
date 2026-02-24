@@ -29,6 +29,14 @@ public interface StudentRepository {
     StudentRecord findByInternalId(String internalId);
 
     /**
+     * Nalezne žáka podle e-mailové adresy (UPN).
+     *
+     * @param email e-mailová adresa / UPN žáka
+     * @return záznam žáka, nebo null
+     */
+    StudentRecord findByEmail(String email);
+
+    /**
      * Zapíše e-mail žáka zpět do SQL evidence.
      *
      * @param internalId interní kód žáka

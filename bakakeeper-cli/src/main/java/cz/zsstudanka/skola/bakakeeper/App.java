@@ -167,38 +167,6 @@ public class App {
             return;
         }
 
-        // CSV export
-        if (params.containsKey("export")) {
-            if (params.containsKey("o") && params.get("o").size() == 1) {
-                Export.exportStudentCSVdata(params.get("o").get(0));
-            } else if (!params.containsKey("o")) {
-                Export.exportStudentCSVdata(null);
-            } else {
-                ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný argument -o. (Použití: --export -o seznam.csv)");
-            }
-            return;
-        }
-
-        // rychlá sestava
-        if (params.containsKey("report")) {
-            if (params.get("report").size() == 1) {
-                Export.genericReport(params.get("report").get(0), false);
-            } else {
-                ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný argument -report. (Použití: -report 1.A)");
-            }
-            return;
-        }
-
-        // rychlá sestava s resetem hesel
-        if (params.containsKey("resetreport")) {
-            if (params.get("resetreport").size() == 1) {
-                Export.genericReport(params.get("resetreport").get(0), true);
-            } else {
-                ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný argument -resetreport. (Použití: -resetreport 1.A)");
-            }
-            return;
-        }
-
         // identifikace AD loginu
         if (params.containsKey("id")) {
             if (params.get("id").size() == 1) {
@@ -240,6 +208,40 @@ public class App {
         SyncOrchestrator orchestrator = new SyncOrchestrator(
                 config, studentRepo, ldapUserRepo, facultyRepo, guardianRepo,
                 structureService, studentService, facultyService, guardianService, ruleService);
+
+        // CSV export (s rozsahem jako u report)
+        if (params.containsKey("export")) {
+            if (params.get("export").size() == 1) {
+                String outFile = (params.containsKey("o") && params.get("o").size() == 1)
+                        ? params.get("o").get(0) : null;
+                Export.exportStudentCSVdata(params.get("export").get(0), outFile, studentRepo, facultyRepo);
+            } else if (params.get("export").isEmpty()) {
+                ReportManager.log(EBakaLogType.LOG_ERR, "Chybějící rozsah výběru. (Použití: --export 5.A -o seznam.csv)");
+            } else {
+                ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný argument --export. (Použití: --export 5.A -o seznam.csv)");
+            }
+            return;
+        }
+
+        // rychlá sestava
+        if (params.containsKey("report")) {
+            if (params.get("report").size() == 1) {
+                Export.genericReport(params.get("report").get(0), false, studentRepo, facultyRepo);
+            } else {
+                ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný argument -report. (Použití: -report 1.A)");
+            }
+            return;
+        }
+
+        // rychlá sestava s resetem hesel
+        if (params.containsKey("resetreport")) {
+            if (params.get("resetreport").size() == 1) {
+                Export.genericReport(params.get("resetreport").get(0), true, studentRepo, facultyRepo);
+            } else {
+                ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný argument -resetreport. (Použití: -resetreport 1.A)");
+            }
+            return;
+        }
 
         // kontrola současného stavu
         if (params.containsKey("status")) {

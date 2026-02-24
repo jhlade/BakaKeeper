@@ -113,6 +113,43 @@ class BakaStudentRepositoryTest {
     }
 
     @Test
+    void findByEmailReturnsStudent() throws Exception {
+        when(sql.select(anyString())).thenReturn(rs);
+        when(rs.next()).thenReturn(true);
+        when(rs.getString(EBakaSQL.F_STU_ID.basename())).thenReturn("12345");
+        when(rs.getString(EBakaSQL.F_STU_SURNAME.basename())).thenReturn("Novák");
+        when(rs.getString(EBakaSQL.F_STU_GIVENNAME.basename())).thenReturn("Tomáš");
+        when(rs.getString(EBakaSQL.F_STU_CLASS.basename())).thenReturn("5.A");
+        when(rs.getString(EBakaSQL.F_STU_CLASS_ID.basename())).thenReturn("12");
+        when(rs.getString(EBakaSQL.F_STU_MAIL.basename())).thenReturn("novak.tomas@skola.cz");
+        when(rs.getString(EBakaSQL.F_STU_BK_CLASSYEAR.basename())).thenReturn("5");
+        when(rs.getString(EBakaSQL.F_STU_BK_CLASSLETTER.basename())).thenReturn("A");
+        when(rs.getString(EBakaSQL.F_GUA_BK_ID.basename())).thenReturn("99001");
+        when(rs.getString(EBakaSQL.F_GUA_BK_SURNAME.basename())).thenReturn("Nováková");
+        when(rs.getString(EBakaSQL.F_GUA_BK_GIVENNAME.basename())).thenReturn("Jana");
+        when(rs.getString(EBakaSQL.F_GUA_BK_MOBILE.basename())).thenReturn("777888999");
+        when(rs.getString(EBakaSQL.F_GUA_BK_MAIL.basename())).thenReturn("novakova@email.cz");
+
+        StudentRecord result = repo.findByEmail("novak.tomas@skola.cz");
+
+        assertNotNull(result);
+        assertEquals("12345", result.getInternalId());
+        assertEquals("novak.tomas@skola.cz", result.getEmail());
+
+        // ověření, že dotaz obsahuje filtr na e-mail
+        verify(sql).select(argThat(q -> q.contains("novak.tomas@skola.cz")));
+    }
+
+    @Test
+    void findByEmailReturnsNullWhenNotFound() throws Exception {
+        when(sql.select(anyString())).thenReturn(rs);
+        when(rs.next()).thenReturn(false);
+
+        StudentRecord result = repo.findByEmail("neexistuje@skola.cz");
+        assertNull(result);
+    }
+
+    @Test
     void updateEmail() throws Exception {
         when(sql.getConnection()).thenReturn(conn);
         when(conn.prepareStatement(anyString())).thenReturn(ps);
