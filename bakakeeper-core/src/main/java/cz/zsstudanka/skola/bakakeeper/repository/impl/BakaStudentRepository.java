@@ -76,6 +76,30 @@ public class BakaStudentRepository implements StudentRepository {
     }
 
     @Override
+    public StudentRecord findByEmail(String email) {
+        sql.connect();
+
+        // dotaz se základním filtrem (aktivní žáci) + podmínka na e-mail
+        String baseQuery = buildStudentQuery(null, null);
+        // vloží podmínku na e-mail před ORDER BY
+        String query = baseQuery.replace("ORDER BY",
+                "AND " + EBakaSQL.F_STU_MAIL.field() + " = '"
+                        + email.replace("'", "''") + "' ORDER BY");
+
+        try {
+            ResultSet rs = sql.select(query);
+            if (rs != null && rs.next()) {
+                DataSQL row = mapRow(rs);
+                return StudentMapper.fromSQL(row);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Chyba při vyhledávání žáka podle e-mailu.", e);
+        }
+
+        return null;
+    }
+
+    @Override
     public boolean updateEmail(String internalId, String email) {
         sql.connect();
 
