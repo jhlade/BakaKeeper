@@ -147,9 +147,9 @@ assert len(JMENA_ZAK_F) == 34
 # --- Zákonní zástupci – příjmení (41): starší, serióznější variace ---
 PRIJMENI_ZZD_M = [
     # zvířata (dospělejší formy)
-    "Liščí",     "Bobří",     "Ježkový",    "Vydří",     "Vlčí",
-    "Srní",      "Krtí",      "Jelení",     "Tchoří",    "Jezevčí",
-    "Krkavčí",   "Soví",      "Čapí",       "Lososí",    "Kaprový",
+    "Liščí",     "Bobr",     "Ježek",    "Vydřík",     "Vlčínek",
+    "Srník",      "Krtek",      "Jelínek",     "Tchoříček",    "Jezevčík",
+    "Krkavec",   "Sovička",      "Čáp",       "Losos",    "Kapr",
     # barvy (příjmení z adjektiv)
     "Modrý",     "Zelený",    "Červený",    "Fialový",   "Zlatý",
     "Stříbrný",  "Perleťový", "Duhový",     "Šedý",      "Blankytnný",
@@ -170,7 +170,7 @@ JMENA_ZZD_M = [
     "Krkavoslav","Sovomír",    "Čapibor",   "Lososlav",  "Kaproslav",
     "Modroslav",  "Zelenomír", "Červobor",  "Zlatoslav",  "Stříbromil",
     "Duhomír",   "Oblakoslav", "Bouřomír",  "Mrazobor",  "Sněžomil",
-    "Kapkoslav",  "Vítroslav",  "Mlžomír",
+    "Kapkoslav",  "Vítroslav",  "Mlžomír", "Drnohryz", "Krvohlt"
 ]
 assert len(JMENA_ZZD_M) == 23
 
@@ -179,7 +179,7 @@ JMENA_ZZD_F = [
     "Krkavoslava","Sovomíra",   "Čapibora",   "Lososlava",  "Kaproslava",
     "Modroslava", "Zelenomíra", "Červobora",  "Zlatoslava",  "Stříbromila",
     "Duhomíra",  "Oblakoslava", "Bouřomíra",  "Mrazobora",  "Sněžomila",
-    "Kapkoslava", "Vítroslava",  "Mlžomíra",
+    "Kapkoslava", "Větroslava",  "Mlžomíra",
 ]
 assert len(JMENA_ZZD_F) == 23
 
