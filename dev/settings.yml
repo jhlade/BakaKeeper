@@ -50,4 +50,4 @@ rules: []
 #   - scope: CLASS
 #     match: "6.A"
 #     attribute: extensionAttribute5
-#     value: "Zaci"
+#     value: "" #""Zaci"

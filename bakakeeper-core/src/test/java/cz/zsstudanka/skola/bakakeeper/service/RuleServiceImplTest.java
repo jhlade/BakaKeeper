@@ -509,7 +509,7 @@ class RuleServiceImplTest {
 
         // s1 dostane hodnotu
         verify(ldapRepo).updateAttribute(s1.getDn(), EBakaLDAPAttributes.EXT05, "Zaci");
-        // s2 má starý záznam → vyčistit
+        // s2 má starý záznam v ext5 (RULE_EXCLUSIVE) → vyčistit
         verify(ldapRepo).updateAttribute(s2.getDn(), EBakaLDAPAttributes.EXT05, "");
     }
 
@@ -552,15 +552,15 @@ class RuleServiceImplTest {
                 "svoboda.petr", "svoboda.petr@skola.ext");
         s2.setInternalId("002"); // aktuální hodnota v LDAP
 
-        // stubbing NENÍ potřeba – s1 má hodnotu shodnou s požadovanou (SPEC01),
-        // s2 má chráněný atribut → žádný updateAttribute se nezavolá
+        // stubbing NENÍ potřeba – s1 má ext1 chráněný → skip (průchod A),
+        // s2 nemá ext1 v ruleAttributes → skip (průchod B)
 
         List<SyncResult> results = service.applyRules(
                 List.of(rule), List.of(s1, s2), true, SyncProgressListener.SILENT);
 
         // s2 má INTERN_KOD "002", ale extensionAttribute1 je chráněný → NESMÍ se vyčistit
         verify(ldapRepo, never()).updateAttribute(eq(s2.getDn()), eq(EBakaLDAPAttributes.EXT01), eq(""));
-        // celkově žádný zápis – s1 má shodnou hodnotu, s2 je chráněný
+        // celkově žádný zápis – ext1 je chráněný
         verify(ldapRepo, never()).updateAttribute(anyString(), any(), anyString());
     }
 
@@ -674,21 +674,160 @@ class RuleServiceImplTest {
     }
 
     // =====================================================================
-    // Prázdná pravidla
+    // Prázdná pravidla – ext3-14 se VŽDY vyčistí (výhradně pro pravidla)
     // =====================================================================
 
     @Test
-    void prázdnáPravidla_žádnéOperace() {
+    void prázdnáPravidla_vyčistíExkluzivníAtributy() {
+        // scénář: pravidlo nastavilo ext5, pak se pravidla odebrala (rules: [])
+        // ext5 je v RULE_EXCLUSIVE_ATTRS → MUSÍ se vyčistit
         StudentRecord s1 = studentWithRuleAttrs("001", "6.A", 6,
                 "CN=N,OU=Trida-A,OU=Rocnik-6,OU=Zaci,OU=Uzivatele,OU=Skola,DC=skola,DC=local",
                 Map.of("extensionAttribute5", "StaráHodnota"));
 
+        when(ldapRepo.updateAttribute(anyString(), any(), anyString())).thenReturn(true);
+
         List<SyncResult> results = service.applyRules(
                 List.of(), List.of(s1), true, SyncProgressListener.SILENT);
 
-        // žádná pravidla → žádné spravované atributy → žádné operace
-        // (konvergentní model bez pravidel nic nečistí – viz dokumentace)
+        // ext5 je exkluzivní pro pravidla → vyčistit i s prázdnými pravidly
+        verify(ldapRepo).updateAttribute(s1.getDn(), EBakaLDAPAttributes.EXT05, "");
+        assertTrue(results.stream().anyMatch(r -> r.getDescription() != null
+                && r.getDescription().contains("Rekonciliace")));
+    }
+
+    @Test
+    void prázdnáPravidla_bezAktuálníchHodnot_žádnéOperace() {
+        // žádná pravidla a žádné aktuální hodnoty v ext3-14 → žádné operace
+        StudentRecord s1 = student("001", "6.A", 6,
+                "CN=N,OU=Trida-A,OU=Rocnik-6,OU=Zaci,OU=Uzivatele,OU=Skola,DC=skola,DC=local");
+
+        List<SyncResult> results = service.applyRules(
+                List.of(), List.of(s1), true, SyncProgressListener.SILENT);
+
         verifyNoInteractions(ldapRepo);
+    }
+
+    @Test
+    void prázdnáPravidla_nevyčistíTitle() {
+        // title NENÍ v RULE_EXCLUSIVE_ATTRS → s prázdnými pravidly se nečistí
+        StudentRecord s1 = studentWithRuleAttrs("001", "6.A", 6,
+                "CN=N,OU=Trida-A,OU=Rocnik-6,OU=Zaci,OU=Uzivatele,OU=Skola,DC=skola,DC=local",
+                Map.of("title", "Žák"));
+        s1.setTitle("Žák");
+
+        List<SyncResult> results = service.applyRules(
+                List.of(), List.of(s1), true, SyncProgressListener.SILENT);
+
+        // title není exkluzivní pro pravidla a žádné pravidlo title nezmiňuje → ponechat
+        verify(ldapRepo, never()).updateAttribute(anyString(), any(), anyString());
+    }
+
+    @Test
+    void prázdnáPravidla_vyčistíVícExkluzivníchAtributů() {
+        // uživatel má nastaveno ext5, ext7, ext10 → všechny se vyčistí (ext5-15 je exkluzivní)
+        StudentRecord s1 = studentWithRuleAttrs("001", "6.A", 6,
+                "CN=N,OU=Trida-A,OU=Rocnik-6,OU=Zaci,OU=Uzivatele,OU=Skola,DC=skola,DC=local",
+                Map.of("extensionAttribute5", "A",
+                        "extensionAttribute7", "B",
+                        "extensionAttribute10", "C"));
+
+        when(ldapRepo.updateAttribute(anyString(), any(), anyString())).thenReturn(true);
+
+        List<SyncResult> results = service.applyRules(
+                List.of(), List.of(s1), true, SyncProgressListener.SILENT);
+
+        verify(ldapRepo).updateAttribute(s1.getDn(), EBakaLDAPAttributes.EXT05, "");
+        verify(ldapRepo).updateAttribute(s1.getDn(), EBakaLDAPAttributes.EXT07, "");
+        verify(ldapRepo).updateAttribute(s1.getDn(), EBakaLDAPAttributes.EXT10, "");
+        assertEquals(3, results.size());
+    }
+
+    // =====================================================================
+    // CLEAR hodnota v pravidle
+    // =====================================================================
+
+    @Test
+    void CLEAR_hodnotaVPravidlu_explicitněVymaže() {
+        // pravidlo: 6.A → CLEAR ext5 (explicitní smazání)
+        SyncRule rule = new SyncRule(SyncScope.CLASS, "6.A",
+                EBakaLDAPAttributes.EXT05.attribute(), RuleServiceImpl.CLEAR);
+
+        StudentRecord s1 = studentWithRuleAttrs("001", "6.A", 6,
+                "CN=N,OU=Trida-A,OU=Rocnik-6,OU=Zaci,OU=Uzivatele,OU=Skola,DC=skola,DC=local",
+                Map.of("extensionAttribute5", "StaryZaznam"));
+
+        when(ldapRepo.updateAttribute(anyString(), any(), anyString())).thenReturn(true);
+
+        List<SyncResult> results = service.applyRules(
+                List.of(rule), List.of(s1), true, SyncProgressListener.SILENT);
+
+        // CLEAR → vyčistit
+        verify(ldapRepo).updateAttribute(s1.getDn(), EBakaLDAPAttributes.EXT05, "");
+        assertTrue(results.stream().anyMatch(r -> r.getDescription() != null
+                && r.getDescription().contains("CLEAR")));
+    }
+
+    @Test
+    void CLEAR_naPrázdnémAtributu_žádnáAkce() {
+        // pravidlo: CLEAR ext5, ale ext5 už je prázdný → žádná akce
+        SyncRule rule = new SyncRule(SyncScope.CLASS, "6.A",
+                EBakaLDAPAttributes.EXT05.attribute(), RuleServiceImpl.CLEAR);
+
+        StudentRecord s1 = student("001", "6.A", 6,
+                "CN=N,OU=Trida-A,OU=Rocnik-6,OU=Zaci,OU=Uzivatele,OU=Skola,DC=skola,DC=local");
+        // s1 nemá ruleAttributes pro ext5 → currentValue = null
+
+        List<SyncResult> results = service.applyRules(
+                List.of(rule), List.of(s1), true, SyncProgressListener.SILENT);
+
+        verify(ldapRepo, never()).updateAttribute(anyString(), any(), anyString());
+    }
+
+    @Test
+    void CLEAR_hodnotaProTitle_vyčistí() {
+        // CLEAR funguje i pro title
+        SyncRule rule = new SyncRule(SyncScope.WHOLE_SCHOOL, null,
+                EBakaLDAPAttributes.TITLE.attribute(), RuleServiceImpl.CLEAR);
+
+        StudentRecord s1 = student("001", "5.A", 5,
+                "CN=N,OU=Trida-A,OU=Rocnik-5,OU=Zaci,OU=Uzivatele,OU=Skola,DC=skola,DC=local");
+        s1.setTitle("Starý title");
+
+        when(ldapRepo.updateAttribute(anyString(), any(), anyString())).thenReturn(true);
+
+        List<SyncResult> results = service.applyRules(
+                List.of(rule), List.of(s1), true, SyncProgressListener.SILENT);
+
+        verify(ldapRepo).updateAttribute(s1.getDn(), EBakaLDAPAttributes.TITLE, "");
+    }
+
+    // =====================================================================
+    // Rekonciliace title – pouze pokud je zmíněn v pravidlech
+    // =====================================================================
+
+    @Test
+    void rekonciliace_vyčistíTitleKdyžJePravidlemZmiňován() {
+        // pravidlo pro 6.A nastaví title; uživatel v 5.A má starý title → vyčistit
+        SyncRule rule = new SyncRule(SyncScope.CLASS, "6.A",
+                EBakaLDAPAttributes.TITLE.attribute(), "Žák 6.A");
+
+        StudentRecord s1 = student("001", "6.A", 6,
+                "CN=N,OU=Trida-A,OU=Rocnik-6,OU=Zaci,OU=Uzivatele,OU=Skola,DC=skola,DC=local");
+        // s2 nematchuje, ale má starý title (nastavený dřívějším pravidlem)
+        StudentRecord s2 = studentWithRuleAttrs("002", "5.A", 5,
+                "CN=S,OU=Trida-A,OU=Rocnik-5,OU=Zaci,OU=Uzivatele,OU=Skola,DC=skola,DC=local",
+                Map.of("title", "Starý title"));
+        s2.setTitle("Starý title");
+
+        when(ldapRepo.updateAttribute(anyString(), any(), anyString())).thenReturn(true);
+
+        List<SyncResult> results = service.applyRules(
+                List.of(rule), List.of(s1, s2), true, SyncProgressListener.SILENT);
+
+        verify(ldapRepo).updateAttribute(s1.getDn(), EBakaLDAPAttributes.TITLE, "Žák 6.A");
+        // title je zmíněn v pravidle → rekoncilovat → vyčistit na s2
+        verify(ldapRepo).updateAttribute(s2.getDn(), EBakaLDAPAttributes.TITLE, "");
     }
 
     // =====================================================================
@@ -711,6 +850,22 @@ class RuleServiceImplTest {
                 List.of(rule), List.of(s1, s2), false, SyncProgressListener.SILENT);
 
         // suchý běh – reportuje, ale neprovede zápis
+        assertFalse(results.isEmpty());
+        assertTrue(results.stream().anyMatch(r -> r.getDescription() != null
+                && r.getDescription().contains("Rekonciliace")));
+        verify(ldapRepo, never()).updateAttribute(anyString(), any(), anyString());
+    }
+
+    @Test
+    void suchýBěh_reportujeRekonciliaciExkluzivních_iPrázdnáPravidla() {
+        // ext5 se vyčistí i v suchém běhu s prázdnými pravidly (jen report)
+        StudentRecord s1 = studentWithRuleAttrs("001", "6.A", 6,
+                "CN=N,OU=Trida-A,OU=Rocnik-6,OU=Zaci,OU=Uzivatele,OU=Skola,DC=skola,DC=local",
+                Map.of("extensionAttribute5", "StaráHodnota"));
+
+        List<SyncResult> results = service.applyRules(
+                List.of(), List.of(s1), false, SyncProgressListener.SILENT);
+
         assertFalse(results.isEmpty());
         assertTrue(results.stream().anyMatch(r -> r.getDescription() != null
                 && r.getDescription().contains("Rekonciliace")));
