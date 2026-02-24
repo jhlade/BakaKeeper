@@ -946,17 +946,69 @@ public class BakaADAuthenticator implements LDAPConnector {
     /**
      * Změna hodnoty atributu objektu.
      *
+     * <p>Pokud je nová hodnota null nebo prázdný řetězec, atribut se kompletně
+     * odebere operací {@code REMOVE_ATTRIBUTE} (Samba4 nepřijímá
+     * {@code REPLACE_ATTRIBUTE} s prázdnou hodnotou – LDAP error 21).</p>
+     *
      * @param dn plné DN objektu
      * @param attribute požadovaný atribut k nahrazení
-     * @param newValue nová hodnota
+     * @param newValue nová hodnota (null/prázdný = odebrání atributu)
      * @return úspěch operace
      */
     public Boolean replaceAttribute(String dn, EBakaLDAPAttributes attribute, String newValue) {
+        // Samba4 nepřijímá REPLACE_ATTRIBUTE s prázdnou hodnotou (LDAP error 21);
+        // pro smazání atributu je nutné REMOVE_ATTRIBUTE bez hodnoty
+        if (newValue == null || newValue.isEmpty()) {
+            return removeAttributeEntirely(dn, attribute);
+        }
+
         if (modifyAttribute(DirContext.REPLACE_ATTRIBUTE, dn, attribute, newValue)) {
             return true;
         } else {
             return modifyAttribute(DirContext.ADD_ATTRIBUTE, dn, attribute, newValue);
         }
+    }
+
+    /**
+     * Kompletní odebrání atributu z objektu (bez specifikace hodnoty).
+     *
+     * <p>Samba4 vyžaduje {@code REMOVE_ATTRIBUTE} bez hodnoty pro smazání atributu;
+     * {@code REPLACE_ATTRIBUTE} s prázdnou hodnotou způsobí LDAP error 21
+     * (LDAP_INVALID_ATTRIBUTE_SYNTAX).</p>
+     *
+     * <p>Operace je idempotentní – pokud atribut neexistuje (LDAP error 16),
+     * vrací true.</p>
+     *
+     * @param dn plné DN objektu
+     * @param attribute atribut k odebrání
+     * @return úspěch operace (true i pokud atribut neexistoval)
+     */
+    private boolean removeAttributeEntirely(String dn, EBakaLDAPAttributes attribute) {
+        if (Settings.getInstance().debugMode()) {
+            ReportManager.log(EBakaLogType.LOG_LDAP,
+                    "Odebrání atributu [" + attribute.attribute() + "] z objektu: [" + dn + "].");
+        }
+
+        try {
+            LdapContext ctx = new InitialLdapContext(env, null);
+            ModificationItem[] mod = new ModificationItem[1];
+            // BasicAttribute bez hodnoty → odebere celý atribut
+            mod[0] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE,
+                    new BasicAttribute(attribute.attribute()));
+            ctx.modifyAttributes(dn, mod);
+        } catch (NoSuchAttributeException e) {
+            // atribut neexistuje → idempotentní operace (úspěch)
+            if (Settings.getInstance().debugMode()) {
+                ReportManager.log(EBakaLogType.LOG_DEBUG,
+                        "Atribut [" + attribute.attribute() + "] neexistuje na [" + dn + "] – přeskakuji.");
+            }
+        } catch (Exception e) {
+            ReportManager.handleException(
+                    "Nebylo možné odebrat atribut [" + attribute.attribute() + "] z objektu [" + dn + "].", e);
+            return false;
+        }
+
+        return true;
     }
 
     /**

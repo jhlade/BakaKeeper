@@ -114,9 +114,8 @@ public class SyncOrchestrator {
 
         // 6. Aplikace deklarativních pravidel (konvergentní model)
         //    Pravidla se spouští VŽDY – i když je seznam pravidel prázdný.
-        //    Konvergentní model rekonciluje stav: pokud se pravidlo odebere z konfigurace,
-        //    hodnoty atributů a skupinové členství nastavené tímto pravidlem se vyčistí
-        //    (za předpokladu, že alespoň jedno pravidlo pro daný atribut/skupinu zůstává).
+        //    Bezstavová rekonciliace: extensionAttribute5–15 se vyčistí vždy,
+        //    pokud je žádné pravidlo nepřiřazuje (i s rules: []).
         {
             // znovu načíst žáky – po všech úpravách
             if (repair) {

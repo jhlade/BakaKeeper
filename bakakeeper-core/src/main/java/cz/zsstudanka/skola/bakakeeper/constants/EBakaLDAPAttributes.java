@@ -52,8 +52,8 @@ public enum EBakaLDAPAttributes {
 
     EXT01 ("extensionAttribute1", null), // rozšířený atribut 1 = ID uživatele v evidenci Bakaláři
     EXT02 ("extensionAttribute2", null), // rozšířený atribut 2 = lit. TRUE/FALSE pošta pouze uvnitř organizace
-    EXT03 ("extensionAttribute3", null), // rozšířený atribut 3
-    EXT04 ("extensionAttribute4", null), // rozšířený atribut 4
+    EXT03 ("extensionAttribute3", null), // rozšířený atribut 3 - rezervováno
+    EXT04 ("extensionAttribute4", null), // rozšířený atribut 4 - rezervováno
     EXT05 ("extensionAttribute5", null), // rozšířený atribut 5
     EXT06 ("extensionAttribute6", null), // rozšířený atribut 6
     EXT07 ("extensionAttribute7", null), // rozšířený atribut 7

@@ -8,7 +8,6 @@ import cz.zsstudanka.skola.bakakeeper.model.SyncScope;
 import cz.zsstudanka.skola.bakakeeper.repository.LDAPUserRepository;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Konvergentní implementace aplikace deklarativních pravidel.
@@ -19,15 +18,22 @@ import java.util.stream.Collectors;
  *   <li><b>Sestavení cílového stavu</b> – pro každého uživatele: které atributy
  *       a hodnoty, do jakých skupin patří</li>
  *   <li><b>Aplikace</b> – nastavení atributů, přidání do skupin</li>
- *   <li><b>Rekonciliace atributů</b> – vyčištění hodnot, které žádné pravidlo nepřiřazuje
- *       (při odebrání pravidla z konfigurace)</li>
+ *   <li><b>Rekonciliace atributů</b> – vyčištění hodnot, které žádné pravidlo nepřiřazuje</li>
  *   <li><b>Rekonciliace skupin</b> – odebrání členů, kteří do skupiny dle pravidel nepatří</li>
  * </ol>
  *
- * <p>Spravované atributy (= atributy zmíněné v alespoň jednom pravidle) se rekoncilují
- * na VŠECH uživatelích – pokud uživateli žádné pravidlo atribut nepřiřazuje, hodnota
- * se vyčistí. Atributy extensionAttribute1 a extensionAttribute2 se nerekoncilují
- * (jsou spravovány jinými fázemi synchronizace), ale mohou být pravidly nastaveny.</p>
+ * <h3>Bezstavová rekonciliace</h3>
+ * <p>Atributy extensionAttribute5–15 jsou výhradně spravovány pravidly a rekoncilují
+ * se VŽDY – i když je seznam pravidel zcela prázdný ({@code rules: []}).
+ * Nepotřebujeme žádnou persistentní paměť: stačí porovnat aktuální hodnoty
+ * z LDAP (v {@code ruleAttributes} mapy na {@link StudentRecord}) s cílovým stavem.</p>
+ *
+ * <h3>Speciální hodnota CLEAR</h3>
+ * <p>V pravidle lze použít hodnotu {@code "CLEAR"} pro explicitní vymazání atributu.</p>
+ *
+ * <h3>Chráněné atributy</h3>
+ * <p>extensionAttribute1–4 se nerekoncilují
+ * (ext1/ext2 jsou spravovány jinými sync fázemi, ext3/ext4 jsou rezervovány).</p>
  *
  * <p>Podporované scopes:
  * USER, INDIVIDUAL, CATEGORY, CLASS, GRADE, LEVEL, LEVEL_1, LEVEL_2,
@@ -37,10 +43,34 @@ import java.util.stream.Collectors;
  */
 public class RuleServiceImpl implements RuleService {
 
+    /** Speciální hodnota v pravidle – explicitní smazání atributu. */
+    public static final String CLEAR = "CLEAR";
+
+    /**
+     * Atributy výhradně spravované pravidly – VŽDY se rekoncilují (ext5–ext15).
+     * Pokud žádné pravidlo nepřiřazuje hodnotu, atribut se vyčistí,
+     * i když je seznam pravidel zcela prázdný.
+     */
+    static final Set<String> RULE_EXCLUSIVE_ATTRS = Set.of(
+            EBakaLDAPAttributes.EXT05.attribute(),
+            EBakaLDAPAttributes.EXT06.attribute(),
+            EBakaLDAPAttributes.EXT07.attribute(),
+            EBakaLDAPAttributes.EXT08.attribute(),
+            EBakaLDAPAttributes.EXT09.attribute(),
+            EBakaLDAPAttributes.EXT10.attribute(),
+            EBakaLDAPAttributes.EXT11.attribute(),
+            EBakaLDAPAttributes.EXT12.attribute(),
+            EBakaLDAPAttributes.EXT13.attribute(),
+            EBakaLDAPAttributes.EXT14.attribute(),
+            EBakaLDAPAttributes.EXT15.attribute()
+    );
+
     /** Atributy spravované jinými sync fázemi – NIKDY se nerekoncilují přes pravidla. */
     private static final Set<String> PROTECTED_ATTRIBUTES = Set.of(
-            "extensionAttribute1",  // INTERN_KOD – StudentService, FacultyService
-            "extensionAttribute2"   // mail restriction – StudentService
+            EBakaLDAPAttributes.EXT01.attribute(),  // INTERN_KOD – StudentService, FacultyService
+            EBakaLDAPAttributes.EXT02.attribute(),  // mail restriction – StudentService
+            EBakaLDAPAttributes.EXT03.attribute(),  // rezervováno
+            EBakaLDAPAttributes.EXT04.attribute()   // rezervováno
     );
 
     private final LDAPUserRepository ldapRepo;
@@ -56,10 +86,10 @@ public class RuleServiceImpl implements RuleService {
         List<SyncResult> results = new ArrayList<>();
 
         // 1. Sbírat spravované atributy a skupiny ze VŠECH pravidel
-        Set<String> managedAttrs = collectManagedAttributes(rules);
+        Set<String> managedAttrsByRules = collectManagedAttributes(rules);
         Set<String> managedGroups = collectManagedGroups(rules);
 
-        listener.onProgress("Spravované atributy: " + managedAttrs);
+        listener.onProgress("Spravované atributy: " + managedAttrsByRules);
         if (!managedGroups.isEmpty()) {
             listener.onProgress("Spravované skupiny: " + managedGroups.size());
         }
@@ -101,10 +131,11 @@ public class RuleServiceImpl implements RuleService {
             }
         }
 
-        // 3. Aplikovat požadovaný stav a rekoncilovat atributy
-        results.addAll(reconcileAttributes(users, managedAttrs, desiredAttrs, repair, listener));
+        // 3. Rekonciliace atributů – aplikace cílového stavu + čištění
+        results.addAll(reconcileAttributes(users, managedAttrsByRules, desiredAttrs,
+                repair, listener));
 
-        // 4. Aplikovat a rekoncilovat skupiny
+        // 4. Rekonciliace skupin
         results.addAll(reconcileGroups(managedGroups, desiredGroupMembers, repair, listener));
 
         // souhrn
@@ -117,17 +148,22 @@ public class RuleServiceImpl implements RuleService {
     // ---- Rekonciliace atributů ----
 
     /**
-     * Porovná požadovaný stav atributů s aktuálním a provede nastavení/vyčištění.
-     * <p>
-     * Pro každý spravovaný atribut a každého uživatele:
-     * <ul>
-     *   <li>Pokud pravidlo přiřazuje hodnotu a ta se liší od aktuální → nastavit</li>
-     *   <li>Pokud žádné pravidlo nepřiřazuje hodnotu a aktuální je neprázdná → vyčistit</li>
-     *   <li>Pokud je atribut chráněný (EXT01, EXT02) → nikdy nevyčistit</li>
-     * </ul>
+     * Dvouprůchodová rekonciliace atributů pro každého uživatele:
+     * <ol>
+     *   <li><b>Průchod A – aplikace:</b> nastaví požadované hodnoty z pravidel
+     *       (včetně CLEAR pro explicitní smazání)</li>
+     *   <li><b>Průchod B – čištění:</b> projde aktuální hodnoty z LDAP (ruleAttributes)
+     *       a vyčistí atributy, které žádné pravidlo nepřiřazuje:
+     *       <ul>
+     *         <li>extensionAttribute5–15 se čistí VŽDY (výhradně pro pravidla)</li>
+     *         <li>Ostatní atributy (title) se čistí, jen pokud je nějaké pravidlo zmiňuje</li>
+     *         <li>Chráněné atributy (ext1, ext2) se nečistí nikdy</li>
+     *       </ul>
+     *   </li>
+     * </ol>
      */
     private List<SyncResult> reconcileAttributes(List<StudentRecord> users,
-                                                   Set<String> managedAttrs,
+                                                   Set<String> managedAttrsByRules,
                                                    Map<String, Map<String, String>> desiredAttrs,
                                                    boolean repair,
                                                    SyncProgressListener listener) {
@@ -140,40 +176,71 @@ public class RuleServiceImpl implements RuleService {
 
             Map<String, String> userDesired = desiredAttrs.getOrDefault(dn, Map.of());
 
-            for (String attrName : managedAttrs) {
-                String desiredValue = userDesired.get(attrName);
-                String currentValue = getCurrentValue(user, attrName);
-                EBakaLDAPAttributes resolved = resolveAttribute(attrName);
+            // Průchod A – nastavit požadované hodnoty z pravidel
+            for (var entry : userDesired.entrySet()) {
+                String attrName = entry.getKey();
+                String desiredValue = entry.getValue();
+                if (PROTECTED_ATTRIBUTES.contains(attrName)) continue;
 
+                EBakaLDAPAttributes resolved = resolveAttribute(attrName);
                 if (resolved == null) {
                     results.add(SyncResult.error(id, "Neznámý atribut: " + attrName));
                     continue;
                 }
 
-                if (desiredValue != null) {
-                    // pravidlo přiřazuje hodnotu – nastavit, pokud se liší
-                    if (!desiredValue.equals(currentValue)) {
-                        if (repair) {
-                            ldapRepo.updateAttribute(dn, resolved, desiredValue);
-                        }
-                        results.add(SyncResult.updated(id,
-                                "Pravidlo: " + attrName + " = " + desiredValue
-                                        + (currentValue != null ? " (bylo: " + currentValue + ")" : "")));
-                    }
-                    // shodná hodnota → žádná akce (NO_CHANGE se nereportuje pro každý atribut)
-                } else {
-                    // žádné pravidlo nepřiřazuje – vyčistit, pokud je nastaven
+                String currentValue = getCurrentValue(user, attrName);
+
+                if (CLEAR.equals(desiredValue)) {
+                    // explicitní smazání atributu hodnotou CLEAR
                     if (currentValue != null && !currentValue.isEmpty()) {
-                        // chráněné atributy se nerekoncilují
-                        if (PROTECTED_ATTRIBUTES.contains(attrName)) {
-                            continue;
-                        }
                         if (repair) {
                             ldapRepo.updateAttribute(dn, resolved, "");
                         }
                         results.add(SyncResult.updated(id,
-                                "Rekonciliace: " + attrName + " vyčištěn (bylo: " + currentValue + ")"));
+                                "Pravidlo CLEAR: " + attrName
+                                        + " vyčištěn (bylo: " + currentValue + ")"));
                     }
+                } else if (!desiredValue.equals(currentValue)) {
+                    // nastavit novou hodnotu
+                    if (repair) {
+                        ldapRepo.updateAttribute(dn, resolved, desiredValue);
+                    }
+                    results.add(SyncResult.updated(id,
+                            "Pravidlo: " + attrName + " = " + desiredValue
+                                    + (currentValue != null
+                                    ? " (bylo: " + currentValue + ")" : "")));
+                }
+                // shodná hodnota → žádná akce
+            }
+
+            // Průchod B – vyčistit atributy, které žádné pravidlo nepřiřazuje
+            if (user.getRuleAttributes() != null) {
+                for (var entry : user.getRuleAttributes().entrySet()) {
+                    String attrName = entry.getKey();
+                    String currentValue = entry.getValue();
+
+                    // přeskočit chráněné, již zpracované (desired) a prázdné
+                    if (PROTECTED_ATTRIBUTES.contains(attrName)) continue;
+                    if (userDesired.containsKey(attrName)) continue;
+                    if (currentValue == null || currentValue.isEmpty()) continue;
+
+                    // rekonciliovat, pokud:
+                    // a) atribut je výhradně spravovaný pravidly (ext5–15), NEBO
+                    // b) atribut je zmíněn v nějakém aktuálním pravidle (např. title)
+                    if (!RULE_EXCLUSIVE_ATTRS.contains(attrName)
+                            && !managedAttrsByRules.contains(attrName)) {
+                        continue;
+                    }
+
+                    EBakaLDAPAttributes resolved = resolveAttribute(attrName);
+                    if (resolved == null) continue;
+
+                    if (repair) {
+                        ldapRepo.updateAttribute(dn, resolved, "");
+                    }
+                    results.add(SyncResult.updated(id,
+                            "Rekonciliace: " + attrName
+                                    + " vyčištěn (bylo: " + currentValue + ")"));
                 }
             }
         }
