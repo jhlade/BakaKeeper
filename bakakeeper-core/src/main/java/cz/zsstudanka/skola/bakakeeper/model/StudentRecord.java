@@ -3,7 +3,9 @@ package cz.zsstudanka.skola.bakakeeper.model;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -66,6 +68,9 @@ public class StudentRecord extends Person {
 
     /** datum konce evidence (EVID_DO) */
     private String expired;
+
+    /** seznam proxyAddresses z LDAP (SMTP: primární, smtp: sekundární) */
+    private List<String> proxyAddresses = new ArrayList<>();
 
     /**
      * Vrátí aktuální hodnotu atributu spravovaného pravidly z LDAP.

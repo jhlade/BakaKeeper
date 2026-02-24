@@ -60,6 +60,16 @@ public class StudentServiceImpl implements StudentService {
                 .filter(s -> s.getInternalId() != null)
                 .collect(Collectors.toMap(StudentRecord::getInternalId, s -> s, (a, b) -> a));
 
+        // množina obsazených adres – UPN + mail + proxyAddresses z celého stromu
+        // (žáci + zaměstnanci), aby nedošlo ke kolizi s existujícími adresami
+        Set<String> occupiedAddresses = new HashSet<>(ldapUpns);
+        // žákovské účty (předány jako parametr)
+        collectOccupiedAddresses(ldapStudents, occupiedAddresses);
+        // zaměstnanecké účty (načíst zvlášť – zaměstnanci běžně mají více proxy adres)
+        List<StudentRecord> staffAccounts = ldapRepo.findAllStudents(
+                config.getLdapBaseFaculty(), null);
+        collectOccupiedAddresses(staffAccounts, occupiedAddresses);
+
         for (StudentRecord sql : sqlStudents) {
             // žák už má spárovaný LDAP účet → přeskočit
             if (sql.getInternalId() != null && ldapById.containsKey(sql.getInternalId())) {
@@ -72,29 +82,37 @@ public class StudentServiceImpl implements StudentService {
                 continue; // už má platný školní mail
             }
 
-            // vygenerovat UPN
-            String proposedUpn = BakaUtils.createUPNfromName(
-                    sql.getSurname(), sql.getGivenName(), config.getMailDomain());
+            // vygenerovat unikátní UPN – kontrola proti UPN i proxyAddresses
+            String proposedUpn = null;
+            for (int attempt = 0; attempt < MAX_DN_ATTEMPTS; attempt++) {
+                String candidate = BakaUtils.createUPNfromName(
+                        sql.getSurname(), sql.getGivenName(), config.getMailDomain(), attempt);
+                if (candidate != null && !occupiedAddresses.contains(candidate.toLowerCase())) {
+                    proposedUpn = candidate;
+                    break;
+                }
+                // pokud první pokus koliduje s UPN → pokus o párování
+                if (attempt == 0 && candidate != null
+                        && ldapUpns.contains(candidate.toLowerCase())) {
+                    StudentRecord existingLdap = ldapStudents.stream()
+                            .filter(s -> candidate.equalsIgnoreCase(s.getUpn()))
+                            .findFirst().orElse(null);
 
-            if (proposedUpn == null) {
-                results.add(SyncResult.error(sql.getInternalId(),
-                        "Nelze vygenerovat UPN pro " + sql.getSurname() + " " + sql.getGivenName()));
-                continue;
+                    if (existingLdap != null && repair) {
+                        SyncResult pairResult = pairingService.attemptToPair(sql, existingLdap, true);
+                        results.add(pairResult);
+                        proposedUpn = null; // zpracováno párováním
+                        break;
+                    }
+                }
             }
 
-            // ověřit dostupnost UPN
-            if (ldapUpns.contains(proposedUpn.toLowerCase())) {
-                // UPN obsazený – pokus o párování
-                StudentRecord existingLdap = ldapStudents.stream()
-                        .filter(s -> proposedUpn.equalsIgnoreCase(s.getUpn()))
-                        .findFirst().orElse(null);
-
-                if (existingLdap != null && repair) {
-                    SyncResult pairResult = pairingService.attemptToPair(sql, existingLdap, true);
-                    results.add(pairResult);
-                } else {
-                    results.add(SyncResult.skipped(sql.getInternalId(),
-                            "UPN " + proposedUpn + " je obsazený."));
+            if (proposedUpn == null) {
+                // buď zpracováno párováním, nebo se nepodařilo vygenerovat UPN
+                if (results.isEmpty() || !sql.getInternalId().equals(results.getLast().getEntityId())) {
+                    results.add(SyncResult.error(sql.getInternalId(),
+                            "Nelze vygenerovat unikátní UPN pro "
+                                    + sql.getSurname() + " " + sql.getGivenName()));
                 }
                 continue;
             }
@@ -108,6 +126,7 @@ public class StudentServiceImpl implements StudentService {
                 results.add(createResult);
 
                 if (createResult.isSuccess()) {
+                    occupiedAddresses.add(proposedUpn.toLowerCase());
                     ldapUpns.add(proposedUpn.toLowerCase());
                 }
             } else {
@@ -315,28 +334,32 @@ public class StudentServiceImpl implements StudentService {
         String dn = ldap.getDn();
         boolean changed = false;
 
-        // 1. Příjmení
-        if (!Objects.equals(sql.getSurname(), ldap.getSurname())) {
-            if (repair) {
-                ldapRepo.updateAttribute(dn, EBakaLDAPAttributes.NAME_LAST, sql.getSurname());
-                String display = sql.getSurname() + " " + sql.getGivenName();
-                ldapRepo.updateAttribute(dn, EBakaLDAPAttributes.NAME_DISPLAY, display);
-                changed = true;
-            }
-            listener.onProgress("Neshoda příjmení: " + sql.getInternalId()
-                    + " SQL=" + sql.getSurname() + " LDAP=" + ldap.getSurname());
-        }
+        // 1-2. Kontrola změny jména (příjmení nebo křestní jméno)
+        boolean nameChanged = !Objects.equals(sql.getSurname(), ldap.getSurname())
+                || !Objects.equals(sql.getGivenName(), ldap.getGivenName());
 
-        // 2. Jméno
-        if (!Objects.equals(sql.getGivenName(), ldap.getGivenName())) {
+        if (nameChanged) {
+            listener.onProgress("Změna jména: " + sql.getInternalId()
+                    + " SQL=" + sql.getSurname() + " " + sql.getGivenName()
+                    + " LDAP=" + ldap.getSurname() + " " + ldap.getGivenName());
+
             if (repair) {
+                // aktualizovat sn, givenName, displayName
+                ldapRepo.updateAttribute(dn, EBakaLDAPAttributes.NAME_LAST, sql.getSurname());
                 ldapRepo.updateAttribute(dn, EBakaLDAPAttributes.NAME_FIRST, sql.getGivenName());
                 String display = sql.getSurname() + " " + sql.getGivenName();
                 ldapRepo.updateAttribute(dn, EBakaLDAPAttributes.NAME_DISPLAY, display);
                 changed = true;
+
+                // pokud je E_MAIL v SQL prázdný → jméno bylo změněno scénářem
+                // a očekává se přegenerování loginu, emailu a proxyAddresses
+                String sqlEmail = sql.getEmail();
+                boolean emailCleared = (sqlEmail == null || sqlEmail.isEmpty());
+
+                if (emailCleared) {
+                    changed |= regenerateLoginAndEmail(dn, sql, ldap, listener);
+                }
             }
-            listener.onProgress("Neshoda jména: " + sql.getInternalId()
-                    + " SQL=" + sql.getGivenName() + " LDAP=" + ldap.getGivenName());
         }
 
         // 3. Třída (OU + skupiny)
@@ -382,6 +405,148 @@ public class StudentServiceImpl implements StudentService {
     }
 
     /**
+     * Přegeneruje login (UPN, sAMAccountName), e-mail a proxyAddresses
+     * při změně jména žáka.
+     *
+     * <p>Operace:
+     * <ol>
+     *   <li>Vygenerovat nový UPN z nového jména (s kontrolou kolizí)</li>
+     *   <li>Aktualizovat UPN, sAMAccountName a mail v LDAP</li>
+     *   <li>Demotovat starý primární email v proxyAddresses na smtp: (sekundární)</li>
+     *   <li>Přidat nový email jako SMTP: (primární) do proxyAddresses</li>
+     *   <li>Zapsat nový email zpět do SQL evidence</li>
+     * </ol>
+     * </p>
+     *
+     * @param dn aktuální DN žáka
+     * @param sql záznam z SQL evidence (nové jméno, prázdný email)
+     * @param ldap záznam z LDAP (staré jméno, stará adresa, proxyAddresses)
+     * @param listener pro logování průběhu
+     * @return true pokud byla provedena změna
+     */
+    private boolean regenerateLoginAndEmail(String dn, StudentRecord sql,
+                                             StudentRecord ldap,
+                                             SyncProgressListener listener) {
+        String newSurname = sql.getSurname();
+        String newGivenName = sql.getGivenName();
+        String oldEmail = ldap.getEmail(); // aktuální primární email v LDAP
+
+        // 1. Vygenerovat nový UPN – kontrola kolizí proti existujícím UPN a proxyAddresses
+        String newUpn = generateUniqueUpn(newSurname, newGivenName, config.getMailDomain(), dn);
+        if (newUpn == null) {
+            ReportManager.log(EBakaLogType.LOG_ERR,
+                    "Nelze vygenerovat nový UPN pro " + newSurname + " " + newGivenName
+                            + " (" + sql.getInternalId() + ").");
+            return false;
+        }
+
+        String newSam = BakaUtils.createSAMloginFromUPNbase(newSurname, newGivenName, newUpn);
+
+        listener.onProgress("Přegenerování loginu: " + sql.getInternalId()
+                + " " + ldap.getUpn() + " → " + newUpn
+                + " (SAM: " + ldap.getSamAccountName() + " → " + newSam + ")");
+
+        // 2. Aktualizovat UPN, sAMAccountName a mail v LDAP
+        ldapRepo.updateAttribute(dn, EBakaLDAPAttributes.UPN, newUpn);
+        ldapRepo.updateAttribute(dn, EBakaLDAPAttributes.LOGIN, newSam);
+        ldapRepo.updateAttribute(dn, EBakaLDAPAttributes.MAIL, newUpn);
+
+        // 3. Správa proxyAddresses – zachovat celou historii
+        List<String> currentProxy = ldap.getProxyAddresses();
+
+        // demotovat starou primární adresu (SMTP:) na sekundární (smtp:)
+        if (oldEmail != null && !oldEmail.isEmpty()) {
+            String oldPrimary = "SMTP:" + oldEmail;
+            String oldSecondary = "smtp:" + oldEmail;
+
+            // odebrat starou primární SMTP: (pokud existuje)
+            if (currentProxy.stream().anyMatch(p -> p.equals(oldPrimary))) {
+                ldapRepo.removeAttribute(dn, EBakaLDAPAttributes.PROXY_ADDR, oldPrimary);
+            }
+            // přidat jako sekundární smtp: (pokud ještě neexistuje)
+            if (currentProxy.stream().noneMatch(p -> p.equalsIgnoreCase(oldSecondary))) {
+                ldapRepo.addAttribute(dn, EBakaLDAPAttributes.PROXY_ADDR, oldSecondary);
+            }
+        }
+
+        // odebrat případnou existující primární SMTP: záznam pro nový email
+        // (např. pokud by nová adresa už byla v proxy jako sekundární z dřívějška)
+        String newPrimary = "SMTP:" + newUpn;
+        String newSecondaryVariant = "smtp:" + newUpn;
+        if (currentProxy.stream().anyMatch(p -> p.equalsIgnoreCase(newSecondaryVariant))) {
+            ldapRepo.removeAttribute(dn, EBakaLDAPAttributes.PROXY_ADDR, newSecondaryVariant);
+        }
+
+        // přidat nový email jako primární SMTP:
+        ldapRepo.addAttribute(dn, EBakaLDAPAttributes.PROXY_ADDR, newPrimary);
+
+        // 4. Zapsat nový email do SQL evidence
+        sqlRepo.updateEmail(sql.getInternalId(), newUpn);
+
+        listener.onProgress("Email přegenerován: " + sql.getInternalId()
+                + " " + (oldEmail != null ? oldEmail : "(žádný)") + " → " + newUpn);
+
+        return true;
+    }
+
+    /**
+     * Vygeneruje unikátní UPN pro nové jméno s kontrolou kolizí.
+     *
+     * <p>Kontroluje kolize proti celému stromu uživatelů (žáci + zaměstnanci):
+     * <ul>
+     *   <li>Existujícím UPN všech účtů</li>
+     *   <li>Existujícím proxyAddresses všech účtů (celá historie adres)</li>
+     * </ul>
+     * Zaměstnanci běžně mají více záznamů v proxyAddresses, proto je kontrola
+     * celého stromu klíčová pro předcházení kolizím.</p>
+     *
+     * @param surname nové příjmení
+     * @param givenName nové jméno
+     * @param domain mailová doména
+     * @param excludeDn DN účtu, pro který generujeme (vyloučit z kontroly kolizí)
+     * @return unikátní UPN, nebo null pokud se nepodařilo vygenerovat
+     */
+    private String generateUniqueUpn(String surname, String givenName,
+                                      String domain, String excludeDn) {
+        // načíst VŠECHNY uživatelské účty z celého stromu (žáci + zaměstnanci)
+        // pro úplnou kontrolu kolizí UPN a proxyAddresses
+        List<StudentRecord> allUsers = ldapRepo.findAllStudents(
+                config.getLdapBase(), null);
+
+        // množina obsazených adres: UPN + mail + všechny proxyAddresses (bez prefixu)
+        Set<String> occupiedAddresses = new HashSet<>();
+        for (StudentRecord s : allUsers) {
+            // vyloučit účet, pro který generujeme nový UPN
+            if (excludeDn != null && excludeDn.equalsIgnoreCase(s.getDn())) {
+                continue;
+            }
+            if (s.getUpn() != null) {
+                occupiedAddresses.add(s.getUpn().toLowerCase());
+            }
+            if (s.getEmail() != null) {
+                occupiedAddresses.add(s.getEmail().toLowerCase());
+            }
+            for (String proxy : s.getProxyAddresses()) {
+                // odstranit SMTP:/smtp: prefix pro normalizované porovnání
+                String addr = proxy.startsWith("SMTP:") ? proxy.substring(5)
+                        : proxy.startsWith("smtp:") ? proxy.substring(5)
+                        : proxy;
+                occupiedAddresses.add(addr.toLowerCase());
+            }
+        }
+
+        // pokus o vygenerování unikátního UPN (max MAX_DN_ATTEMPTS pokusů)
+        for (int attempt = 0; attempt < MAX_DN_ATTEMPTS; attempt++) {
+            String candidate = BakaUtils.createUPNfromName(surname, givenName, domain, attempt);
+            if (candidate != null && !occupiedAddresses.contains(candidate.toLowerCase())) {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Přesune žákovský účet do správné třídní OU a aktualizuje skupiny.
      * Extrahováno z Student.moveToClass().
      *
@@ -393,6 +558,31 @@ public class StudentServiceImpl implements StudentService {
      * @param letter písmeno cílové třídy
      * @return nové DN žáka po přesunu (nebo původní DN, pokud přesun selhal)
      */
+
+    /**
+     * Naplní množinu obsazenými e-mailovými adresami ze seznamu uživatelských účtů.
+     * Pro každý účet přidá UPN, primární mail a všechny proxyAddresses (bez prefixu).
+     *
+     * @param accounts seznam účtů
+     * @param target cílová množina adres (case-insensitive, lowercase)
+     */
+    private void collectOccupiedAddresses(List<StudentRecord> accounts, Set<String> target) {
+        for (StudentRecord s : accounts) {
+            if (s.getEmail() != null) {
+                target.add(s.getEmail().toLowerCase());
+            }
+            if (s.getUpn() != null) {
+                target.add(s.getUpn().toLowerCase());
+            }
+            for (String proxy : s.getProxyAddresses()) {
+                String addr = proxy.startsWith("SMTP:") ? proxy.substring(5)
+                        : proxy.startsWith("smtp:") ? proxy.substring(5)
+                        : proxy;
+                target.add(addr.toLowerCase());
+            }
+        }
+    }
+
     private String moveStudentToClass(String dn, int year, String letter) {
         if (letter == null) letter = "A";
 

@@ -34,6 +34,12 @@ public interface LDAPConnector {
     /** Nahrazení atributu objektu. */
     Boolean replaceAttribute(String dn, EBakaLDAPAttributes attribute, String newValue);
 
+    /** Přidání hodnoty k multi-value atributu (např. proxyAddresses). */
+    Boolean addAttribute(String dn, EBakaLDAPAttributes attribute, String value);
+
+    /** Odebrání konkrétní hodnoty z multi-value atributu. */
+    Boolean removeAttribute(String dn, EBakaLDAPAttributes attribute, String oldValue);
+
     /** Přesun objektu do jiné OU. */
     Boolean moveObject(String objectDN, String ouName);
 
