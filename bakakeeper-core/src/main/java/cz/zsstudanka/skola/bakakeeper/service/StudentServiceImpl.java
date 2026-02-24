@@ -344,14 +344,15 @@ public class StudentServiceImpl implements StudentService {
         String ldapClass = resolveClassFromDn(ldap.getDn());
         if (sqlClass != null && !sqlClass.equals(ldapClass)) {
             if (repair) {
-                moveStudentToClass(dn, sql.getClassYear(), sql.getClassLetter());
+                // moveStudentToClass přesune objekt a vrátí nové DN
+                dn = moveStudentToClass(dn, sql.getClassYear(), sql.getClassLetter());
                 changed = true;
             }
             listener.onProgress("Neshoda třídy: " + sql.getInternalId()
                     + " SQL=" + sqlClass + " LDAP=" + ldapClass);
         }
 
-        // 4. Kontrola externího mailu
+        // 4. Kontrola externího mailu (po přesunu používáme aktuální dn)
         boolean extMailRestricted = ldap.isExtMailRestricted();
         boolean shouldBeRestricted = !config.getExtMailAllowed().contains(sql.getClassYear());
         if (extMailRestricted != shouldBeRestricted) {
@@ -362,7 +363,7 @@ public class StudentServiceImpl implements StudentService {
             }
         }
 
-        // 5. UAC příznaky (expirace hesla)
+        // 5. UAC příznaky (expirace hesla – po přesunu používáme aktuální dn)
         if (ldap.getUac() > 0) {
             int expectedUac = computeExpectedUac(sql.getClassYear());
             if (ldap.getUac() != expectedUac) {
@@ -386,8 +387,13 @@ public class StudentServiceImpl implements StudentService {
      *
      * <p>Pořadí operací: nejprve přesun do cílové OU (dokud je staré DN platné),
      * poté úprava skupin a atributů s novým DN.</p>
+     *
+     * @param dn aktuální DN žáka
+     * @param year cílový ročník
+     * @param letter písmeno cílové třídy
+     * @return nové DN žáka po přesunu (nebo původní DN, pokud přesun selhal)
      */
-    private void moveStudentToClass(String dn, int year, String letter) {
+    private String moveStudentToClass(String dn, int year, String letter) {
         if (letter == null) letter = "A";
 
         String targetOu = "OU=Trida-" + letter.toUpperCase()
@@ -400,7 +406,7 @@ public class StudentServiceImpl implements StudentService {
         if (!ldapRepo.checkDN(dn)) {
             ReportManager.log(EBakaLogType.LOG_ERR,
                     "Objekt [" + dn + "] v LDAP neexistuje – přesun třídy nebude proveden.");
-            return;
+            return dn;
         }
 
         // 1. Nejprve přesunout do cílové OU (dokud je staré DN platné)
@@ -418,6 +424,8 @@ public class StudentServiceImpl implements StudentService {
 
         // 3. Aktualizovat titulek na novém DN
         ldapRepo.updateAttribute(activeDn, EBakaLDAPAttributes.TITLE, "Žák");
+
+        return activeDn;
     }
 
     /**
