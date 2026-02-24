@@ -1,7 +1,9 @@
 package cz.zsstudanka.skola.bakakeeper.service;
 
+import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.config.AppConfig;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaUAC;
 import cz.zsstudanka.skola.bakakeeper.model.StudentRecord;
 import cz.zsstudanka.skola.bakakeeper.model.entities.DataLDAP;
@@ -381,6 +383,9 @@ public class StudentServiceImpl implements StudentService {
     /**
      * Přesune žákovský účet do správné třídní OU a aktualizuje skupiny.
      * Extrahováno z Student.moveToClass().
+     *
+     * <p>Pořadí operací: nejprve přesun do cílové OU (dokud je staré DN platné),
+     * poté úprava skupin a atributů s novým DN.</p>
      */
     private void moveStudentToClass(String dn, int year, String letter) {
         if (letter == null) letter = "A";
@@ -391,16 +396,28 @@ public class StudentServiceImpl implements StudentService {
                 + "," + config.getLdapBaseStudentGroups();
         String baseGroup = "CN=Skupina-Zaci," + config.getLdapBaseGlobalGroups();
 
-        // přeřadit skupiny
-        ldapRepo.removeFromAllGroups(dn);
-        ldapRepo.addToGroup(dn, baseGroup);
-        ldapRepo.addToGroup(dn, classGroup);
+        // ověřit, že zdrojový objekt stále existuje na uvedeném DN
+        if (!ldapRepo.checkDN(dn)) {
+            ReportManager.log(EBakaLogType.LOG_ERR,
+                    "Objekt [" + dn + "] v LDAP neexistuje – přesun třídy nebude proveden.");
+            return;
+        }
 
-        // aktualizovat titulek
-        ldapRepo.updateAttribute(dn, EBakaLDAPAttributes.TITLE, "Žák");
+        // 1. Nejprve přesunout do cílové OU (dokud je staré DN platné)
+        boolean moved = ldapRepo.moveObject(dn, targetOu);
 
-        // přesunout OU
-        ldapRepo.moveObject(dn, targetOu);
+        // vypočítat nové DN – po přesunu operace pracují s novým umístěním
+        String activeDn = moved
+                ? "CN=" + BakaUtils.parseCN(dn) + "," + targetOu
+                : dn;
+
+        // 2. Přeřadit skupiny (operace nad skupinovými objekty – používá activeDn jako member)
+        ldapRepo.removeFromAllGroups(activeDn);
+        ldapRepo.addToGroup(activeDn, baseGroup);
+        ldapRepo.addToGroup(activeDn, classGroup);
+
+        // 3. Aktualizovat titulek na novém DN
+        ldapRepo.updateAttribute(activeDn, EBakaLDAPAttributes.TITLE, "Žák");
     }
 
     /**

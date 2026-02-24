@@ -864,6 +864,13 @@ public class BakaADAuthenticator implements LDAPConnector {
 
                 Map<Integer, Map<String, String>> origData = getObjectInfo(BakaUtils.parseBase(dn), queryOrig, origAttributes);
 
+                // ochrana proti NPE – objekt nebyl nalezen
+                if (origData == null || origData.get(0) == null) {
+                    ReportManager.log(EBakaLogType.LOG_ERR,
+                            "Nebylo možné načíst původní UAC pro objekt [" + dn + "].");
+                    return false;
+                }
+
                 boolean uacPNXOrig = EBakaUAC.PASSWD_CANT_CHANGE.checkFlag(origData.get(0).get(EBakaLDAPAttributes.UAC.attribute()));
                 boolean uacPNXNew = EBakaUAC.PASSWD_CANT_CHANGE.checkFlag(value);
 
@@ -877,6 +884,13 @@ public class BakaADAuthenticator implements LDAPConnector {
                             BakaUtils.parseBase(dn), queryOrig,
                             new String[] { EBakaLDAPAttributes.NT_SECURITY_DESCRIPTOR.attribute() }
                     );
+
+                    // ochrana proti NPE – objekt nebyl nalezen
+                    if (ntsdOrigResult == null || ntsdOrigResult.get(0) == null) {
+                        ReportManager.log(EBakaLogType.LOG_ERR,
+                                "Nebylo možné načíst NT Security Descriptor pro objekt [" + dn + "].");
+                        return false;
+                    }
 
                     // binární data NT Security Descriptoru
                     byte[] ntsdOrig = (byte[]) ntsdOrigResult.get(0).get(EBakaLDAPAttributes.NT_SECURITY_DESCRIPTOR.attribute());
@@ -1068,25 +1082,42 @@ public class BakaADAuthenticator implements LDAPConnector {
      * @return úspěch operace
      */
     public Boolean moveObject(String objectDN, String ouName, Boolean createNewOUifNotExists, Boolean renameObject) {
-        // kontrola existence cílové ou
-        if (!createNewOUifNotExists && checkOU(ouName) == -1) {
+        // 1. Zajistit existenci cílové OU – při createNewOUifNotExists vytvořit PŘED
+        //    jakýmikoli checkDN voláními, aby se zamezilo LDAP error 32 při hledání
+        //    v dosud neexistující OU.
+        if (checkOU(ouName) == -1) {
+            if (createNewOUifNotExists) {
+                // vlastní název
+                String cn = BakaUtils.parseLastOU(ouName);
+                // cílová cesta
+                String base = BakaUtils.parseBase(ouName);
+                // vytvoření
+                this.createOU(cn, base);
 
-            if (Settings.getInstance().beVerbose()) {
-                ReportManager.log(EBakaLogType.LOG_ERR, "Cílová organizační jednotka pro přesun objektu neexistuje.");
+                if (Settings.getInstance().beVerbose()) {
+                    ReportManager.log(EBakaLogType.LOG_LDAP,
+                            "Vytvořena cílová OU [" + ouName + "].");
+                }
+            } else {
+                if (Settings.getInstance().beVerbose()) {
+                    ReportManager.log(EBakaLogType.LOG_ERR,
+                            "Cílová organizační jednotka pro přesun objektu neexistuje.");
+                }
+
+                if (Settings.getInstance().debugMode()) {
+                    ReportManager.log(EBakaLogType.LOG_ERR_DEBUG,
+                            "Nebylo možné přesunout objekt [" + objectDN + "] do umístění [" + ouName + "].");
+                }
+
+                return false;
             }
-
-            if (Settings.getInstance().debugMode()) {
-                ReportManager.log(EBakaLogType.LOG_ERR_DEBUG, "Nebylo možné přesunout objekt [" + objectDN + "] do umístění [" + ouName + "].");
-            }
-
-            return false;
         }
 
-        // nový název objektu
+        // 2. Nový název objektu
         String objCN = BakaUtils.parseCN(objectDN);
         String newObjectDN = "CN=" + objCN + "," + ouName;
 
-        // prvotní kontrola existence cílového objektu
+        // 3. Prvotní kontrola existence cílového objektu (kolize)
         if (checkDN(newObjectDN) && !renameObject) {
             if (Settings.getInstance().beVerbose()) {
                 ReportManager.log(EBakaLogType.LOG_ERR, "Cílový název objektu již existuje, přesun nebude proveden.");
@@ -1099,6 +1130,7 @@ public class BakaADAuthenticator implements LDAPConnector {
             return false;
         }
 
+        // 4. Řešení kolizí přejmenováním
         int moveAttempt = 0;
         Boolean dnOccupied;
 
@@ -1125,20 +1157,9 @@ public class BakaADAuthenticator implements LDAPConnector {
             ReportManager.log(EBakaLogType.LOG_ERR, "Byl překročen maximální limit pro přejmenování LDAP objektu.");
         }
 
-        // vytvoření nové organziační jednotky
-        if (createNewOUifNotExists && checkOU(ouName) == -1) {
-            // vlastní název
-            String cn = BakaUtils.parseLastOU(ouName);
-            // cílová cesta
-            String base = BakaUtils.parseBase(ouName);
-            // vytvoření
-            this.createOU(cn, base);
-        }
-
-        // kontext
+        // 5. Provedení přesunu
         LdapContext ctxOM = null;
 
-        // provedení přesunu
         try {
             ctxOM = new InitialLdapContext(env, null);
             ctxOM.rename(objectDN, newObjectDN);
@@ -1172,7 +1193,11 @@ public class BakaADAuthenticator implements LDAPConnector {
         };
 
         // pouze první položka
-        Map info = ((Map<Integer, Map>) getObjectInfo(Settings.getInstance().getLDAP_base(), ldapQ, retAttributes)).get(0);
+        Map<Integer, Map> rawResult = (Map<Integer, Map>) getObjectInfo(Settings.getInstance().getLDAP_base(), ldapQ, retAttributes);
+        if (rawResult == null || rawResult.isEmpty()) {
+            return new ArrayList<>(0);
+        }
+        Map info = rawResult.get(0);
 
         if (info != null) {
 
@@ -1223,12 +1248,14 @@ public class BakaADAuthenticator implements LDAPConnector {
 
         Map<Integer, Map<String, String>> query = (Map<Integer, Map<String, String>>) getObjectInfo(Settings.getInstance().getLDAP_base(), ldapQ, retAttributes);
 
-        if (query.size() > 0) {
+        if (query != null && query.size() > 0) {
             result = new ArrayList<String>(query.size());
 
-            int memberCounter = 0;
-            for (memberCounter = 0; memberCounter < query.size(); memberCounter++) {
-                result.add(query.get(memberCounter).get(EBakaLDAPAttributes.DN.attribute()));
+            for (int memberCounter = 0; memberCounter < query.size(); memberCounter++) {
+                Map<String, String> member = query.get(memberCounter);
+                if (member != null && member.get(EBakaLDAPAttributes.DN.attribute()) != null) {
+                    result.add(member.get(EBakaLDAPAttributes.DN.attribute()));
+                }
             }
         }
 

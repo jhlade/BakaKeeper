@@ -38,9 +38,7 @@ public interface LDAPConnector {
     Boolean moveObject(String objectDN, String ouName);
 
     /** Přesun objektu do jiné OU s volitelným vytvořením cílové OU. */
-    default Boolean moveObject(String objectDN, String ouName, boolean createOuIfNotExists) {
-        return moveObject(objectDN, ouName);
-    }
+    Boolean moveObject(String objectDN, String ouName, Boolean createOuIfNotExists);
 
     /** Seznam členství objektu ve skupinách. */
     ArrayList<String> listMembership(String objDN);

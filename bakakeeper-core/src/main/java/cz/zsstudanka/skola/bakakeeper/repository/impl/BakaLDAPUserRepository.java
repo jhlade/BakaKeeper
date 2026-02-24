@@ -61,8 +61,17 @@ public class BakaLDAPUserRepository implements LDAPUserRepository {
         Map<Integer, Map<String, String>> raw = queryUsers(baseOu);
         List<StudentRecord> result = new ArrayList<>();
 
+        if (raw == null) {
+            return result;
+        }
+
         for (int i = 0; i < raw.size(); i++) {
             Map<String, String> entry = raw.get(i);
+
+            // ochrana proti NPE – nekonzistentní klíče v mapě
+            if (entry == null) {
+                continue;
+            }
 
             // vyloučit absolventy (pokud nejsou explicitně hledáni)
             if (alumniOu != null && entry.get(EBakaLDAPAttributes.DN.attribute()) != null
@@ -85,8 +94,17 @@ public class BakaLDAPUserRepository implements LDAPUserRepository {
         Map<Integer, Map<String, String>> raw = queryUsers(alumniOu);
         List<StudentRecord> result = new ArrayList<>();
 
+        if (raw == null) {
+            return result;
+        }
+
         for (int i = 0; i < raw.size(); i++) {
-            DataLDAP data = new DataLDAP(raw.get(i));
+            Map<String, String> entry = raw.get(i);
+            if (entry == null) {
+                continue;
+            }
+
+            DataLDAP data = new DataLDAP(entry);
             StudentRecord record = StudentMapper.fromLDAP(data);
             if (record != null) {
                 result.add(record);
