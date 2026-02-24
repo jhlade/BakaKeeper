@@ -143,6 +143,16 @@ public class BakaLDAPUserRepository implements LDAPUserRepository {
     }
 
     @Override
+    public boolean addAttribute(String dn, EBakaLDAPAttributes attr, String value) {
+        return ldap.addAttribute(dn, attr, value);
+    }
+
+    @Override
+    public boolean removeAttribute(String dn, EBakaLDAPAttributes attr, String oldValue) {
+        return ldap.removeAttribute(dn, attr, oldValue);
+    }
+
+    @Override
     public boolean moveObject(String dn, String targetOu) {
         return ldap.moveObject(dn, targetOu);
     }

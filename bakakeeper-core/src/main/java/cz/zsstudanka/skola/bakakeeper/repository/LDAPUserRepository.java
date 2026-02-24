@@ -68,6 +68,26 @@ public interface LDAPUserRepository {
     boolean updateAttribute(String dn, EBakaLDAPAttributes attr, String value);
 
     /**
+     * Přidá hodnotu k multi-value atributu objektu (např. proxyAddresses).
+     *
+     * @param dn distinguished name objektu
+     * @param attr atribut
+     * @param value hodnota k přidání
+     * @return úspěch operace
+     */
+    boolean addAttribute(String dn, EBakaLDAPAttributes attr, String value);
+
+    /**
+     * Odebere konkrétní hodnotu z multi-value atributu objektu.
+     *
+     * @param dn distinguished name objektu
+     * @param attr atribut
+     * @param oldValue hodnota k odebrání
+     * @return úspěch operace
+     */
+    boolean removeAttribute(String dn, EBakaLDAPAttributes attr, String oldValue);
+
+    /**
      * Přesune objekt do jiné OU.
      *
      * @param dn distinguished name objektu

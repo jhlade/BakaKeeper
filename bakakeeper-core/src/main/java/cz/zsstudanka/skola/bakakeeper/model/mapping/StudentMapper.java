@@ -7,6 +7,7 @@ import cz.zsstudanka.skola.bakakeeper.model.entities.DataLDAP;
 import cz.zsstudanka.skola.bakakeeper.model.entities.DataSQL;
 import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -124,6 +125,10 @@ public class StudentMapper {
         record.setExtMailRestricted(
                 EBakaLDAPAttributes.BK_LITERAL_TRUE.value().equalsIgnoreCase(ext02));
 
+        // proxyAddresses – multi-value atribut (SMTP: primární, smtp: sekundární)
+        record.setProxyAddresses(
+                new ArrayList<>(MapperUtils.getMultiValueAttr(ldap, EBakaLDAPAttributes.PROXY_ADDR)));
+
         // aktuální hodnoty atributů pro konvergentní rekonciliaci pravidel
         // (extensionAttribute3-15 + title) – umožňuje zjistit, zda atribut
         // potřebuje vyčistit při odebrání pravidla z konfigurace
@@ -205,6 +210,10 @@ public class StudentMapper {
         String ext02 = MapperUtils.getStringAttr(ldap, EBakaLDAPAttributes.EXT02);
         record.setExtMailRestricted(
                 EBakaLDAPAttributes.BK_LITERAL_TRUE.value().equalsIgnoreCase(ext02));
+
+        // proxyAddresses – multi-value atribut z LDAP
+        record.setProxyAddresses(
+                new ArrayList<>(MapperUtils.getMultiValueAttr(ldap, EBakaLDAPAttributes.PROXY_ADDR)));
 
         // e-mail z SQL je autoritativní; pokud je prázdný, použijeme LDAP
         if (record.getEmail() == null || record.getEmail().isEmpty()) {
