@@ -88,6 +88,15 @@ public interface LDAPUserRepository {
     boolean removeAttribute(String dn, EBakaLDAPAttributes attr, String oldValue);
 
     /**
+     * Přejmenuje objekt (změní CN) ve stejné OU.
+     *
+     * @param dn distinguished name objektu
+     * @param newCn nový Common Name
+     * @return nové DN po přejmenování, nebo null při chybě
+     */
+    String renameObject(String dn, String newCn);
+
+    /**
      * Přesune objekt do jiné OU.
      *
      * @param dn distinguished name objektu

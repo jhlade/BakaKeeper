@@ -42,6 +42,7 @@
                 <transformer>
                   <mainClass>${project.app.mainClass}</mainClass>
                 </transformer>
+                <transformer />
               </transformers>
               <filters>
                 <filter>

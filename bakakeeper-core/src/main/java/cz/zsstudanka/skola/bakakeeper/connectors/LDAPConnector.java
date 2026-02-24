@@ -40,6 +40,9 @@ public interface LDAPConnector {
     /** Odebrání konkrétní hodnoty z multi-value atributu. */
     Boolean removeAttribute(String dn, EBakaLDAPAttributes attribute, String oldValue);
 
+    /** Přejmenování objektu (změna CN) ve stejné OU. Vrací nové DN, nebo null při chybě. */
+    String renameObject(String objectDN, String newCn);
+
     /** Přesun objektu do jiné OU. */
     Boolean moveObject(String objectDN, String ouName);
 

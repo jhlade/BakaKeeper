@@ -32,6 +32,7 @@
         <adsddl.version>1.9</adsddl.version>
         <slf4j.version>1.7.10</slf4j.version>
         <snakeyaml.version>2.3</snakeyaml.version>
+        <itext.version>8.0.5</itext.version>
 
         <!-- verze testovacích závislostí -->
         <junit-jupiter.version>5.11.4</junit-jupiter.version>
@@ -101,6 +102,23 @@
                 <groupId>org.yaml</groupId>
                 <artifactId>snakeyaml</artifactId>
                 <version>${snakeyaml.version}</version>
+            </dependency>
+
+            <!-- iText 8 – generátor PDF sestav (AGPL-3.0) -->
+            <dependency>
+                <groupId>com.itextpdf</groupId>
+                <artifactId>layout</artifactId>
+                <version>${itext.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.itextpdf</groupId>
+                <artifactId>barcodes</artifactId>
+                <version>${itext.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.itextpdf</groupId>
+                <artifactId>bouncy-castle-adapter</artifactId>
+                <version>${itext.version}</version>
             </dependency>
 
             <!-- JUnit 5 -->

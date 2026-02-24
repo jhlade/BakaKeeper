@@ -344,19 +344,60 @@ public class StudentServiceImpl implements StudentService {
                     + " LDAP=" + ldap.getSurname() + " " + ldap.getGivenName());
 
             if (repair) {
-                // aktualizovat sn, givenName, displayName
+                // aktualizovat sn, givenName, displayName (ještě na starém DN)
                 ldapRepo.updateAttribute(dn, EBakaLDAPAttributes.NAME_LAST, sql.getSurname());
                 ldapRepo.updateAttribute(dn, EBakaLDAPAttributes.NAME_FIRST, sql.getGivenName());
                 String display = sql.getSurname() + " " + sql.getGivenName();
                 ldapRepo.updateAttribute(dn, EBakaLDAPAttributes.NAME_DISPLAY, display);
                 changed = true;
 
-                // pokud je E_MAIL v SQL prázdný → jméno bylo změněno scénářem
-                // a očekává se přegenerování loginu, emailu a proxyAddresses
-                String sqlEmail = sql.getEmail();
-                boolean emailCleared = (sqlEmail == null || sqlEmail.isEmpty());
+                // přegenerovat login, e-mail a proxyAddresses – vždy při změně jména.
+                // E_MAIL v SQL může být prázdný (scénář zmena-jmen) nebo stále obsahovat
+                // starý e-mail (běžný případ) – regenerace proběhne v obou případech.
+                changed |= regenerateLoginAndEmail(dn, sql, ldap, listener);
 
-                if (emailCleared) {
+                // přejmenovat CN objektu (změna DN) – jako poslední operace,
+                // protože invaliduje staré DN
+                String newCn = sql.getSurname() + " " + sql.getGivenName();
+                String currentCn = BakaUtils.parseCN(dn);
+                if (!newCn.equals(currentCn)) {
+                    String newDn = ldapRepo.renameObject(dn, newCn);
+                    if (newDn != null) {
+                        listener.onProgress("Přejmenování CN: " + sql.getInternalId()
+                                + " " + currentCn + " → " + BakaUtils.parseCN(newDn));
+                        dn = newDn;
+                    } else {
+                        ReportManager.log(EBakaLogType.LOG_ERR,
+                                "Přejmenování CN selhalo pro " + sql.getInternalId()
+                                        + " (" + currentCn + " → " + newCn + ").");
+                    }
+                }
+            }
+        }
+
+        // 2.5 Kontrola chybějícího emailu u spárovaného žáka
+        // Žák může mít LDAP účet (spárovaný přes INTERN_KOD), ale prázdný E_MAIL v SQL
+        // – například při částečném selhání inicializace nebo ruční tvorbě účtu.
+        // Pokud LDAP účet má UPN → zpětně zapsat do SQL.
+        // Pokud nemá ani UPN → vygenerovat nový a zapsat do obou systémů.
+        String sqlEmail = sql.getEmail();
+        boolean emailMissing = (sqlEmail == null || sqlEmail.isEmpty());
+        if (emailMissing && !nameChanged) {
+            String ldapUpn = ldap.getUpn();
+            if (ldapUpn != null && !ldapUpn.isEmpty()) {
+                // LDAP má UPN, SQL nemá → zpětné doplnění
+                listener.onProgress("Chybějící email v SQL: " + sql.getInternalId()
+                        + " → zpětné doplnění z LDAP UPN: " + ldapUpn);
+                if (repair) {
+                    sqlRepo.updateEmail(sql.getInternalId(), ldapUpn);
+                    changed = true;
+                }
+            } else {
+                // ani LDAP nemá UPN → vygenerovat nový a zapsat do obou
+                listener.onProgress("Chybějící email: " + sql.getInternalId()
+                        + " " + sql.getSurname() + " " + sql.getGivenName()
+                        + " → generování nového UPN");
+                if (repair) {
                     changed |= regenerateLoginAndEmail(dn, sql, ldap, listener);
                 }
             }

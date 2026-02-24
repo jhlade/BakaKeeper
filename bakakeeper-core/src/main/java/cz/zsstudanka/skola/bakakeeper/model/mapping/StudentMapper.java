@@ -38,19 +38,22 @@ public class StudentMapper {
         record.setPartial(true);
         record.setPaired(false);
 
-        record.setInternalId(sql.get(EBakaSQL.F_STU_ID.basename()));
-        record.setSurname(sql.get(EBakaSQL.F_STU_SURNAME.basename()));
-        record.setGivenName(sql.get(EBakaSQL.F_STU_GIVENNAME.basename()));
+        // sqlValue() konvertuje sentinel "(NULL)" zpět na skutečný null
+        record.setInternalId(sqlValue(sql, EBakaSQL.F_STU_ID));
+        record.setSurname(sqlValue(sql, EBakaSQL.F_STU_SURNAME));
+        record.setGivenName(sqlValue(sql, EBakaSQL.F_STU_GIVENNAME));
+        String surname = record.getSurname();
+        String givenName = record.getGivenName();
         record.setDisplayName(
-                sql.get(EBakaSQL.F_STU_SURNAME.basename()) + " " +
-                sql.get(EBakaSQL.F_STU_GIVENNAME.basename()));
-        record.setEmail(sql.get(EBakaSQL.F_STU_MAIL.basename()));
-        record.setClassName(sql.get(EBakaSQL.F_STU_CLASS.basename()));
-        record.setClassNumber(sql.get(EBakaSQL.F_STU_CLASS_ID.basename()));
-        record.setExpired(sql.get(EBakaSQL.F_STU_EXPIRED.basename()));
+                (surname != null ? surname : "") + " " +
+                (givenName != null ? givenName : ""));
+        record.setEmail(sqlValue(sql, EBakaSQL.F_STU_MAIL));
+        record.setClassName(sqlValue(sql, EBakaSQL.F_STU_CLASS));
+        record.setClassNumber(sqlValue(sql, EBakaSQL.F_STU_CLASS_ID));
+        record.setExpired(sqlValue(sql, EBakaSQL.F_STU_EXPIRED));
 
         // ročník – z aliasu B_ROCNIK (pokud existuje v SQL joinu)
-        String classYearStr = sql.get(EBakaSQL.F_STU_BK_CLASSYEAR.basename());
+        String classYearStr = sqlValue(sql, EBakaSQL.F_STU_BK_CLASSYEAR);
         if (classYearStr != null && !classYearStr.isEmpty()) {
             try {
                 record.setClassYear(Integer.parseInt(classYearStr));
@@ -59,7 +62,7 @@ public class StudentMapper {
             }
         }
 
-        record.setClassLetter(sql.get(EBakaSQL.F_STU_BK_CLASSLETTER.basename()));
+        record.setClassLetter(sqlValue(sql, EBakaSQL.F_STU_BK_CLASSLETTER));
 
         // data zákonného zástupce (pokud je v SQL joinu)
         record.setGuardianInternalId(sqlValue(sql, EBakaSQL.F_GUA_BK_ID));

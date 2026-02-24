@@ -71,6 +71,8 @@
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>${project.app.mainClass}</mainClass>
                                 </transformer>
+                                <!-- sloučení META-INF/services z iText/BouncyCastle -->
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                             </transformers>
                             <filters>
                                 <!-- odstranit signatury z podepsaných závislostí (BouncyCastle, MSSQL JDBC apod.) -->

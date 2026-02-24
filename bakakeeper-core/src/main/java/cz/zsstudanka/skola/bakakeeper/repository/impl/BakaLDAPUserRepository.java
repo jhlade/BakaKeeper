@@ -153,6 +153,11 @@ public class BakaLDAPUserRepository implements LDAPUserRepository {
     }
 
     @Override
+    public String renameObject(String dn, String newCn) {
+        return ldap.renameObject(dn, newCn);
+    }
+
+    @Override
     public boolean moveObject(String dn, String targetOu) {
         return ldap.moveObject(dn, targetOu);
     }
