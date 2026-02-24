@@ -1045,6 +1045,66 @@ public class BakaADAuthenticator implements LDAPConnector {
     }
 
     /**
+     * Přejmenování objektu (změna CN) ve stejné OU.
+     * Používá se při změně jména žáka – CN se změní na nové příjmení + jméno,
+     * objekt zůstane ve stejné OU. Při kolizi názvu se generuje číselný sufix.
+     *
+     * @param objectDN plné DN objektu
+     * @param newCn nový Common Name (např. "Nováková Jana")
+     * @return nové DN po přejmenování, nebo null při chybě
+     */
+    public String renameObject(String objectDN, String newCn) {
+        String currentOU = BakaUtils.parseBase(objectDN);
+        String newObjectDN = "CN=" + newCn + "," + currentOU;
+
+        // řešení kolizí přejmenováním (stejný postup jako moveObject)
+        int attempt = 0;
+        boolean dnOccupied;
+
+        do {
+            dnOccupied = checkDN(newObjectDN);
+            attempt++;
+
+            if (dnOccupied) {
+                if (Settings.getInstance().beVerbose()) {
+                    ReportManager.log(EBakaLogType.LOG_LDAP,
+                            "Cílové DN [" + newObjectDN + "] již existuje, generuji nový název.");
+                }
+                newObjectDN = BakaUtils.nextDN(newObjectDN);
+            }
+        } while (dnOccupied && attempt <= MOVE_LIMIT);
+
+        if (attempt >= MOVE_LIMIT) {
+            ReportManager.log(EBakaLogType.LOG_ERR,
+                    "Překročen limit pokusů o přejmenování objektu [" + objectDN + "].");
+            return null;
+        }
+
+        // provedení přejmenování
+        LdapContext ctxRN = null;
+
+        try {
+            ctxRN = new InitialLdapContext(env, null);
+            ctxRN.rename(objectDN, newObjectDN);
+        } catch (Exception e) {
+            ReportManager.handleException(
+                    "Nebylo možné přejmenovat objekt [" + objectDN + "] na [" + newObjectDN + "].", e);
+            return null;
+        }
+
+        // ověřit existenci nového DN
+        if (checkDN(newObjectDN)) {
+            if (Settings.getInstance().beVerbose()) {
+                ReportManager.log(EBakaLogType.LOG_LDAP,
+                        "Objekt přejmenován: [" + objectDN + "] → [" + newObjectDN + "].");
+            }
+            return newObjectDN;
+        }
+
+        return null;
+    }
+
+    /**
      * Přesun objektu do požadované OU.
      *
      * @param objectDN plné DN objektu

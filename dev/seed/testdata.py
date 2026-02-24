@@ -117,12 +117,14 @@ JMENA_ZAK_M = [
     # kaledářové variace (–oslav, –mir, –boj atd.)
     "Radoušek",  "Světlomír",  "Kvítoslav",  "Zoroslav",   "Buřivoj",
     "Mlžimír",   "Duhomil",    "Zlatoslav",  "Oblakoslav", "Rákoslav",
+    "Kociáš",    "Luciáš",     "Uriáš",      "Štěkán",
     # z přírody
     "Duboslav",  "Jehličmír",  "Kapkoslav",  "Mrazimír",   "Sněžoslav",
     "Krutomír",
     # zkráceniny a přezdívky
     "Ríša",      "Fikus",      "Kubi",       "Bobík",      "Cílek",
     "Krteček",   "Šupin",      "Pírko",      "Dubin",      "Brouk",
+    "Janek",     "Pačes",
     # zcela vymyšlená
     "Zlumek",    "Vrkos",      "Bublík",     "Šmudla",     "Chroust",
     "Hoblík",    "Milisálek",  "Mates",
@@ -131,16 +133,18 @@ assert len(JMENA_ZAK_M) == 34
 
 JMENA_ZAK_F = [
     # kaledářové variace (–slava, –mila, –na)
-    "Duhoslava",  "Mlžena",     "Kvítkoslava", "Zora",     "Ryboslava",
-    "Bublina",    "Kapkomíra",  "Sněžena",     "Zlatoslava",  "Oblačena",
+    "Duhoslava",  "Mlžena",     "Kvítkoslava", "Azura",     "Ryboslava",
+    "Hoblana",    "Kapkomíra",  "Sněžena",     "Zlatoslava",  "Oblačena",
+    "Lycka",      "Micka",
     # z přírody
     "Jehlička",   "Rákosena",   "Mrazivka",    "Švestka",    "Lipěna",
     # zkráceniny a přezdívky
     "Vyky",       "Krustýna",   "Zuběna",      "Bobina",      "Slimka",
     "Motýla",     "Broučena",   "Ryběna",      "Lupínka",     "Drobka",
+    "Myška",      "Gábinka",
     # zcela vymyšlená
     "Šmudlenka",  "Lišejka",    "Pírečka",     "Mlsnička",    "Bublinka",
-    "Chroustka", "Cihlena",     "Borka",       "Typka",
+    "Chroustka",  "Cihlena",    "Borka",       "Typka",
 ]
 assert len(JMENA_ZAK_F) == 34
 
@@ -168,9 +172,9 @@ PRIJMENI_ZZD_F = [_f(p) for p in PRIJMENI_ZZD_M]
 JMENA_ZZD_M = [
     "Lišomír",   "Bobřislav",  "Ježobor",   "Vlkomír",   "Srnomil",
     "Krkavoslav","Sovomír",    "Čapibor",   "Lososlav",  "Kaproslav",
-    "Modroslav",  "Zelenomír", "Červobor",  "Zlatoslav",  "Stříbromil",
+    "Modroslav", "Zelenomír",  "Červobor",  "Zlatoslav", "Stříbromil",
     "Duhomír",   "Oblakoslav", "Bouřomír",  "Mrazobor",  "Sněžomil",
-    "Kapkoslav",  "Vítroslav",  "Mlžomír", "Drnohryz", "Krvohlt"
+    "Kapkoslav", "Vítroslav",  "Mlžomír",   "Drnohryz",  "Krvohlt"
 ]
 assert len(JMENA_ZZD_M) == 25
 
@@ -230,9 +234,9 @@ PRIJMENI_VIET = ["Nguyen", "Tran", "Le", "Pham", "Hoang", "Phan", "Vu",
 
 # --- Ukrajinská jména (moderní česká transliterace, nařízení 2021) -----------
 # Příjmení se v transliteraci neohýbá podle pohlaví (na rozdíl od češtiny).
-JMENA_UA_M  = ["Oleksii", "Mykhailo", "Dmytro", "Bohdan", "Yaroslav",
+JMENA_UA_M  = ["Oleksii", "Mykhailo", "Maksym", "Dmytro", "Bohdan", "Yaroslav",
                 "Vasyl", "Ivan", "Vladyslav", "Andriy", "Oleh",
-                "Taras", "Serhii"]
+                "Taras", "Serhii", "Fylyp"]
 JMENA_UA_F  = ["Anastasiia", "Yuliia", "Nataliia", "Viktoriia", "Oksana",
                 "Daryna", "Iryna", "Olha", "Svitlana", "Kateryna",
                 "Sofiia", "Mariia"]
@@ -331,10 +335,15 @@ def telefon(n: int) -> str:
     return f"+420 {s[:3]} {s[3:6]} {s[6:]}"
 
 def sql_escape(s) -> str:
-    """Escapuje single-quote pro T-SQL string; None → NULL."""
+    """Escapuje single-quote pro T-SQL NVARCHAR string; None → NULL.
+
+    Prefix N'...' zajistí, že SQL Server interpretuje literál jako Unicode (NVARCHAR),
+    nikoli přes výchozí code page 1252 (Latin-1), která neobsahuje české znaky
+    č, ř, š, ž, ď, ť, ň, ě, ů – bez N prefixu se ztrácí diakritika (např. č→c).
+    """
     if s is None:
         return "NULL"
-    return "'" + str(s).replace("'", "''") + "'"
+    return "N'" + str(s).replace("'", "''") + "'"
 
 def _assign_email(local: str, seen: dict, domain: str) -> str:
     """

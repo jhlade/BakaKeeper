@@ -13,12 +13,13 @@ import cz.zsstudanka.skola.bakakeeper.model.entities.DataLDAP;
 import cz.zsstudanka.skola.bakakeeper.model.entities.DataSQL;
 import cz.zsstudanka.skola.bakakeeper.model.entities.Student;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
-import cz.zsstudanka.skola.bakakeeper.settings.Version;
 import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
+import cz.zsstudanka.skola.bakakeeper.utils.PdfReportGenerator;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -185,7 +186,7 @@ public class Export {
     }
 
     /**
-     * Odešle LuaLaTeXem generované PDF se současným stavem dat.
+     * Vygeneruje PDF sestavy s přístupovými údaji a odešle je e-mailem.
      *
      * @param query dotazované objekty (ročník, třída, UPN žáka - seznam oddělený čárkami)
      * @param resetPassword provede okamžitý reset hesla nad danými objekty
@@ -241,8 +242,8 @@ public class Export {
         Collections.sort(classes);
         Collections.sort(students);
 
-        // sestavy <třída, TeX data>
-        Map<String, String> reports = new HashMap<>();
+        // sestavy <třída, data žáků>
+        Map<String, List<PdfReportGenerator.StudentReportRow>> reportData = new LinkedHashMap<>();
         // třídní učitelé
         SQLrecords classTeachers = new SQLrecords(true);
 
@@ -260,17 +261,12 @@ public class Export {
                     continue;
                 }
 
-
                 // SQL data třídy
                 SQLrecords classData = new SQLrecords(mYr, String.valueOf(mLetter));
                 // LDAP data třídy
                 LDAPrecords dataAD = new LDAPrecords("OU=Trida-"+String.valueOf(mLetter)+",OU=Rocnik-"+String.valueOf(mYr)+"," + Settings.getInstance().getLDAP_baseStudents(), EBakaLDAPAttributes.OC_USER);
 
-                // identifikace třídního učitele - jméno
-                String classTeacher = classTeachers.getBy(EBakaSQL.F_CLASS_LABEL, mYr + "." + mLetter).get(EBakaSQL.F_FAC_GIVENNAME.basename()) + " " + classTeachers.getBy(EBakaSQL.F_CLASS_LABEL, mYr + "." + mLetter).get(EBakaSQL.F_FAC_SURNAME.basename());
-
-                StringBuilder classReportData = new StringBuilder();
-                String template = "__CLASS_ID__ & __SURNAME__ & __GIVENNAME__ & \\texttt{__UPN__} & \\texttt{__PWD__} & \\qrcode{__QR__} \\\\ \\hline\n";
+                List<PdfReportGenerator.StudentReportRow> classStudents = new ArrayList<>();
 
                 // získání dat žáků ze třídy - iterace nad evidencí
                 while (classData.iterator().hasNext()) {
@@ -318,7 +314,6 @@ public class Export {
                                 passwordSet = studentObject.setPassword(newPassword, false);
                             } else {
                                 passwordSet = true;
-                                // TODO RM
                             }
                             attempt++;
                         }
@@ -332,63 +327,87 @@ public class Export {
                         }
                     }
 
-                    // zápis do tabulky v sestavě
-                    classReportData.append(template
-                            .replace("__CLASS_ID__", classNum.toString())
-                            .replace("__SURNAME__", studentSurname)
-                            .replace("__GIVENNAME__", studentName)
-                            .replace("__UPN__", studentUPN)
-                            .replace("__PWD__", newPassword)
-                            .replace("__QR__", studentUPN + "\t" + newPassword)
-                    );
+                    // záznam žáka pro sestavu
+                    // SQLrecords konvertuje SQL NULL na sentinel "(NULL)" – je nutné ho ošetřit
+                    if (studentUPN == null || studentUPN.isEmpty()
+                            || EBakaSQL.NULL.basename().equals(studentUPN)) {
+                        ReportManager.log(EBakaLogType.LOG_ERR_VERBOSE,
+                                "Žák " + studentSurname + " " + studentName
+                                        + " (č. " + classNum + ") nemá přiřazené UPN – přeskočen v sestavě.");
+                        continue;
+                    }
+
+                    classStudents.add(new PdfReportGenerator.StudentReportRow(
+                            classNum,
+                            studentSurname,
+                            studentName,
+                            studentUPN,
+                            newPassword,
+                            studentUPN + "\t" + newPassword
+                    ));
                 }
 
-                // vytvoření TeX sestavy
-                reports.put(mYr + "." + mLetter, Export.latexReportTemplate(mYr + "." + mLetter, classTeacher, classReportData.toString()));
+                // seřazení dle příjmení
+                classStudents.sort(Comparator.comparing(PdfReportGenerator.StudentReportRow::surname));
+                reportData.put(mYr + "." + mLetter, classStudents);
 
             } // celá třída
 
         } // ročník
 
         // TODO jednotliví žáci zvlášť
-        //
-        //
 
+        // inicializace generátoru PDF
+        PdfReportGenerator pdfGen;
+        try {
+            pdfGen = new PdfReportGenerator();
+        } catch (IOException e) {
+            ReportManager.handleException("Nelze inicializovat generátor PDF sestav.", e);
+            return;
+        }
 
-        // uložení, vytvoření a odeslání sestav
-        Iterator<String> tex = reports.keySet().iterator();
-        while (tex.hasNext()) {
+        // konfigurace poznámek pod tabulkou (URL portálu se odvodí z mailové domény)
+        pdfGen.setFootnotePassword("Žáci si mohou své heslo sami změnit na\u00a0portálu https://heslo."
+                + Settings.getInstance().getMailDomain() + "/.");
 
-            String classN = tex.next();
+        String schoolYear = PdfReportGenerator.currentSchoolYear();
+
+        // zajištění existence adresáře pro sestavy
+        new File("./reports").mkdirs();
+
+        // generování a odeslání sestav
+        for (String classN : reportData.keySet()) {
+
+            // identifikace třídního učitele
+            String classTeacher = classTeachers.getBy(EBakaSQL.F_CLASS_LABEL, classN).get(EBakaSQL.F_FAC_GIVENNAME.basename())
+                    + " " + classTeachers.getBy(EBakaSQL.F_CLASS_LABEL, classN).get(EBakaSQL.F_FAC_SURNAME.basename());
 
             SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
             Date date = new Date();
 
             String reportFile = "./reports/" + formatter.format(date)
                     + "_" + classN.toLowerCase().replace(".", "")
-                    + ".tex";
-
-            try (PrintStream out = new PrintStream(new FileOutputStream(reportFile))) {
-                out.print(reports.get(classN));
-            } catch (FileNotFoundException e) {
-                // TODO
-                ReportManager.handleException("Nebylo možné vytvořit sestavu.", e);
-            }
+                    + ".pdf";
 
             ReportManager.logWait(EBakaLogType.LOG_INFO, "Probíhá generování PDF sestavy třídy " + classN);
 
-            // pdf lualatex
             try {
-                Process p = Runtime.getRuntime().exec("/usr/bin/lualatex " + reportFile);
-                p.waitFor();
-            } catch (Exception x) {
+                pdfGen.generateClassReport(
+                        reportFile,
+                        classN,
+                        classTeacher,
+                        schoolYear,
+                        reportData.get(classN),
+                        RuntimeContext.FLAG_DRYRUN
+                );
+                ReportManager.logResult(EBakaLogType.LOG_OK);
+            } catch (IOException e) {
                 ReportManager.logResult(EBakaLogType.LOG_ERR);
-                ReportManager.handleException("Proces LuaLaTeX nebyl spuštěn.", x);
+                ReportManager.handleException("Nebylo možné vytvořit PDF sestavu třídy " + classN + ".", e);
+                continue;
             }
 
-            ReportManager.logResult(EBakaLogType.LOG_OK);
-
-
+            // text e-mailu
             String message = "V příloze naleznete sestavu s novými přístupovými údaji žáků " +
                     classN + " pro použití v prostředí Office365. Všichni žáci mají přiřazené " +
                     "odpovídající žákovské licence, mohou tedy ihned plně používat všechny cloudové služby O365.\n\n" +
@@ -399,7 +418,7 @@ public class Export {
                 message += "[ i ] Sestava byla vygenerována s příznakem zkušebního spuštění, zobrazované údaje nemusí reflektovat skutečný stav.";
             }
 
-            // identifiakce třídního učitele - e-mail
+            // identifikace třídního učitele - e-mail
             String classTeacherEmail = classTeachers.getBy(EBakaSQL.F_CLASS_LABEL, classN).get(EBakaSQL.F_FAC_EMAIL.basename());
 
             String[] addresses;
@@ -414,84 +433,12 @@ public class Export {
             // e-mail pro třídního a správce
             BakaMailer.getInstance().mail(addresses,
                     "Přístupové údaje žáků " + classN, message,
-                    new String[]{"./" + BakaUtils.fileBaseName(reportFile.replace(".tex", ".pdf"))});
+                    new String[]{reportFile});
 
-            // úklid
-            File pdf = new File("./" + BakaUtils.fileBaseName(reportFile.replace(".tex", ".pdf")));
-            File aux = new File("./" + BakaUtils.fileBaseName(reportFile.replace(".tex", ".aux")));
-            File log = new File("./" + BakaUtils.fileBaseName(reportFile.replace(".tex", ".log")));
-            pdf.delete();
-            aux.delete();
-            log.delete();
-            File texfile = new File("./reports/" + BakaUtils.fileBaseName(reportFile));
-            texfile.delete();
+            // úklid – pouze PDF
+            new File(reportFile).delete();
         }
 
-    }
-
-    /**
-     * TODO - LaTeXová šablona sestavy
-     *
-     * @param classID třída
-     * @param classTeacherName jméno třídního učitele
-     * @param internalData vnitřní data - tabulka s žáky
-     * @return TeX - sestava
-     */
-    public static String latexReportTemplate(String classID, String classTeacherName, String internalData) {
-
-        // tvorba sestavy
-        StringBuilder report = new StringBuilder();
-        report.append("\\documentclass[10pt]{article}\n\n");
-        report.append("\\usepackage[czech]{babel}\n");
-        report.append("\\usepackage[utf8]{inputenc}\n");
-        report.append("\\usepackage{tabularx}\n\n");
-        report.append("\\usepackage{geometry}\n");
-        report.append("\\geometry{a4paper,total={170mm,257mm},left=20mm,top=20mm}\n");
-        report.append("\\def\\arraystretch{1.5}%\n\n");
-        report.append("\\usepackage{fancyhdr}\n");
-        report.append("\\usepackage{qrcode}\n");
-        report.append("\\pagestyle{fancy}\n\n");
-
-        if (RuntimeContext.FLAG_DRYRUN) {
-            report.append("\\usepackage{xcolor}\n\n");
-        }
-
-        report.append("\\begin{document}\n");
-        report.append("\\qrset{height=.55cm}%\n\n");
-
-        report.append("\\fancyhf{}\n");
-        report.append("\\lhead{" + classID + "}\n");
-        report.append("\\rhead{" + classTeacherName + "}\n");
-        report.append("\\lfoot{" + Settings.getInstance().systemInfoTag() + "}\n");
-        report.append("\\rfoot{" + Version.getInstance().getTag() + "}\n");
-
-        if (RuntimeContext.FLAG_DRYRUN) {
-            report.append("\\chead{{\\color{red}\\textbf{ZKUŠEBNÍ SESTAVA}}}\n");
-        }
-
-        report.append("\\noindent\n");
-        report.append("\\Large{Třída " + classID + "}\n\n");
-        report.append("\\begin{table}[htbp]\n\n");
-        report.append("\\centering\n");
-        report.append("\\begin{tabularx}{\\textwidth}{| c | X | X | r | c | c |}\n");
-        report.append("\\hline\n");
-        report.append("\\bf{Č.} & \\bf{Příjmení} & \\bf{Jméno} & \\bf{UPN}  & \\bf{Heslo} & {~} \\\\ \\hline \\hline\n");
-
-        // data
-        report.append(internalData);
-
-        report.append("\\end{tabularx}\n\n");
-        report.append("\\end{table}\n\n");
-        report.append("\\noindent\n");
-        report.append("UPN = \\textit{User Principal Name}, slouží jako přihlašovací jméno do~služeb\n");
-        report.append("Office~365 a~zároveň jako platný tvar e-mailové adresy.\\par\n");
-        report.append("~\\par\n\n");
-        report.append("\\noindent\n");
-        report.append("Žáci si mohou své heslo sami změnit na~portálu https://heslo.zs-studanka.cz/.\\par\n\n");
-        report.append("\\end{document}\n");
-
-
-        return report.toString();
     }
 
 }

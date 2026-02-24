@@ -59,6 +59,20 @@
             <artifactId>snakeyaml</artifactId>
         </dependency>
 
+        <!-- iText 8 – generátor PDF sestav -->
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>layout</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>barcodes</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>bouncy-castle-adapter</artifactId>
+        </dependency>
+
         <!-- testy -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
