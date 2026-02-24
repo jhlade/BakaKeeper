@@ -172,7 +172,7 @@ JMENA_ZZD_M = [
     "Duhomír",   "Oblakoslav", "Bouřomír",  "Mrazobor",  "Sněžomil",
     "Kapkoslav",  "Vítroslav",  "Mlžomír", "Drnohryz", "Krvohlt"
 ]
-assert len(JMENA_ZZD_M) == 23
+assert len(JMENA_ZZD_M) == 25
 
 JMENA_ZZD_F = [
     "Lišomíra",  "Bobřislava",  "Ježobora",   "Vlkomíra",   "Srnomila",
