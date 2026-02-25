@@ -1,480 +1,157 @@
 package cz.zsstudanka.skola.bakakeeper;
 
-import cz.zsstudanka.skola.bakakeeper.components.HelpManager;
-import cz.zsstudanka.skola.bakakeeper.components.KeyStoreManager;
+import cz.zsstudanka.skola.bakakeeper.commands.*;
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
-import cz.zsstudanka.skola.bakakeeper.config.AppConfig;
-import cz.zsstudanka.skola.bakakeeper.connectors.BakaADAuthenticator;
-import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
-import cz.zsstudanka.skola.bakakeeper.connectors.BakaSQL;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
-import cz.zsstudanka.skola.bakakeeper.model.StudentRecord;
-import cz.zsstudanka.skola.bakakeeper.model.collections.BakaInternalUserHistory;
-import cz.zsstudanka.skola.bakakeeper.model.entities.BakaInternalUser;
-import cz.zsstudanka.skola.bakakeeper.repository.FacultyRepository;
-import cz.zsstudanka.skola.bakakeeper.repository.GuardianRepository;
-import cz.zsstudanka.skola.bakakeeper.repository.LDAPUserRepository;
-import cz.zsstudanka.skola.bakakeeper.repository.StudentRepository;
-import cz.zsstudanka.skola.bakakeeper.repository.impl.BakaFacultyRepository;
-import cz.zsstudanka.skola.bakakeeper.repository.impl.BakaGuardianRepository;
-import cz.zsstudanka.skola.bakakeeper.repository.impl.BakaLDAPUserRepository;
-import cz.zsstudanka.skola.bakakeeper.repository.impl.BakaStudentRepository;
-import cz.zsstudanka.skola.bakakeeper.routines.Export;
-import cz.zsstudanka.skola.bakakeeper.service.*;
+import cz.zsstudanka.skola.bakakeeper.service.ServiceFactory;
+import cz.zsstudanka.skola.bakakeeper.service.SyncResult;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.settings.Version;
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.ScopeType;
 
-import java.util.*;
+import java.util.List;
+import java.util.concurrent.Callable;
 
 /**
  * Nástroj pro synchronizaci záznamů z Bakalářů a informacemi v Active Directory.
  *
  * @author Jan Hladěna
  */
-public class App {
+@Command(name = "bakakeeper",
+        mixinStandardHelpOptions = true,
+        versionProvider = App.BakaVersionProvider.class,
+        description = "Synchronizační nástroj evidence žáků v programu Bakaláři s uživatelskými účty v Active Directory.",
+        footer = {
+                "",
+                "Příklady:",
+                "  bakakeeper check -p heslo         Kontrola konektivity",
+                "  bakakeeper sync --verbose          Synchronizace s podrobným výstupem",
+                "  bakakeeper report 5.A              Sestava přihlašovacích údajů",
+                "  bakakeeper report --reset *        Reset hesel a sestava pro celou školu",
+                "  bakakeeper export 5 -o seznam.csv  CSV export ročníku",
+                "  bakakeeper init -f settings.yml    Inicializace ze souboru"
+        },
+        subcommands = {
+                CheckCommand.class,
+                SyncCommand.class,
+                StatusCommand.class,
+                InitCommand.class,
+                ReportCommand.class,
+                ExportCommand.class,
+                IdentifyCommand.class,
+                ResetPasswordCommand.class,
+                SetPasswordCommand.class,
+                InternalDbCommand.class
+        })
+public class App implements Callable<Integer> {
+
+    @Option(names = "--verbose", description = "Aktivovat podrobný výstup.", scope = ScopeType.INHERIT)
+    boolean verbose;
+
+    @Option(names = "--debug", description = "Aktivovat ladící výstup.", scope = ScopeType.INHERIT)
+    boolean debug;
+
+    @Option(names = "--develmode", description = "Vývojový režim – neprobíhá zápis do ostrých dat.", scope = ScopeType.INHERIT)
+    boolean develMode;
+
+    @Option(names = {"-p", "--passphrase"}, description = "Heslo ke konfiguraci.", scope = ScopeType.INHERIT)
+    String passphrase;
+
+    @Option(names = {"-l", "--log"}, description = "Soubor pro zápis protokolu.", scope = ScopeType.INHERIT)
+    String logFile;
+
+    /** Stav: globální flagy byly aplikovány. */
+    private boolean flagsApplied = false;
+
+    /** Stav: konfigurace byla načtena. */
+    private boolean settingsLoaded = false;
+
+    /** Cache ServiceFactory instance. */
+    private ServiceFactory serviceFactory;
+
+    @Override
+    public Integer call() {
+        // spuštění bez subcommandu → vypsat info
+        Version appVersion = Version.getInstance();
+        System.out.println(appVersion.getInfo());
+        System.out.println("Spusťte program s parametrem --help pro nápovědu.\n");
+        return 0;
+    }
 
     /**
-     * Chod programu.
-     *
-     * @param args argumenty viz --help
+     * Aplikuje globální příznaky (verbose, debug, develmode, passphrase, log).
+     * Bezpečné volat vícekrát – aplikuje se jen jednou.
      */
-    public static void main(String[] args) {
+    public void applyGlobalFlags() {
+        if (flagsApplied) return;
+        flagsApplied = true;
 
-        // argumenty programu
-        final Map<String, List<String>> params = new HashMap<>();
-
-        List<String> options = null;
-        for (final String a : args) {
-            if (a.length() >= 3 && a.charAt(0) == '-' && a.charAt(1) == '-') {
-                options = new ArrayList<>();
-                params.put(a.substring(2), options);
-                continue;
-            }
-
-            if (a.charAt(0) == '-') {
-                if (a.length() < 2) {
-                    ReportManager.log(EBakaLogType.LOG_ERR, "Chyba v argumentu: " + a);
-                    return;
-                }
-                options = new ArrayList<>();
-                params.put(a.substring(1), options);
-            } else if (options != null) {
-                options.add(a);
-            } else {
-                ReportManager.log(EBakaLogType.LOG_ERR, "Neplatné argumenty programu.");
-                return;
-            }
-        }
-
-        // spuštění bez parametrů
-        if (params.isEmpty()) {
-            actionPrintRun();
-            return;
-        }
-
-        // --- Globální příznaky ---
-
-        if (params.containsKey("develmode")) {
+        if (develMode) {
             RuntimeContext.FLAG_DEVEL = Boolean.TRUE;
             ReportManager.log(EBakaLogType.LOG_DEVEL, "Je aktivní vývojový režim. Nebude se zapisovat do ostrých dat evidence.");
         }
 
-        if (params.containsKey("dryrun")) {
-            RuntimeContext.FLAG_DRYRUN = Boolean.TRUE;
-        }
-
-        if (params.containsKey("verbose")) {
+        if (verbose || debug) {
             RuntimeContext.FLAG_VERBOSE = Boolean.TRUE;
             Settings.getInstance().verbosity(RuntimeContext.FLAG_VERBOSE);
             ReportManager.log(EBakaLogType.LOG_ERR_VERBOSE, "Aktivován výstup podrobných informací.");
         }
 
-        if (params.containsKey("debug")) {
-            RuntimeContext.FLAG_VERBOSE = Boolean.TRUE;
-            Settings.getInstance().verbosity(RuntimeContext.FLAG_VERBOSE);
+        if (debug) {
             RuntimeContext.FLAG_DEBUG = Boolean.TRUE;
             Settings.getInstance().debug(RuntimeContext.FLAG_DEBUG);
             ReportManager.log(EBakaLogType.LOG_DEBUG, "Aktivován výstup ladících informací.");
         }
 
-        if (params.containsKey("log")) {
-            if (params.get("log").size() == 1) {
-                ReportManager.getInstance().setLogfile(params.get("log").get(0));
-            } else {
-                ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný argument -log. (Použití: -log protokol.log)");
-            }
+        if (logFile != null) {
+            ReportManager.getInstance().setLogfile(logFile);
         }
 
-        if (params.containsKey("passphrase")) {
-            if (params.get("passphrase").size() == 1) {
-                RuntimeContext.PASSPHRASE = params.get("passphrase").get(0);
-                Settings.getInstance().setPassphrase(RuntimeContext.PASSPHRASE);
-            } else {
-                ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný parametr -passphrase.");
-                return;
-            }
+        if (passphrase != null) {
+            RuntimeContext.PASSPHRASE = passphrase;
+            Settings.getInstance().setPassphrase(RuntimeContext.PASSPHRASE);
         }
+    }
 
-        // --- Příkazy nevyžadující načtení konfigurace ---
+    /**
+     * Načte a validuje konfiguraci.
+     * Pro příkazy, které nepotřebují ServiceFactory (check, id, internaldb).
+     */
+    public void loadSettings() {
+        if (settingsLoaded) return;
+        settingsLoaded = true;
 
-        if (params.containsKey("help")) {
-            actionPrintHelp();
-            return;
-        }
-
-        if (params.containsKey("version")) {
-            System.out.print(Version.getInstance().getInfo(Boolean.TRUE));
-            return;
-        }
-
-        // --- Inicializace konfigurace ---
-        if (params.containsKey("init")) {
-            RuntimeContext.FLAG_INIT = Boolean.TRUE;
-
-            if (params.containsKey("f")) {
-                if (params.get("f").size() == 1) {
-                    actionInitialize(params.get("f").get(0));
-                } else {
-                    ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný argument -f. (Použití: --init -f settings.yml)");
-                }
-                return;
-            }
-
-            if (params.containsKey("interactive")) {
-                actionInitialize();
-                return;
-            }
-
-            if (RuntimeContext.FLAG_VERBOSE) {
-                ReportManager.log(EBakaLogType.LOG_VERBOSE, "Probíhá pokus o inicializaci s výchozím souborem settings.yml.");
-            }
-            actionInitialize("./settings.yml");
-            return;
-        }
-
-        // --- Načtení konfigurace ---
         Settings.getInstance().load();
         if (!Settings.getInstance().isValid()) {
-            return;
+            throw new CommandLine.ExecutionException(
+                    new CommandLine(this), "Konfigurační data nejsou platná.");
         }
         Settings.getInstance().setDevelMode(RuntimeContext.FLAG_DEVEL);
-
-        // --- Příkazy vyžadující konfiguraci ---
-
-        // kontrola přístupu ke službám
-        if (params.containsKey("check")) {
-            actionCheck();
-            return;
-        }
-
-        // identifikace AD loginu
-        if (params.containsKey("id")) {
-            if (params.get("id").size() == 1) {
-                Export.identify(params.get("id").get(0));
-            } else {
-                ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný argument -id. (Použití: -id novak.jan)");
-            }
-            return;
-        }
-
-        // interní uživatelé
-        if (params.containsKey("internaldb")) {
-            handleInternalDb(params.get("internaldb"));
-            return;
-        }
-
-        // --- Příkazy využívající novou service vrstvu (DI) ---
-        AppConfig config = Settings.getInstance();
-        SyncProgressListener listener = new CliProgressListener(RuntimeContext.FLAG_VERBOSE);
-
-        // sestavení DI grafu
-        BakaADAuthenticator ldapConnector = BakaADAuthenticator.getInstance();
-        BakaSQL sqlConnector = BakaSQL.getInstance();
-
-        StudentRepository studentRepo = new BakaStudentRepository(sqlConnector);
-        LDAPUserRepository ldapUserRepo = new BakaLDAPUserRepository(ldapConnector);
-        GuardianRepository guardianRepo = new BakaGuardianRepository(ldapConnector);
-        FacultyRepository facultyRepo = new BakaFacultyRepository(sqlConnector);
-
-        StructureService structureService = new StructureServiceImpl(config, ldapConnector);
-        PasswordService passwordService = new PasswordServiceImpl(ldapUserRepo);
-        PairingService pairingService = new PairingServiceImpl(ldapUserRepo);
-        StudentService studentService = new StudentServiceImpl(
-                config, studentRepo, ldapUserRepo, passwordService, pairingService);
-        GuardianService guardianService = new GuardianServiceImpl(config, guardianRepo, ldapUserRepo);
-        FacultyService facultyService = new FacultyServiceImpl(config, ldapUserRepo);
-        RuleService ruleService = new RuleServiceImpl(ldapUserRepo);
-
-        SyncOrchestrator orchestrator = new SyncOrchestrator(
-                config, studentRepo, ldapUserRepo, facultyRepo, guardianRepo,
-                structureService, studentService, facultyService, guardianService, ruleService);
-
-        // CSV export (s rozsahem jako u report)
-        if (params.containsKey("export")) {
-            if (params.get("export").size() == 1) {
-                String outFile = (params.containsKey("o") && params.get("o").size() == 1)
-                        ? params.get("o").get(0) : null;
-                Export.exportStudentCSVdata(params.get("export").get(0), outFile, studentRepo, facultyRepo);
-            } else if (params.get("export").isEmpty()) {
-                ReportManager.log(EBakaLogType.LOG_ERR, "Chybějící rozsah výběru. (Použití: --export 5.A -o seznam.csv)");
-            } else {
-                ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný argument --export. (Použití: --export 5.A -o seznam.csv)");
-            }
-            return;
-        }
-
-        // rychlá sestava
-        if (params.containsKey("report")) {
-            if (params.get("report").size() == 1) {
-                Export.genericReport(params.get("report").get(0), false, studentRepo, facultyRepo);
-            } else {
-                ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný argument -report. (Použití: -report 1.A)");
-            }
-            return;
-        }
-
-        // rychlá sestava s resetem hesel
-        if (params.containsKey("resetreport")) {
-            if (params.get("resetreport").size() == 1) {
-                Export.genericReport(params.get("resetreport").get(0), true, studentRepo, facultyRepo);
-            } else {
-                ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný argument -resetreport. (Použití: -resetreport 1.A)");
-            }
-            return;
-        }
-
-        // kontrola současného stavu
-        if (params.containsKey("status")) {
-            List<SyncResult> results = orchestrator.runFullSync(false, listener);
-            printSummary(results);
-            return;
-        }
-
-        // synchronizace
-        if (params.containsKey("sync")) {
-            boolean repair = !RuntimeContext.FLAG_DRYRUN;
-            List<SyncResult> results = orchestrator.runFullSync(repair, listener);
-            printSummary(results);
-            return;
-        }
-
-        // reset hesla
-        if (params.containsKey("reset")) {
-            if (params.get("reset").size() == 1) {
-                actionResetPassword(params.get("reset").get(0), config, ldapUserRepo, passwordService, studentRepo);
-            } else {
-                ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný argument -reset. (Použití: -reset novak.jan)");
-            }
-            return;
-        }
-
-        // nastavení hesla
-        if (params.containsKey("set")) {
-            if (params.get("set").size() == 2) {
-                actionSetPassword(params.get("set").get(0), params.get("set").get(1),
-                        config, ldapUserRepo, passwordService);
-            } else {
-                ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný argument -set. (Použití: -set novak.jan Nove.Heslo)");
-            }
-            return;
-        }
-
-        ReportManager.log(EBakaLogType.LOG_ERR, "Neznámý příkaz. Spusťte s --help pro nápovědu.");
     }
 
-    // ===========================
-    // Jednoduché příkazy
-    // ===========================
+    /**
+     * Vytvoří ServiceFactory (lazy, volají subcommandy).
+     * Obsahuje načtení konfigurace + sestavení DI grafu.
+     *
+     * @return instance ServiceFactory
+     */
+    public ServiceFactory createServiceFactory() {
+        if (serviceFactory != null) return serviceFactory;
 
-    /** Spuštění bez parametrů. */
-    private static void actionPrintRun() {
-        Version appVersion = Version.getInstance();
-        System.out.println(appVersion.getInfo());
-        System.out.println("Spusťte program s parametrem --help pro nápovědu.\n");
+        loadSettings();
+        serviceFactory = new ServiceFactory(Settings.getInstance());
+        return serviceFactory;
     }
 
-    /** Nápověda. */
-    private static void actionPrintHelp() {
-        System.out.print(HelpManager.printHelp());
-    }
-
-    // ===========================
-    // Inicializace konfigurace
-    // ===========================
-
-    /** Inicializace ze souboru. */
-    private static void actionInitialize(String filename) {
-        Settings.getInstance().load(filename);
-        finalizeInit();
-    }
-
-    /** Interaktivní inicializace. */
-    private static void actionInitialize() {
-        Settings.getInstance().interactivePrompt();
-        finalizeInit();
-    }
-
-    /** Dokončení inicializace – validace, uložení, SSL. */
-    private static void finalizeInit() {
-        if (!Settings.getInstance().isValid()) {
-            ReportManager.log(EBakaLogType.LOG_ERR, "Nebylo možné vytvořit platná nastavení.");
-            return;
-        }
-
-        Settings.getInstance().save();
-
-        if (Settings.getInstance().isValid()) {
-            if (Settings.getInstance().useSSL()) {
-                if (KeyStoreManager.initialize()) {
-                    ReportManager.log(EBakaLogType.LOG_OK, "Výchozí úložiště certifikátů bylo vytvořeno.");
-                } else {
-                    ReportManager.log(EBakaLogType.LOG_ERR, "Nebylo možné vytvořit výchozí úložiště certifikátů.");
-                }
-            }
-
-            if (RuntimeContext.PASSPHRASE.length() > 0) {
-                ReportManager.log(EBakaLogType.LOG_OK, "Šifrovaný datový soubor s nastavením byl úspěšně vytvořen.");
-            } else {
-                ReportManager.log(EBakaLogType.LOG_OK, "Datový soubor s nastavením byl úspěšně vytvořen.");
-            }
-        } else {
-            ReportManager.log(EBakaLogType.LOG_ERR, "Vytvoření konfigurace se nezdařilo.");
-        }
-    }
-
-    // ===========================
-    // Kontrola konektivity
-    // ===========================
-
-    /** Kontrola přístupu ke všem službám. */
-    private static void actionCheck() {
-        ReportManager.logWait(EBakaLogType.LOG_TEST, "Testování validity konfiguračních dat");
-        if (!Settings.getInstance().isValid()) {
-            ReportManager.logResult(EBakaLogType.LOG_ERR);
-        } else {
-            ReportManager.logResult(EBakaLogType.LOG_OK);
-        }
-
-        ReportManager.logWait(EBakaLogType.LOG_TEST, "Testování spojení na řadič Active Directory");
-        if (BakaADAuthenticator.getInstance().isAuthenticated()) {
-            ReportManager.logResult(EBakaLogType.LOG_OK);
-        } else {
-            ReportManager.logResult(EBakaLogType.LOG_ERR);
-        }
-
-        ReportManager.logWait(EBakaLogType.LOG_TEST, "Testování spojení na SQL Server");
-        if (BakaSQL.getInstance().testSQL()) {
-            ReportManager.logResult(EBakaLogType.LOG_OK);
-        } else {
-            ReportManager.logResult(EBakaLogType.LOG_ERR);
-        }
-
-        ReportManager.logWait(EBakaLogType.LOG_TEST, "Testování spojení na SMTP server");
-        if (BakaMailer.getInstance().testSMTP()) {
-            ReportManager.logResult(EBakaLogType.LOG_OK);
-        } else {
-            ReportManager.logResult(EBakaLogType.LOG_ERR);
-        }
-    }
-
-    // ===========================
-    // Operace s hesly (DI)
-    // ===========================
-
-    /** Reset hesla žáka podle UPN. */
-    private static void actionResetPassword(String login, AppConfig config,
-                                             LDAPUserRepository ldapUserRepo,
-                                             PasswordService passwordService,
-                                             StudentRepository studentRepo) {
-        ReportManager.logWait(EBakaLogType.LOG_STDOUT, "Probíhá pokus o reset hesla účtu " + login);
-
-        // vyhledat žáka v LDAP
-        String upn = login.contains("@") ? login : login + "@" + config.getMailDomain();
-        StudentRecord student = ldapUserRepo.findByUPN(config.getLdapBaseStudents(), upn);
-
-        if (student == null || student.getDn() == null) {
-            ReportManager.logResult(EBakaLogType.LOG_ERR);
-            ReportManager.log(EBakaLogType.LOG_ERR, "Účet " + upn + " nenalezen v AD.");
-            return;
-        }
-
-        // získat classId z SQL evidence
-        int classId = 0;
-        StudentRecord sqlStudent = studentRepo.findByInternalId(student.getInternalId());
-        if (sqlStudent != null && sqlStudent.getClassNumber() != null) {
-            try { classId = Integer.parseInt(sqlStudent.getClassNumber()); } catch (NumberFormatException ignored) {}
-        }
-
-        SyncResult result = passwordService.resetStudentPassword(
-                student.getDn(), student.getSurname(), student.getGivenName(),
-                student.getClassYear(), classId);
-
-        if (result.isSuccess()) {
-            ReportManager.logResult(EBakaLogType.LOG_OK);
-        } else {
-            ReportManager.logResult(EBakaLogType.LOG_ERR);
-            ReportManager.log(EBakaLogType.LOG_ERR, result.getDescription());
-        }
-    }
-
-    /** Okamžité nastavení hesla účtu. */
-    private static void actionSetPassword(String login, String password, AppConfig config,
-                                           LDAPUserRepository ldapUserRepo,
-                                           PasswordService passwordService) {
-        ReportManager.logWait(EBakaLogType.LOG_STDOUT, "Probíhá pokus o okamžité nastavení hesla účtu " + login);
-
-        String upn = login.contains("@") ? login : login + "@" + config.getMailDomain();
-        StudentRecord student = ldapUserRepo.findByUPN(config.getLdapBaseStudents(), upn);
-
-        if (student == null || student.getDn() == null) {
-            ReportManager.logResult(EBakaLogType.LOG_ERR);
-            ReportManager.log(EBakaLogType.LOG_ERR, "Účet " + upn + " nenalezen v AD.");
-            return;
-        }
-
-        if (passwordService.setPassword(student.getDn(), password, false)) {
-            ReportManager.logResult(EBakaLogType.LOG_OK);
-        } else {
-            ReportManager.logResult(EBakaLogType.LOG_ERR);
-        }
-    }
-
-    // ===========================
-    // Interní uživatelé
-    // ===========================
-
-    /** Správa interních uživatelů. */
-    private static void handleInternalDb(List<String> args) {
-        if (args.size() == 3 && "restore".equals(args.get(0))) {
-            BakaInternalUserHistory.getInstance().restore(args.get(1), Integer.parseInt(args.get(2)));
-        } else if (args.size() == 2) {
-            if ("list".equals(args.get(0))) {
-                Map<Date, BakaInternalUser> data = BakaInternalUserHistory.getInstance().list(args.get(1));
-                if (data != null) {
-                    BakaInternalUser current = new BakaInternalUser(args.get(1));
-                    int i = 0;
-                    for (Map.Entry<Date, BakaInternalUser> entry : data.entrySet()) {
-                        String mark = (entry.getValue().compareTo(current) == 0) ? "*" : "";
-                        ReportManager.log("[ " + i + " ]" + mark + "\t[" + entry.getKey() + "] : " + entry.getValue().getLogin());
-                        i++;
-                    }
-                } else {
-                    ReportManager.log("Pro zadaného uživatele neexistují žádné zálohy.");
-                }
-            } else if ("backup".equals(args.get(0))) {
-                BakaInternalUserHistory.getInstance().backup(args.get(1));
-            }
-        } else {
-            ReportManager.log(EBakaLogType.LOG_ERR, "Chybně zadaný argument -internaldb. (Použití: -internaldb (list|backup|restore) login [index])");
-        }
-    }
-
-    // ===========================
-    // Souhrn výsledků
-    // ===========================
-
-    /** Vypíše souhrn synchronizace. */
-    private static void printSummary(List<SyncResult> results) {
+    /**
+     * Vypíše souhrn výsledků synchronizace.
+     *
+     * @param results seznam výsledků
+     */
+    public static void printSummary(List<SyncResult> results) {
         long created = results.stream().filter(r -> r.getType() == SyncResult.Type.CREATED).count();
         long updated = results.stream().filter(r -> r.getType() == SyncResult.Type.UPDATED).count();
         long retired = results.stream().filter(r -> r.getType() == SyncResult.Type.RETIRED).count();
@@ -489,5 +166,28 @@ public class App {
         if (paired > 0) ReportManager.log(EBakaLogType.LOG_STDOUT, "  Spárováno: " + paired);
         if (noChange > 0) ReportManager.log(EBakaLogType.LOG_STDOUT, "  Beze změny: " + noChange);
         if (errors > 0) ReportManager.log(EBakaLogType.LOG_ERR, "  Chyby: " + errors);
+    }
+
+    /**
+     * Chod programu.
+     *
+     * @param args argumenty příkazového řádku
+     */
+    public static void main(String[] args) {
+        int exitCode = new CommandLine(new App())
+                .setExecutionExceptionHandler((ex, cmd, parseResult) -> {
+                    ReportManager.log(EBakaLogType.LOG_ERR, ex.getMessage());
+                    return 1;
+                })
+                .execute(args);
+        System.exit(exitCode);
+    }
+
+    /** Picocli version provider – deleguje na Version singleton. */
+    static class BakaVersionProvider implements CommandLine.IVersionProvider {
+        @Override
+        public String[] getVersion() {
+            return new String[] { Version.getInstance().getInfo(true) };
+        }
     }
 }
