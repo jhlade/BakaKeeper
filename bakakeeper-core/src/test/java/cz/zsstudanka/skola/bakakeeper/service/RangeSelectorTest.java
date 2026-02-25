@@ -241,6 +241,39 @@ class RangeSelectorTest {
         assertEquals("Veselá", result.studentsByClass().get("6.B").get(0).getSurname());
     }
 
+    @Test
+    void resolveLoginBezDomenyDoplniMailDomain() {
+        // bare login "novak.tomas" (bez @) by měl být doplněn na "novak.tomas@skola.cz"
+        FacultyRecord teacher5A = new FacultyRecord();
+        teacher5A.setClassLabel("5.A");
+        when(facultyRepo.findActive(true)).thenReturn(List.of(teacher5A));
+
+        StudentRecord student = createStudent("001", "Novák", "Tomáš", "5.A", "novak.tomas@skola.cz");
+        when(studentRepo.findByEmail("novak.tomas@skola.cz")).thenReturn(student);
+
+        ResolvedSelection result = RangeSelector.parse("novak.tomas")
+                .resolve(studentRepo, facultyRepo, "skola.cz");
+
+        assertEquals(1, result.studentsByClass().size());
+        assertTrue(result.studentsByClass().containsKey("5.A"));
+        assertEquals("Novák", result.studentsByClass().get("5.A").get(0).getSurname());
+        assertTrue(result.notFound().isEmpty());
+    }
+
+    @Test
+    void resolveLoginBezDomenyBezMailDomainNenajde() {
+        // bez mailDomain se bare login hledá tak, jak je – a nenajde se
+        when(facultyRepo.findActive(true)).thenReturn(List.of());
+        when(studentRepo.findByEmail("novak.tomas")).thenReturn(null);
+
+        ResolvedSelection result = RangeSelector.parse("novak.tomas")
+                .resolve(studentRepo, facultyRepo);
+
+        assertTrue(result.studentsByClass().isEmpty());
+        assertEquals(1, result.notFound().size());
+        assertEquals("novak.tomas", result.notFound().get(0));
+    }
+
     // === Pomocná metoda ===
 
     private static StudentRecord createStudent(String id, String surname, String givenName,

@@ -27,12 +27,15 @@ import java.util.concurrent.Callable;
         footer = {
                 "",
                 "Příklady:",
-                "  bakakeeper check -p heslo         Kontrola konektivity",
-                "  bakakeeper sync --verbose          Synchronizace s podrobným výstupem",
-                "  bakakeeper report 5.A              Sestava přihlašovacích údajů",
-                "  bakakeeper report --reset *        Reset hesel a sestava pro celou školu",
-                "  bakakeeper export 5 -o seznam.csv  CSV export ročníku",
-                "  bakakeeper init -f settings.yml    Inicializace ze souboru"
+                "  bakakeeper check -p heslo           Kontrola konektivity",
+                "  bakakeeper sync --verbose            Synchronizace s podrobným výstupem",
+                "  bakakeeper report 5.A                Sestava přihlašovacích údajů",
+                "  bakakeeper reset 5.A --report        Reset hesel a sestava třídy",
+                "  bakakeeper reset *                   Reset hesel celé školy",
+                "  bakakeeper suspend 5.A               Zakázání účtů třídy",
+                "  bakakeeper unsuspend 5.A             Povolení účtů třídy",
+                "  bakakeeper export 5 -o seznam.csv    CSV export ročníku",
+                "  bakakeeper init -f settings.yml      Inicializace ze souboru"
         },
         subcommands = {
                 CheckCommand.class,
@@ -44,6 +47,8 @@ import java.util.concurrent.Callable;
                 IdentifyCommand.class,
                 ResetPasswordCommand.class,
                 SetPasswordCommand.class,
+                SuspendCommand.class,
+                UnsuspendCommand.class,
                 InternalDbCommand.class
         })
 public class App implements Callable<Integer> {

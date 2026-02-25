@@ -86,4 +86,31 @@ class PasswordServiceImplTest {
         assertFalse(result.isSuccess());
         assertEquals(SyncResult.Type.ERROR, result.getType());
     }
+
+    @Test
+    void resetStudentPasswordWithResult_uspech_vratiHeslo() {
+        when(ldapRepo.updateAttribute(anyString(), eq(EBakaLDAPAttributes.PW_UNICODE), anyString()))
+                .thenReturn(true);
+        when(ldapRepo.updateAttribute(anyString(), eq(EBakaLDAPAttributes.PW_LASTSET), anyString()))
+                .thenReturn(true);
+
+        PasswordResetResult result = service.resetStudentPasswordWithResult(
+                "CN=Novak,OU=Users", "Novák", "Jan", 5, 1);
+
+        assertTrue(result.isSuccess());
+        assertNotNull(result.password());
+        assertFalse(result.password().isEmpty());
+    }
+
+    @Test
+    void resetStudentPasswordWithResult_selhani_vratiNullHeslo() {
+        when(ldapRepo.updateAttribute(anyString(), eq(EBakaLDAPAttributes.PW_UNICODE), anyString()))
+                .thenReturn(false);
+
+        PasswordResetResult result = service.resetStudentPasswordWithResult(
+                "CN=Novak,OU=Users", "Novák", "Jan", 5, 1);
+
+        assertFalse(result.isSuccess());
+        assertNull(result.password());
+    }
 }

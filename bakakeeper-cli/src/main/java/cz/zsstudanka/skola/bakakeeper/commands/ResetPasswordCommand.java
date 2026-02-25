@@ -3,63 +3,56 @@ package cz.zsstudanka.skola.bakakeeper.commands;
 import cz.zsstudanka.skola.bakakeeper.App;
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
-import cz.zsstudanka.skola.bakakeeper.model.StudentRecord;
+import cz.zsstudanka.skola.bakakeeper.routines.Export;
+import cz.zsstudanka.skola.bakakeeper.routines.ReportData;
 import cz.zsstudanka.skola.bakakeeper.service.ServiceFactory;
-import cz.zsstudanka.skola.bakakeeper.service.SyncResult;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 import picocli.CommandLine.ParentCommand;
 
 import java.util.concurrent.Callable;
 
 /**
- * Příkaz pro reset hesla žáka.
+ * Příkaz pro hromadný reset hesla žáků na výchozí hodnotu.
+ * Používá range selector – stejný formát rozsahu jako {@code report} a {@code export}.
  *
  * @author Jan Hladěna
  */
-@Command(name = "reset", description = "Provede reset hesla uživatele na výchozí hodnotu.")
+@Command(name = "reset", description = "Provede reset hesla uživatelů na výchozí hodnotu.")
 public class ResetPasswordCommand implements Callable<Integer> {
 
     @ParentCommand App app;
 
-    @Parameters(index = "0", description = "Uživatelské jméno (login).")
-    String login;
+    @Parameters(index = "0", description = "Rozsah výběru (*, ročník, třída, UPN – oddělené čárkou).")
+    String scope;
+
+    @Option(names = "--report",
+            description = "Po resetu odešle PDF sestavu s novými údaji třídnímu učiteli a správci.")
+    boolean sendReport;
 
     @Override
     public Integer call() {
         app.applyGlobalFlags();
 
         ServiceFactory sf = app.createServiceFactory();
-        ReportManager.logWait(EBakaLogType.LOG_STDOUT, "Probíhá pokus o reset hesla účtu " + login);
 
-        // vyhledat žáka v LDAP
-        String upn = login.contains("@") ? login : login + "@" + sf.getConfig().getMailDomain();
-        StudentRecord student = sf.getLdapUserRepo().findByUPN(sf.getConfig().getLdapBaseStudents(), upn);
+        // fáze 1: reset hesel (vždy)
+        ReportData data = Export.buildReportData(
+                scope, true,
+                sf.getStudentRepo(), sf.getFacultyRepo(),
+                sf.getPasswordService());
 
-        if (student == null || student.getDn() == null) {
-            ReportManager.logResult(EBakaLogType.LOG_ERR);
-            ReportManager.log(EBakaLogType.LOG_ERR, "Účet " + upn + " nenalezen v AD.");
-            return 1;
+        // souhrn do konzole
+        ReportManager.log(EBakaLogType.LOG_STDOUT,
+                "Reset dokončen: " + data.successCount() + " úspěšných, "
+                        + data.failureCount() + " chyb.");
+
+        // fáze 2: volitelná sestava
+        if (sendReport) {
+            Export.sendReports(data, "Reset hesel – ", Export.resetEmailBody());
         }
 
-        // získat classId z SQL evidence
-        int classId = 0;
-        StudentRecord sqlStudent = sf.getStudentRepo().findByInternalId(student.getInternalId());
-        if (sqlStudent != null && sqlStudent.getClassNumber() != null) {
-            try { classId = Integer.parseInt(sqlStudent.getClassNumber()); } catch (NumberFormatException ignored) {}
-        }
-
-        SyncResult result = sf.getPasswordService().resetStudentPassword(
-                student.getDn(), student.getSurname(), student.getGivenName(),
-                student.getClassYear(), classId);
-
-        if (result.isSuccess()) {
-            ReportManager.logResult(EBakaLogType.LOG_OK);
-            return 0;
-        } else {
-            ReportManager.logResult(EBakaLogType.LOG_ERR);
-            ReportManager.log(EBakaLogType.LOG_ERR, result.getDescription());
-            return 1;
-        }
+        return data.failureCount() > 0 ? 1 : 0;
     }
 }
