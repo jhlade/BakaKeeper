@@ -72,6 +72,15 @@ public class StudentRecord extends Person {
     /** seznam proxyAddresses z LDAP (SMTP: primární, smtp: sekundární) */
     private List<String> proxyAddresses = new ArrayList<>();
 
+    /** poslední přihlášení (Windows FILETIME ticks) */
+    private Long lastLogon;
+
+    /** poslední změna hesla (Windows FILETIME ticks) */
+    private Long pwdLastSet;
+
+    /** seznam členství ve skupinách (DN z LDAP memberOf) */
+    private List<String> memberOf = new ArrayList<>();
+
     /**
      * Vrátí aktuální hodnotu atributu spravovaného pravidly z LDAP.
      *
