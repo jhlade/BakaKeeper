@@ -27,6 +27,12 @@
             <artifactId>bakakeeper-core</artifactId>
         </dependency>
 
+        <!-- picocli – parsování argumentů CLI -->
+        <dependency>
+            <groupId>info.picocli</groupId>
+            <artifactId>picocli</artifactId>
+        </dependency>
+
         <!-- testy -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>

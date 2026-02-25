@@ -33,6 +33,7 @@
         <slf4j.version>1.7.10</slf4j.version>
         <snakeyaml.version>2.3</snakeyaml.version>
         <itext.version>8.0.5</itext.version>
+        <picocli.version>4.7.6</picocli.version>
 
         <!-- verze testovacích závislostí -->
         <junit-jupiter.version>5.11.4</junit-jupiter.version>
@@ -119,6 +120,13 @@
                 <groupId>com.itextpdf</groupId>
                 <artifactId>bouncy-castle-adapter</artifactId>
                 <version>${itext.version}</version>
+            </dependency>
+
+            <!-- picocli – parsování argumentů CLI -->
+            <dependency>
+                <groupId>info.picocli</groupId>
+                <artifactId>picocli</artifactId>
+                <version>${picocli.version}</version>
             </dependency>
 
             <!-- JUnit 5 -->
