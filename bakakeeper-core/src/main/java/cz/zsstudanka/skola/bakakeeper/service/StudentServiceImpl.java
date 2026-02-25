@@ -505,7 +505,9 @@ public class StudentServiceImpl implements StudentService {
                 ldapRepo.removeAttribute(dn, EBakaLDAPAttributes.PROXY_ADDR, oldPrimary);
             }
             // přidat jako sekundární smtp: (pokud ještě neexistuje)
-            if (currentProxy.stream().noneMatch(p -> p.equalsIgnoreCase(oldSecondary))) {
+            // pozn.: porovnání musí být case-sensitive – SMTP: varianta (právě odebraná)
+            // je stále v snapshotu currentProxy a equalsIgnoreCase by ji matchla
+            if (currentProxy.stream().noneMatch(p -> p.equals(oldSecondary))) {
                 ldapRepo.addAttribute(dn, EBakaLDAPAttributes.PROXY_ADDR, oldSecondary);
             }
         }

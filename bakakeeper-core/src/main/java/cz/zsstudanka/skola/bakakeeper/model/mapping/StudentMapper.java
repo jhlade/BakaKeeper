@@ -132,6 +132,21 @@ public class StudentMapper {
         record.setProxyAddresses(
                 new ArrayList<>(MapperUtils.getMultiValueAttr(ldap, EBakaLDAPAttributes.PROXY_ADDR)));
 
+        // poslední přihlášení
+        String lastLogonStr = MapperUtils.getStringAttr(ldap, EBakaLDAPAttributes.LAST_LOGON);
+        if (lastLogonStr != null && !lastLogonStr.isEmpty()) {
+            try { record.setLastLogon(Long.parseLong(lastLogonStr)); } catch (NumberFormatException ignored) {}
+        }
+
+        // poslední změna hesla
+        String pwdLastSetStr = MapperUtils.getStringAttr(ldap, EBakaLDAPAttributes.PW_LASTSET);
+        if (pwdLastSetStr != null && !pwdLastSetStr.isEmpty()) {
+            try { record.setPwdLastSet(Long.parseLong(pwdLastSetStr)); } catch (NumberFormatException ignored) {}
+        }
+
+        // členství ve skupinách
+        record.setMemberOf(new ArrayList<>(MapperUtils.getMultiValueAttr(ldap, EBakaLDAPAttributes.MEMBER_OF)));
+
         // aktuální hodnoty atributů pro konvergentní rekonciliaci pravidel
         // (extensionAttribute3-15 + title) – umožňuje zjistit, zda atribut
         // potřebuje vyčistit při odebrání pravidla z konfigurace
@@ -217,6 +232,21 @@ public class StudentMapper {
         // proxyAddresses – multi-value atribut z LDAP
         record.setProxyAddresses(
                 new ArrayList<>(MapperUtils.getMultiValueAttr(ldap, EBakaLDAPAttributes.PROXY_ADDR)));
+
+        // poslední přihlášení
+        String lastLogonStr = MapperUtils.getStringAttr(ldap, EBakaLDAPAttributes.LAST_LOGON);
+        if (lastLogonStr != null && !lastLogonStr.isEmpty()) {
+            try { record.setLastLogon(Long.parseLong(lastLogonStr)); } catch (NumberFormatException ignored) {}
+        }
+
+        // poslední změna hesla
+        String pwdLastSetStr = MapperUtils.getStringAttr(ldap, EBakaLDAPAttributes.PW_LASTSET);
+        if (pwdLastSetStr != null && !pwdLastSetStr.isEmpty()) {
+            try { record.setPwdLastSet(Long.parseLong(pwdLastSetStr)); } catch (NumberFormatException ignored) {}
+        }
+
+        // členství ve skupinách
+        record.setMemberOf(new ArrayList<>(MapperUtils.getMultiValueAttr(ldap, EBakaLDAPAttributes.MEMBER_OF)));
 
         // e-mail z SQL je autoritativní; pokud je prázdný, použijeme LDAP
         if (record.getEmail() == null || record.getEmail().isEmpty()) {

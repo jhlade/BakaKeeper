@@ -112,6 +112,15 @@ class RangeSelectorTest {
     }
 
     @Test
+    void parseLoginWithoutDomain() {
+        // bare login novak.tomas (bez @) se musí rozpoznat jako individuální
+        RangeSelector sel = RangeSelector.parse("novak.tomas");
+        assertTrue(sel.getClasses().isEmpty());
+        assertEquals(1, sel.getIndividuals().size());
+        assertEquals("novak.tomas", sel.getIndividuals().get(0));
+    }
+
+    @Test
     void parseIgnoresWhitespace() {
         RangeSelector sel = RangeSelector.parse(" 5.A , 6.B ");
         assertEquals(2, sel.getClasses().size());

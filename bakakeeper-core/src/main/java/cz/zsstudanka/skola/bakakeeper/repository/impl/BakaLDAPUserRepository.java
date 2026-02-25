@@ -50,6 +50,10 @@ public class BakaLDAPUserRepository implements LDAPUserRepository {
             EBakaLDAPAttributes.EXT13.attribute(),
             EBakaLDAPAttributes.EXT14.attribute(),
             EBakaLDAPAttributes.EXT15.attribute(),
+            // rozšířené atributy pro identifikaci
+            EBakaLDAPAttributes.LAST_LOGON.attribute(),
+            EBakaLDAPAttributes.PW_LASTSET.attribute(),
+            EBakaLDAPAttributes.MEMBER_OF.attribute(),
     };
 
     public BakaLDAPUserRepository(LDAPConnector ldap) {

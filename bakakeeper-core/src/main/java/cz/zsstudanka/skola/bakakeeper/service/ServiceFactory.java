@@ -43,6 +43,7 @@ public class ServiceFactory {
     private final GuardianService guardianService;
     private final FacultyService facultyService;
     private final RuleService ruleService;
+    private final IdentifyService identifyService;
 
     // orchestrátor
     private final SyncOrchestrator orchestrator;
@@ -81,6 +82,7 @@ public class ServiceFactory {
         this.guardianService = new GuardianServiceImpl(config, guardianRepo, ldapUserRepo);
         this.facultyService = new FacultyServiceImpl(config, ldapUserRepo);
         this.ruleService = new RuleServiceImpl(ldapUserRepo);
+        this.identifyService = new IdentifyServiceImpl(config, studentRepo, facultyRepo, ldapUserRepo);
 
         // orchestrátor
         this.orchestrator = new SyncOrchestrator(
@@ -102,6 +104,7 @@ public class ServiceFactory {
     public GuardianService getGuardianService() { return guardianService; }
     public FacultyService getFacultyService() { return facultyService; }
     public RuleService getRuleService() { return ruleService; }
+    public IdentifyService getIdentifyService() { return identifyService; }
 
     public SyncOrchestrator getOrchestrator() { return orchestrator; }
 }
