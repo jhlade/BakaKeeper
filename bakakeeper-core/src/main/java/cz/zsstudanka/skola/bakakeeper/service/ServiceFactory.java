@@ -38,6 +38,7 @@ public class ServiceFactory {
     // služby
     private final StructureService structureService;
     private final PasswordService passwordService;
+    private final AccountService accountService;
     private final PairingService pairingService;
     private final StudentService studentService;
     private final GuardianService guardianService;
@@ -76,6 +77,7 @@ public class ServiceFactory {
         // služby
         this.structureService = new StructureServiceImpl(config, ldap);
         this.passwordService = new PasswordServiceImpl(ldapUserRepo);
+        this.accountService = new AccountServiceImpl(ldapUserRepo);
         this.pairingService = new PairingServiceImpl(ldapUserRepo);
         this.studentService = new StudentServiceImpl(
                 config, studentRepo, ldapUserRepo, passwordService, pairingService);
@@ -99,6 +101,7 @@ public class ServiceFactory {
 
     public StructureService getStructureService() { return structureService; }
     public PasswordService getPasswordService() { return passwordService; }
+    public AccountService getAccountService() { return accountService; }
     public PairingService getPairingService() { return pairingService; }
     public StudentService getStudentService() { return studentService; }
     public GuardianService getGuardianService() { return guardianService; }

@@ -13,6 +13,8 @@ import cz.zsstudanka.skola.bakakeeper.model.collections.SQLrecords;
 import cz.zsstudanka.skola.bakakeeper.model.entities.DataSQL;
 import cz.zsstudanka.skola.bakakeeper.repository.FacultyRepository;
 import cz.zsstudanka.skola.bakakeeper.repository.StudentRepository;
+import cz.zsstudanka.skola.bakakeeper.service.PasswordResetResult;
+import cz.zsstudanka.skola.bakakeeper.service.PasswordService;
 import cz.zsstudanka.skola.bakakeeper.service.RangeSelector;
 import cz.zsstudanka.skola.bakakeeper.service.ResolvedSelection;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
@@ -33,7 +35,7 @@ import java.util.*;
  */
 public class Export {
 
-    /** Maximální počet pokusů pro generování hesla. */
+    /** Maximální počet pokusů pro generování hesla (legacy cesta bez PasswordService). */
     private static final int MAX_PASSWORD_ATTEMPTS = 25;
 
     /**
@@ -55,7 +57,8 @@ public class Export {
 
         // parsování a vyhodnocení rozsahu
         RangeSelector selector = RangeSelector.parse(query);
-        ResolvedSelection selection = selector.resolve(studentRepo, facultyRepo);
+        ResolvedSelection selection = selector.resolve(studentRepo, facultyRepo,
+                Settings.getInstance().getMailDomain());
 
         // varování pro nenalezené žáky
         for (String nf : selection.notFound()) {
@@ -213,22 +216,25 @@ public class Export {
     }
 
     /**
-     * Vygeneruje PDF sestavy s přístupovými údaji a odešle je e-mailem.
-     * Používá {@link RangeSelector} pro parsování rozsahu výběru.
-     * Podporuje celé třídy i individuální žáky.
+     * Fáze 1: Sestavení dat pro sestavu / reset.
+     * Parsuje rozsah, iteruje žáky a volitelně resetuje hesla přes {@link PasswordService}.
      *
-     * @param query dotazované objekty (ročník, třída, UPN žáka - seznam oddělený čárkami)
-     * @param resetPassword provede okamžitý reset hesla nad danými objekty
+     * @param query rozsah výběru (ročník, třída, UPN – odděleno čárkou)
+     * @param resetPassword provést reset hesel
      * @param studentRepo repozitář žáků
      * @param facultyRepo repozitář vyučujících
+     * @param passwordService služba pro reset hesel (použita jen pokud resetPassword=true; může být null pro report bez resetu)
+     * @return agregovaná data sestavy
      */
-    public static void genericReport(String query, boolean resetPassword,
-                                      StudentRepository studentRepo,
-                                      FacultyRepository facultyRepo) {
+    public static ReportData buildReportData(String query, boolean resetPassword,
+                                              StudentRepository studentRepo,
+                                              FacultyRepository facultyRepo,
+                                              PasswordService passwordService) {
 
         // parsování a vyhodnocení rozsahu
         RangeSelector selector = RangeSelector.parse(query);
-        ResolvedSelection selection = selector.resolve(studentRepo, facultyRepo);
+        ResolvedSelection selection = selector.resolve(studentRepo, facultyRepo,
+                Settings.getInstance().getMailDomain());
 
         // varování pro nenalezené žáky
         for (String nf : selection.notFound()) {
@@ -236,7 +242,9 @@ public class Export {
         }
 
         // sestavy <třída, data žáků>
-        Map<String, List<PdfReportGenerator.StudentReportRow>> reportData = new LinkedHashMap<>();
+        Map<String, List<PdfReportGenerator.StudentReportRow>> reportRows = new LinkedHashMap<>();
+        int successCount = 0;
+        int failureCount = 0;
 
         for (var entry : selection.studentsByClass().entrySet()) {
             String classLabel = entry.getKey();
@@ -254,48 +262,50 @@ public class Export {
                     // žák bez čísla v třídním výkazu
                 }
 
-                // výchozí heslo žáka
-                String newPassword = BakaUtils.createInitialPassword(
-                        s.getSurname(), s.getGivenName(), s.getClassYear(), classNum);
+                String newPassword;
 
-                // resetování hesla
                 if (resetPassword) {
                     ReportManager.logWait(EBakaLogType.LOG_INFO,
                             "Probíhá reset hesla žáka " + s.getSurname() + " " + s.getGivenName());
 
-                    int attempt = 0;
-                    boolean passwordSet = false;
+                    if (!RuntimeContext.FLAG_DRYRUN && s.getDn() != null && passwordService != null) {
+                        // ostrý reset přes PasswordService
+                        PasswordResetResult resetResult = passwordService.resetStudentPasswordWithResult(
+                                s.getDn(), s.getSurname(), s.getGivenName(),
+                                s.getClassYear(), classNum);
 
-                    while (!passwordSet && attempt < MAX_PASSWORD_ATTEMPTS) {
+                        if (resetResult.isSuccess()) {
+                            newPassword = resetResult.password();
+                            successCount++;
+                            ReportManager.logResult(EBakaLogType.LOG_OK);
+                            ReportManager.log(EBakaLogType.LOG_VERBOSE,
+                                    "Heslo žáka " + s.getSurname() + " " + s.getGivenName()
+                                            + " bylo úspěšně změněno na " + newPassword);
+                        } else {
+                            // reset selhal – použít výchozí heslo pro sestavu
+                            newPassword = BakaUtils.createInitialPassword(
+                                    s.getSurname(), s.getGivenName(), s.getClassYear(), classNum);
+                            failureCount++;
+                            ReportManager.logResult(EBakaLogType.LOG_ERR);
+                            ReportManager.log(EBakaLogType.LOG_ERR_VERBOSE,
+                                    "Heslo žáka " + s.getSurname() + " " + s.getGivenName()
+                                            + " nebylo možné změnit.");
+                        }
+                    } else {
+                        // dry-run nebo chybějící DN – jen vypočítat heslo
                         newPassword = BakaUtils.nextPassword(
                                 s.getSurname(), s.getGivenName(),
-                                s.getClassYear(), classNum, attempt);
-
-                        if (!RuntimeContext.FLAG_DRYRUN && s.getDn() != null) {
-                            passwordSet = BakaADAuthenticator.getInstance()
-                                    .replaceAttribute(s.getDn(),
-                                            EBakaLDAPAttributes.PW_UNICODE,
-                                            newPassword);
-                        } else {
-                            passwordSet = true;
-                        }
-                        attempt++;
-                    }
-
-                    if (passwordSet) {
+                                s.getClassYear(), classNum, 0);
+                        successCount++;
                         ReportManager.logResult(EBakaLogType.LOG_OK);
-                        ReportManager.log(EBakaLogType.LOG_VERBOSE,
-                                "Heslo žáka " + s.getSurname() + " " + s.getGivenName()
-                                        + " bylo úspěšně změněno na " + newPassword);
-                    } else {
-                        ReportManager.logResult(EBakaLogType.LOG_ERR);
-                        ReportManager.log(EBakaLogType.LOG_ERR_VERBOSE,
-                                "Heslo žáka " + s.getSurname() + " " + s.getGivenName()
-                                        + " nebylo možné změnit ani po " + attempt + " pokusech.");
                     }
+                } else {
+                    // bez resetu – výchozí heslo
+                    newPassword = BakaUtils.createInitialPassword(
+                            s.getSurname(), s.getGivenName(), s.getClassYear(), classNum);
                 }
 
-                // přeskočit žáky bez UPN
+                // přeskočit žáky bez UPN v sestavě
                 if (studentUPN == null || studentUPN.isEmpty()
                         || EBakaSQL.NULL.basename().equals(studentUPN)) {
                     ReportManager.log(EBakaLogType.LOG_ERR_VERBOSE,
@@ -316,8 +326,26 @@ public class Export {
 
             // seřazení dle příjmení
             classStudents.sort(Comparator.comparing(PdfReportGenerator.StudentReportRow::surname));
-            reportData.put(classLabel, classStudents);
+            reportRows.put(classLabel, classStudents);
         }
+
+        return new ReportData(
+                reportRows,
+                selection.classTeachers(),
+                resetPassword,
+                successCount,
+                failureCount
+        );
+    }
+
+    /**
+     * Fáze 2: Generování PDF sestav a odeslání e-mailem.
+     *
+     * @param data data sestavy z {@link #buildReportData}
+     * @param emailSubjectPrefix prefix předmětu e-mailu (před názvem třídy)
+     * @param emailBodyTemplate šablona těla e-mailu ({@code {class}} bude nahrazeno názvem třídy)
+     */
+    public static void sendReports(ReportData data, String emailSubjectPrefix, String emailBodyTemplate) {
 
         // inicializace generátoru PDF
         PdfReportGenerator pdfGen;
@@ -338,10 +366,10 @@ public class Export {
         new File("./reports").mkdirs();
 
         // generování a odeslání sestav
-        for (String classN : reportData.keySet()) {
+        for (String classN : data.reportRows().keySet()) {
 
             // identifikace třídního učitele
-            FacultyRecord teacher = selection.classTeachers().get(classN);
+            FacultyRecord teacher = data.classTeachers().get(classN);
             String classTeacher = (teacher != null)
                     ? teacher.getGivenName() + " " + teacher.getSurname()
                     : "(neznámý)";
@@ -361,7 +389,7 @@ public class Export {
                         classN,
                         classTeacher,
                         schoolYear,
-                        reportData.get(classN),
+                        data.reportRows().get(classN),
                         RuntimeContext.FLAG_DRYRUN
                 );
                 ReportManager.logResult(EBakaLogType.LOG_OK);
@@ -372,17 +400,14 @@ public class Export {
             }
 
             // text e-mailu
-            String message = "V příloze naleznete sestavu s novými přístupovými údaji žáků " +
-                    classN + " pro použití v prostředí Office365. Všichni žáci mají přiřazené " +
-                    "odpovídající žákovské licence, mohou tedy ihned plně používat všechny cloudové služby O365.\n\n" +
-                    "Tuto sestavu považujte za důvěrnou a distribuci " +
-                    "hesel, pokud to bude možné, provádějte jednotlivě.\n\n";
+            String message = emailBodyTemplate.replace("{class}", classN);
 
             if (RuntimeContext.FLAG_DRYRUN) {
-                message += "[ i ] Sestava byla vygenerována s příznakem zkušebního spuštění, zobrazované údaje nemusí reflektovat skutečný stav.";
+                message += "\n\n[ i ] Sestava byla vygenerována s příznakem zkušebního spuštění, " +
+                        "zobrazované údaje nemusí reflektovat skutečný stav.";
             }
 
-            // identifikace třídního učitele - e-mail
+            // identifikace třídního učitele – e-mail
             String classTeacherEmail = (teacher != null) ? teacher.getEmail() : null;
 
             String[] addresses;
@@ -394,12 +419,78 @@ public class Export {
 
             // e-mail pro třídního a správce
             BakaMailer.getInstance().mail(addresses,
-                    "Přístupové údaje žáků " + classN, message,
+                    emailSubjectPrefix + classN, message,
                     new String[]{reportFile});
 
             // úklid – pouze PDF
             new File(reportFile).delete();
         }
+    }
+
+    /**
+     * Šablona e-mailu pro report (s přístupovými údaji, bez resetu).
+     *
+     * @return text e-mailu s placeholderem {class}
+     */
+    public static String reportEmailBody() {
+        return "V příloze naleznete sestavu s přístupovými údaji žáků " +
+                "{class} pro použití v prostředí Office365. Všichni žáci mají přiřazené " +
+                "odpovídající žákovské licence, mohou tedy ihned plně používat všechny cloudové služby O365.\n\n" +
+                "Tuto sestavu považujte za důvěrnou a distribuci " +
+                "hesel, pokud to bude možné, provádějte jednotlivě.";
+    }
+
+    /**
+     * Šablona e-mailu pro reset hesel.
+     *
+     * @return text e-mailu s placeholderem {class}
+     */
+    public static String resetEmailBody() {
+        return "U žáků třídy {class} byl proveden reset přístupových hesel ke školním účtům.\n" +
+                "V příloze naleznete sestavu s novými přístupovými údaji.\n\n" +
+                "Tuto sestavu považujte za důvěrnou a distribuci " +
+                "hesel, pokud to bude možné, provádějte jednotlivě.";
+    }
+
+    /**
+     * Vygeneruje PDF sestavy s přístupovými údaji a odešle je e-mailem.
+     * Používá {@link RangeSelector} pro parsování rozsahu výběru.
+     * Podporuje celé třídy i individuální žáky.
+     *
+     * @param query dotazované objekty (ročník, třída, UPN žáka - seznam oddělený čárkami)
+     * @param resetPassword provede okamžitý reset hesla nad danými objekty
+     * @param studentRepo repozitář žáků
+     * @param facultyRepo repozitář vyučujících
+     * @param passwordService služba pro reset hesel
+     */
+    public static void genericReport(String query, boolean resetPassword,
+                                      StudentRepository studentRepo,
+                                      FacultyRepository facultyRepo,
+                                      PasswordService passwordService) {
+
+        ReportData data = buildReportData(query, resetPassword,
+                studentRepo, facultyRepo, passwordService);
+
+        String emailBody = resetPassword ? resetEmailBody() : reportEmailBody();
+        sendReports(data, "Přístupové údaje žáků ", emailBody);
+    }
+
+    /**
+     * Zpětně kompatibilní verze bez {@link PasswordService}.
+     * Při resetu používá přímé volání {@link BakaADAuthenticator} (legacy cesta).
+     *
+     * @param query dotazované objekty
+     * @param resetPassword provede reset hesla
+     * @param studentRepo repozitář žáků
+     * @param facultyRepo repozitář vyučujících
+     * @deprecated Použijte {@link #genericReport(String, boolean, StudentRepository, FacultyRepository, PasswordService)}.
+     */
+    @Deprecated
+    public static void genericReport(String query, boolean resetPassword,
+                                      StudentRepository studentRepo,
+                                      FacultyRepository facultyRepo) {
+        // legacy cesta – null PasswordService → buildReportData použije dry-run větev pro hesla
+        genericReport(query, resetPassword, studentRepo, facultyRepo, null);
     }
 
     /**

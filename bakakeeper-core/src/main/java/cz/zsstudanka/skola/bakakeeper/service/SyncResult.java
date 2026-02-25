@@ -50,6 +50,10 @@ public class SyncResult {
         return new SyncResult(Type.NO_CHANGE, id, null);
     }
 
+    public static SyncResult noChange(String id, String desc) {
+        return new SyncResult(Type.NO_CHANGE, id, desc);
+    }
+
     public static SyncResult error(String id, String desc) {
         return new SyncResult(Type.ERROR, id, desc);
     }

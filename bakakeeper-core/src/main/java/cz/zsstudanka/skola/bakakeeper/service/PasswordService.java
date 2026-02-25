@@ -21,6 +21,20 @@ public interface PasswordService {
                                      Integer classYear, Integer classId);
 
     /**
+     * Resetuje heslo žáka na vygenerované počáteční heslo a vrátí skutečně nastavené heslo.
+     * Výsledek obsahuje heslo potřebné pro generování PDF sestavy.
+     *
+     * @param dn distinguished name žákovského účtu
+     * @param surname příjmení
+     * @param givenName jméno
+     * @param classYear ročník
+     * @param classId ID třídy
+     * @return výsledek resetu včetně hesla
+     */
+    PasswordResetResult resetStudentPasswordWithResult(String dn, String surname, String givenName,
+                                                        Integer classYear, Integer classId);
+
+    /**
      * Nastaví heslo uživateli.
      *
      * @param dn distinguished name účtu

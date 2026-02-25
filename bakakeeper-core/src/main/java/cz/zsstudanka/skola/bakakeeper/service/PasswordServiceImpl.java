@@ -21,17 +21,27 @@ public class PasswordServiceImpl implements PasswordService {
     }
 
     @Override
-    public SyncResult resetStudentPassword(String dn, String surname, String givenName,
-                                            Integer classYear, Integer classId) {
+    public PasswordResetResult resetStudentPasswordWithResult(String dn, String surname, String givenName,
+                                                               Integer classYear, Integer classId) {
         for (int attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
             String password = BakaUtils.nextPassword(surname, givenName, classYear, classId, attempt);
 
             if (setPassword(dn, password, false)) {
-                return SyncResult.updated(dn, "Heslo resetováno.");
+                return new PasswordResetResult(
+                        SyncResult.updated(dn, "Heslo resetováno."),
+                        password);
             }
         }
 
-        return SyncResult.error(dn, "Nepodařilo se nastavit heslo po " + MAX_ATTEMPTS + " pokusech.");
+        return new PasswordResetResult(
+                SyncResult.error(dn, "Nepodařilo se nastavit heslo po " + MAX_ATTEMPTS + " pokusech."),
+                null);
+    }
+
+    @Override
+    public SyncResult resetStudentPassword(String dn, String surname, String givenName,
+                                            Integer classYear, Integer classId) {
+        return resetStudentPasswordWithResult(dn, surname, givenName, classYear, classId).result();
     }
 
     @Override

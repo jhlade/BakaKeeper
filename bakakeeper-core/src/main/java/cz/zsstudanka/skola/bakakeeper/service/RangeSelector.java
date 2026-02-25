@@ -112,8 +112,7 @@ public class RangeSelector {
 
     /**
      * Vyhodnotí výběr – načte žáky z repozitáře a seskupí je podle tříd.
-     * Individuální žáci se vyhledají podle e-mailu a zařadí do příslušné třídy.
-     * Deduplikace zajistí, že se žák nevyskytne dvakrát (např. při zadání třídy i konkrétního UPN).
+     * Varianta bez e-mailové domény – individuální identifikátory bez {@code @} nebudou doplněny.
      *
      * @param studentRepo  repozitář žáků
      * @param facultyRepo  repozitář vyučujících (pro třídní učitele)
@@ -121,6 +120,25 @@ public class RangeSelector {
      */
     public ResolvedSelection resolve(StudentRepository studentRepo,
                                       FacultyRepository facultyRepo) {
+        return resolve(studentRepo, facultyRepo, null);
+    }
+
+    /**
+     * Vyhodnotí výběr – načte žáky z repozitáře a seskupí je podle tříd.
+     * Individuální žáci se vyhledají podle e-mailu a zařadí do příslušné třídy.
+     * Deduplikace zajistí, že se žák nevyskytne dvakrát (např. při zadání třídy i konkrétního UPN).
+     *
+     * <p>Pokud je zadán {@code mailDomain} a individuální identifikátor neobsahuje {@code @},
+     * automaticky se doplní jako {@code identifikátor@mailDomain}.</p>
+     *
+     * @param studentRepo  repozitář žáků
+     * @param facultyRepo  repozitář vyučujících (pro třídní učitele)
+     * @param mailDomain   e-mailová doména pro doplnění bare loginů (může být null)
+     * @return vyhodnocený výběr se žáky seskupenými podle tříd
+     */
+    public ResolvedSelection resolve(StudentRepository studentRepo,
+                                      FacultyRepository facultyRepo,
+                                      String mailDomain) {
 
         // třídní učitelé – indexováni podle classLabel
         Map<String, FacultyRecord> teachersByClass = facultyRepo.findActive(true).stream()
@@ -154,10 +172,16 @@ public class RangeSelector {
         // vyhledání individuálních žáků
         List<String> notFound = new ArrayList<>();
 
-        for (String email : individuals) {
+        for (String id : individuals) {
+            // doplnění domény pro bare login (bez @)
+            String email = id;
+            if (!id.contains("@") && mailDomain != null && !mailDomain.isEmpty()) {
+                email = id + "@" + mailDomain;
+            }
+
             StudentRecord student = studentRepo.findByEmail(email);
             if (student == null) {
-                notFound.add(email);
+                notFound.add(id);
                 continue;
             }
 
@@ -171,9 +195,6 @@ public class RangeSelector {
             String cls = student.getClassName();
             if (cls != null) {
                 studentsByClass.computeIfAbsent(cls, k -> new ArrayList<>()).add(student);
-
-                // doplnit třídního učitele, pokud ještě není v mapě
-                // (třída nebyla v classes listu, ale individuální žák do ní patří)
             }
         }
 
