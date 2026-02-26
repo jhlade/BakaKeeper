@@ -14,7 +14,7 @@ import java.util.Map;
 
 /**
  * Implementace LDAPUserRepository nad BakaADAuthenticator konektorem.
- * Extrahuje logiku dotazování z původního LDAPrecords.
+ * Dotazování uživatelských účtů v AD.
  *
  * @author Jan Hladěna
  */

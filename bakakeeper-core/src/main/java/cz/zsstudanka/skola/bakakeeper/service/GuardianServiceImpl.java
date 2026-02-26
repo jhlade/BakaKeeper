@@ -10,6 +10,7 @@ import cz.zsstudanka.skola.bakakeeper.repository.LDAPUserRepository;
 import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
 
 import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -21,6 +22,14 @@ import java.util.stream.Collectors;
 public class GuardianServiceImpl implements GuardianService {
 
     private static final int MAX_DN_ATTEMPTS = 10;
+
+    /** Vzor pro základní validaci e-mailu (RFC 5322 zjednodušený). */
+    private static final Pattern EMAIL_PATTERN = Pattern.compile(
+            "^[A-Za-z0-9._%+\\-]+@[A-Za-z0-9.\\-]+\\.[A-Za-z]{2,}$");
+
+    /** Vzor pro české telefonní číslo: volitelný prefix +420, pak 9 číslic (s mezerami). */
+    private static final Pattern PHONE_PATTERN = Pattern.compile(
+            "^(\\+420\\s?)?[0-9]{3}\\s?[0-9]{3}\\s?[0-9]{3}$");
 
     private final AppConfig config;
     private final GuardianRepository guardianRepo;
@@ -35,12 +44,14 @@ public class GuardianServiceImpl implements GuardianService {
     }
 
     @Override
-    public List<SyncResult> syncGuardians(List<StudentRecord> sqlStudents,
-                                           List<GuardianRecord> existingContacts,
-                                           boolean repair,
-                                           SyncProgressListener listener) {
+    public GuardianSyncOutcome syncGuardians(List<StudentRecord> sqlStudents,
+                                              List<GuardianRecord> existingContacts,
+                                              Map<String, String> classTeacherEmails,
+                                              boolean repair,
+                                              SyncProgressListener listener) {
         listener.onPhaseStart("Synchronizace zákonných zástupců");
         List<SyncResult> results = new ArrayList<>();
+        List<GuardianValidationError> validationErrors = new ArrayList<>();
 
         // index kontaktů podle interního ID
         Map<String, GuardianRecord> contactById = existingContacts.stream()
@@ -51,10 +62,24 @@ public class GuardianServiceImpl implements GuardianService {
         // mapování tříd → DL DN pro distribuční skupiny
         Map<String, List<String>> classDlMembers = new LinkedHashMap<>();
 
-        // Fáze 1: Vytvořit/aktualizovat kontakty dle evidence
+        // Fáze 1: Vytvořit/aktualizovat kontakty dle evidence + validace
         for (StudentRecord sql : sqlStudents) {
             String guardianId = sql.getGuardianInternalId();
-            if (guardianId == null || guardianId.isBlank()) continue;
+            if (guardianId == null || guardianId.isBlank()) {
+                // žák nemá zástupce → validační chyba
+                String studentName = formatStudentName(sql);
+                String className = sql.getClassName();
+                String teacherEmail = (className != null) ? classTeacherEmails.get(className) : null;
+                validationErrors.add(new GuardianValidationError(
+                        studentName, className, teacherEmail,
+                        GuardianValidationError.ErrorType.NO_PRIMARY_GUARDIAN,
+                        "Žák nemá evidovaného zákonného zástupce."));
+                continue;
+            }
+
+            // validace kontaktních údajů zástupce (pro každého žáka)
+            validateGuardianData(sql, classTeacherEmails, validationErrors);
+
             if (processedIds.contains(guardianId)) continue;
             processedIds.add(guardianId);
 
@@ -110,11 +135,63 @@ public class GuardianServiceImpl implements GuardianService {
         int ok = (int) results.stream().filter(SyncResult::isSuccess).count();
         int err = (int) results.stream().filter(r -> !r.isSuccess()).count();
         listener.onPhaseEnd("Synchronizace zákonných zástupců", ok, err);
-        return results;
+        return new GuardianSyncOutcome(results, validationErrors);
     }
 
     // ===========================
-    // Interní
+    // Validace kontaktních údajů
+    // ===========================
+
+    /**
+     * Validuje telefon a e-mail zákonného zástupce.
+     * Přidá nalezené chyby do seznamu.
+     */
+    private void validateGuardianData(StudentRecord sql,
+                                       Map<String, String> classTeacherEmails,
+                                       List<GuardianValidationError> errors) {
+        String studentName = formatStudentName(sql);
+        String className = sql.getClassName();
+        String teacherEmail = (className != null) ? classTeacherEmails.get(className) : null;
+
+        // validace telefonu
+        String phone = sql.getGuardianPhone();
+        if (phone == null || phone.isBlank()) {
+            errors.add(new GuardianValidationError(
+                    studentName, className, teacherEmail,
+                    GuardianValidationError.ErrorType.MISSING_PHONE, null));
+        } else if (!PHONE_PATTERN.matcher(phone.trim()).matches()) {
+            errors.add(new GuardianValidationError(
+                    studentName, className, teacherEmail,
+                    GuardianValidationError.ErrorType.INVALID_PHONE, phone.trim()));
+        }
+
+        // validace e-mailu
+        String email = sql.getGuardianEmail();
+        if (email == null || email.isBlank()) {
+            errors.add(new GuardianValidationError(
+                    studentName, className, teacherEmail,
+                    GuardianValidationError.ErrorType.MISSING_EMAIL, null));
+        } else if (!EMAIL_PATTERN.matcher(email.trim()).matches()) {
+            errors.add(new GuardianValidationError(
+                    studentName, className, teacherEmail,
+                    GuardianValidationError.ErrorType.INVALID_EMAIL, email.trim()));
+        }
+    }
+
+    /**
+     * Formátuje jméno žáka pro validační chyby.
+     */
+    private static String formatStudentName(StudentRecord sql) {
+        String surname = sql.getSurname();
+        String givenName = sql.getGivenName();
+        if (surname != null && givenName != null) {
+            return surname + " " + givenName;
+        }
+        return (surname != null) ? surname : "(neznámý)";
+    }
+
+    // ===========================
+    // Synchronizace kontaktů
     // ===========================
 
     /**

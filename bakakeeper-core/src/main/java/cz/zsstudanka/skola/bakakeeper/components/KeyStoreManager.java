@@ -25,7 +25,7 @@ public class KeyStoreManager {
         final String jks_passphrase = new String("BakaKeeper");
 
         // FQDN a port z konfigurace
-        String ldapFqdn = Settings.getInstance().getLDAP_fqdn();
+        String ldapFqdn = Settings.getInstance().getLdapFqdn();
         int ldapPort = Settings.getInstance().getLdapPort();
 
         try {
@@ -37,7 +37,7 @@ public class KeyStoreManager {
             SocketFactory factory = BakaSSLSocketFactory.getDefault();
             try {
                 // navázání SSL spojení na LDAPS port z konfigurace
-                if (Settings.getInstance().beVerbose()) {
+                if (Settings.getInstance().isVerbose()) {
                     ReportManager.log(EBakaLogType.LOG_VERBOSE, "Připojuji se na " + ldapFqdn + ":" + ldapPort + " pro získání certifikátu.");
                 }
                 SSLSocket socket = (SSLSocket) factory.createSocket(ldapFqdn, ldapPort);
@@ -45,7 +45,7 @@ public class KeyStoreManager {
                 socket.startHandshake();
                 Certificate[] certs = socket.getSession().getPeerCertificates();
 
-                if (Settings.getInstance().beVerbose()) {
+                if (Settings.getInstance().isVerbose()) {
                     ReportManager.log(EBakaLogType.LOG_VERBOSE, "Získáno " + certs.length + " certifikátů.");
                 }
 

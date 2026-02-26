@@ -261,13 +261,6 @@ public class Settings implements AppConfig {
         syncRuntimeFlags();
     }
 
-    /**
-     * Okamžitá změna nastavení (pro vývoj/testy).
-     */
-    public void override(String param, String value) {
-        // TODO: implementovat pro YAML strukturu (potřeba v budoucích fázích)
-    }
-
     // ===========================
     // AppConfig implementace
     // ===========================
@@ -338,80 +331,6 @@ public class Settings implements AppConfig {
     public boolean isDevelMode() {
         return develMode;
     }
-
-    // ===========================
-    // Staré API (bridge pro stávající kód)
-    // Bude odstraněno v Fázi 6.
-    // ===========================
-
-    /** @deprecated použijte {@link #getLdapHost()} */
-    public String getLDAP_host() { return getLdapHost(); }
-    /** @deprecated použijte {@link #getLdapDomain()} */
-    public String getLDAP_domain() { return getLdapDomain(); }
-    /** @deprecated použijte {@link #getLdapFqdn()} */
-    public String getLDAP_fqdn() { return getLdapFqdn(); }
-    /** @deprecated použijte {@link #getLdapBase()} */
-    public String getLDAP_base() { return getLdapBase(); }
-    /** @deprecated použijte {@link #getLdapBaseStudents()} */
-    public String getLDAP_baseStudents() { return getLdapBaseStudents(); }
-    /** @deprecated použijte {@link #getLdapBaseAlumni()} */
-    public String getLDAP_baseAlumni() { return getLdapBaseAlumni(); }
-    /** @deprecated použijte {@link #getLdapBaseFaculty()} */
-    public String getLDAP_baseFaculty() { return getLdapBaseFaculty(); }
-    /** @deprecated použijte {@link #getLdapBaseTeachers()} */
-    public String getLDAP_baseTeachers() { return getLdapBaseTeachers(); }
-    /** @deprecated použijte {@link #getLdapBaseContacts()} */
-    public String getLDAP_baseContacts() { return getLdapBaseContacts(); }
-    /** @deprecated použijte {@link #getLdapBaseDistributionLists()} */
-    public String getLDAP_baseDL() { return getLdapBaseDistributionLists(); }
-    /** @deprecated použijte {@link #getLdapBaseStudentGroups()} */
-    public String getLDAP_baseStudentGroups() { return getLdapBaseStudentGroups(); }
-    /** @deprecated použijte {@link #getLdapBaseGlobalGroups()} */
-    public String getLDAP_baseGlobalGroups() { return getLdapBaseGlobalGroups(); }
-    /** @deprecated */
-    public Boolean isLDAP_MSAD() { return true; }
-    /** @deprecated použijte {@link #isLdapSsl()} */
-    public Boolean useSSL() { return isLdapSsl(); }
-    /** @deprecated použijte {@link #getLdapDomain()} */
-    public String getLocalDomain() { return getLdapDomain(); }
-
-    /** @deprecated použijte {@link #getSqlHost()} */
-    public String getSQL_host() { return getSqlHost(); }
-    /** @deprecated */
-    public String getSQL_hostFQDN() {
-        return getSqlHost().toLowerCase() + "." + getLdapDomain().toUpperCase();
-    }
-    /** @deprecated použijte {@link #getSqlDatabase()} */
-    public String getSQL_database() { return getSqlDatabase(); }
-    /** @deprecated */
-    public Boolean sql_NTLM() { return isSqlNtlm(); }
-    /** @deprecated */
-    public Boolean sql_Kerberos() { return isSqlKerberos(); }
-    /** @deprecated */
-    public String getSQL_SPN() {
-        String host = getSqlHost().toLowerCase().replace("." + getLdapDomain().toLowerCase(), "");
-        return "MSSQLSvc/" + host + "." + getLdapDomain().toLowerCase() + "@" + getLdapDomain().toUpperCase();
-    }
-    /** @deprecated */
-    public String getKrb_user() {
-        return getSqlUser().toLowerCase() + "@" + getLdapDomain().toUpperCase();
-    }
-
-    /** @deprecated použijte {@link #getSmtpHost()} */
-    public String getSMTP_host() { return getSmtpHost(); }
-    /** @deprecated */
-    public String getSMTP_user() {
-        return getSmtpUser() + "@" + getMailDomain();
-    }
-    /** @deprecated */
-    public String getSMTP_pass() { return getSmtpPass(); }
-
-    /** @deprecated použijte {@link #isVerbose()} */
-    public Boolean beVerbose() { return beVerbose; }
-    /** @deprecated použijte {@link #isDebug()} */
-    public Boolean debugMode() { return debugMode; }
-    /** @deprecated použijte {@link #isDevelMode()} */
-    public Boolean develMode() { return develMode; }
 
     public void verbosity(Boolean verboseMode) { this.beVerbose = verboseMode; }
     public void debug(Boolean debugMode) { this.debugMode = debugMode; }

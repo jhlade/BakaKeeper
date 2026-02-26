@@ -84,6 +84,7 @@ public class BakaADAuthenticator implements LDAPConnector {
      *
      * @return spojení navázáno
      */
+    @Override
     public Boolean isAuthenticated() {
         return connectionFactory.isAuthenticated();
     }

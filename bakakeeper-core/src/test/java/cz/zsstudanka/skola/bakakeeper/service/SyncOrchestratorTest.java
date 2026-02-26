@@ -74,7 +74,8 @@ class SyncOrchestratorTest {
         when(studentService.initializeNewStudents(any(), any(), anyBoolean(), any())).thenReturn(List.of());
         when(studentService.syncStudentData(any(), any(), anyBoolean(), any())).thenReturn(List.of());
         when(studentService.retireOrphanedStudents(any(), any(), anyBoolean(), any())).thenReturn(List.of());
-        when(guardianService.syncGuardians(any(), any(), anyBoolean(), any())).thenReturn(List.of());
+        when(guardianService.syncGuardians(any(), any(), any(), anyBoolean(), any()))
+                .thenReturn(new GuardianSyncOutcome(List.of(), List.of()));
         // konvergentní model – pravidla se volají vždy (kvůli rekonciliaci)
         when(ruleService.applyRules(any(), any(), anyBoolean(), any())).thenReturn(List.of());
 
@@ -87,7 +88,7 @@ class SyncOrchestratorTest {
         verify(studentService).initializeNewStudents(any(), any(), eq(false), any());
         verify(studentService).syncStudentData(any(), any(), eq(false), any());
         verify(studentService).retireOrphanedStudents(any(), any(), eq(false), any());
-        verify(guardianService).syncGuardians(any(), any(), eq(false), any());
+        verify(guardianService).syncGuardians(any(), any(), any(), eq(false), any());
         // konvergentní model – pravidla se volají vždy (i s prázdnými rules – kvůli rekonciliaci)
         verify(ruleService).applyRules(eq(List.of()), any(), eq(false), any());
     }
@@ -111,7 +112,8 @@ class SyncOrchestratorTest {
         when(studentService.initializeNewStudents(any(), any(), anyBoolean(), any())).thenReturn(List.of());
         when(studentService.syncStudentData(any(), any(), anyBoolean(), any())).thenReturn(List.of());
         when(studentService.retireOrphanedStudents(any(), any(), anyBoolean(), any())).thenReturn(List.of());
-        when(guardianService.syncGuardians(any(), any(), anyBoolean(), any())).thenReturn(List.of());
+        when(guardianService.syncGuardians(any(), any(), any(), anyBoolean(), any()))
+                .thenReturn(new GuardianSyncOutcome(List.of(), List.of()));
         when(ruleService.applyRules(any(), any(), anyBoolean(), any())).thenReturn(List.of());
 
         orchestrator.runFullSync(true, SyncProgressListener.SILENT);
@@ -142,8 +144,8 @@ class SyncOrchestratorTest {
                 .thenReturn(List.of(SyncResult.error("S2", "chyba")));
         when(studentService.retireOrphanedStudents(any(), any(), anyBoolean(), any()))
                 .thenReturn(List.of());
-        when(guardianService.syncGuardians(any(), any(), anyBoolean(), any()))
-                .thenReturn(List.of());
+        when(guardianService.syncGuardians(any(), any(), any(), anyBoolean(), any()))
+                .thenReturn(new GuardianSyncOutcome(List.of(), List.of()));
         when(ruleService.applyRules(any(), any(), anyBoolean(), any())).thenReturn(List.of());
 
         SyncReport report = orchestrator.runFullSync(false, SyncProgressListener.SILENT);

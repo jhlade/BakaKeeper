@@ -14,7 +14,7 @@ import java.util.List;
 
 /**
  * Implementace StudentRepository nad SQL konektorem Bakaláři.
- * Extrahuje logiku dotazování z původního SQLrecords.
+ * Dotazování žáků z evidence Bakaláři.
  *
  * @author Jan Hladěna
  */
@@ -135,7 +135,7 @@ public class BakaStudentRepository implements StudentRepository {
 
     /**
      * Sestaví SELECT dotaz pro žáky s volitelným filtrem ročníku/třídy.
-     * Logika extrahována z původního SQLrecords konstruktoru.
+     * Sestavení SQL dotazu s volitelným filtrem.
      */
     public static String buildStudentQuery(Integer classYear, String classLetter) {
         StringBuilder sb = new StringBuilder("SELECT ");

@@ -60,7 +60,7 @@ public class BakaMailer {
 
         Properties props = new Properties();
 
-        props.put("mail.smtp.host", Settings.getInstance().getSMTP_host());
+        props.put("mail.smtp.host", Settings.getInstance().getSmtpHost());
         props.put("mail.smtp.port", smtpPort);
         props.put("mail.smtp.auth", Boolean.toString(smtpAuth));
         props.put("mail.smtp.starttls.enable", Boolean.toString(smtpStarttls));
@@ -68,7 +68,7 @@ public class BakaMailer {
         if (smtpAuth) {
             Authenticator auth = new Authenticator() {
                 protected PasswordAuthentication getPasswordAuthentication() {
-                    return new PasswordAuthentication(Settings.getInstance().getSMTP_user(), Settings.getInstance().getSMTP_pass());
+                    return new PasswordAuthentication(Settings.getInstance().getSmtpUserAddress(), Settings.getInstance().getSmtpPass());
                 }
             };
             this.session = Session.getInstance(props, auth);
@@ -107,7 +107,7 @@ public class BakaMailer {
         messageBuilder.append("\n\n---\n");
         messageBuilder.append(Version.getInstance().getTag() + "\n" + Settings.getInstance().systemInfoTag() + "\n\n");
 
-        if (Settings.getInstance().beVerbose()) {
+        if (Settings.getInstance().isVerbose()) {
             System.out.println("[ INFO ] Začíná odesílání e-mailu.");
         }
 
@@ -117,7 +117,7 @@ public class BakaMailer {
             msg.addHeader("Content-Transfer-Encoding", "8bit");
             msg.setHeader("X-Mailer", Version.getInstance().getTag());
 
-            msg.setFrom(new InternetAddress(Settings.getInstance().getSMTP_user(), Version.getInstance().getName()));
+            msg.setFrom(new InternetAddress(Settings.getInstance().getSmtpUserAddress(), Version.getInstance().getName()));
             msg.setSentDate(new Date());
             for (String rcpt : recipients) {
                 msg.addRecipients(Message.RecipientType.TO, InternetAddress.parse(rcpt, false));
@@ -181,9 +181,9 @@ public class BakaMailer {
             Transport transport = session.getTransport("smtp");
             int port = Settings.getInstance().getSmtpPort();
             if (Settings.getInstance().isSmtpAuth()) {
-                transport.connect(Settings.getInstance().getSMTP_host(), port, Settings.getInstance().getSMTP_user(), Settings.getInstance().getSMTP_pass());
+                transport.connect(Settings.getInstance().getSmtpHost(), port, Settings.getInstance().getSmtpUserAddress(), Settings.getInstance().getSmtpPass());
             } else {
-                transport.connect(Settings.getInstance().getSMTP_host(), port, null, null);
+                transport.connect(Settings.getInstance().getSmtpHost(), port, null, null);
             }
             transport.close();
 

@@ -95,7 +95,7 @@ class LdapQueryEngine {
                 }
 
                 // LDAP je MS AD a požaduje se UAC -> bude se číst i NTSD
-                if (Settings.getInstance().isLDAP_MSAD() && Arrays.stream(retAttributes).anyMatch(EBakaLDAPAttributes.UAC.attribute()::equals)) {
+                if (Arrays.stream(retAttributes).anyMatch(EBakaLDAPAttributes.UAC.attribute()::equals)) {
 
                     returnedAtts = new String[retAttributes.length + 1];
                     int rA;
@@ -153,7 +153,7 @@ class LdapQueryEngine {
                         } // jednotlivé atributy
 
                         // modifikace UAC
-                        if (Settings.getInstance().isLDAP_MSAD() && Arrays.stream(retAttributes).anyMatch(EBakaLDAPAttributes.UAC.attribute()::equals)) {
+                        if (Arrays.stream(retAttributes).anyMatch(EBakaLDAPAttributes.UAC.attribute()::equals)) {
                             if (BakaSDDLHelper.isUserCannotChangePassword(new SDDL((byte[]) objDetails.get(EBakaLDAPAttributes.NT_SECURITY_DESCRIPTOR.attribute())))) {
                                 // nastavení flagu do UAC; ve výchozím stavu MS AS vždy uvádí 0
                                 objDetails.replace(EBakaLDAPAttributes.UAC.attribute(), String.format("%d", EBakaUAC.PASSWD_CANT_CHANGE.setFlag((String) objDetails.get(EBakaLDAPAttributes.UAC.attribute()).toString())));
@@ -306,23 +306,23 @@ class LdapQueryEngine {
         HashMap<String, String> ldapQ = new HashMap<String, String>();
 
         // kontakty
-        if (OU.contains(Settings.getInstance().getLDAP_baseContacts())) {
+        if (OU.contains(Settings.getInstance().getLdapBaseContacts())) {
             ldapQ.put(EBakaLDAPAttributes.OC_CONTACT.attribute(), EBakaLDAPAttributes.OC_CONTACT.value());
         }
 
         // skupiny a seznamy
         if (
-                OU.contains(Settings.getInstance().getLDAP_baseStudentGroups())
-                || OU.contains(Settings.getInstance().getLDAP_baseDL())
+                OU.contains(Settings.getInstance().getLdapBaseStudentGroups())
+                || OU.contains(Settings.getInstance().getLdapBaseDistributionLists())
         ) {
             ldapQ.put(EBakaLDAPAttributes.OC_GROUP.attribute(), EBakaLDAPAttributes.OC_GROUP.value());
         }
 
         // uživatelé
         if (
-                OU.contains(Settings.getInstance().getLDAP_baseStudents())
-                || OU.contains(Settings.getInstance().getLDAP_baseFaculty())
-                || OU.contains(Settings.getInstance().getLDAP_baseAlumni())
+                OU.contains(Settings.getInstance().getLdapBaseStudents())
+                || OU.contains(Settings.getInstance().getLdapBaseFaculty())
+                || OU.contains(Settings.getInstance().getLdapBaseAlumni())
         ) {
             ldapQ.put(EBakaLDAPAttributes.ST_USER.attribute(), EBakaLDAPAttributes.ST_USER.value());
             ldapQ.put(EBakaLDAPAttributes.OC_USER.attribute(), EBakaLDAPAttributes.OC_USER.value());

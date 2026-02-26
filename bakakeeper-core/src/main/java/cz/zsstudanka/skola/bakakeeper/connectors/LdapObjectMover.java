@@ -62,7 +62,7 @@ class LdapObjectMover {
             attempt++;
 
             if (dnOccupied) {
-                if (Settings.getInstance().beVerbose()) {
+                if (Settings.getInstance().isVerbose()) {
                     ReportManager.log(EBakaLogType.LOG_LDAP,
                             "Cílové DN [" + newObjectDN + "] již existuje, generuji nový název.");
                 }
@@ -91,7 +91,7 @@ class LdapObjectMover {
 
         // ověřit existenci nového DN
         if (queryEngine.checkDN(newObjectDN)) {
-            if (Settings.getInstance().beVerbose()) {
+            if (Settings.getInstance().isVerbose()) {
                 ReportManager.log(EBakaLogType.LOG_LDAP,
                         "Objekt přejmenován: [" + objectDN + "] → [" + newObjectDN + "].");
             }
@@ -151,17 +151,17 @@ class LdapObjectMover {
                 // vytvoření
                 objectFactory.createOU(cn, base);
 
-                if (Settings.getInstance().beVerbose()) {
+                if (Settings.getInstance().isVerbose()) {
                     ReportManager.log(EBakaLogType.LOG_LDAP,
                             "Vytvořena cílová OU [" + ouName + "].");
                 }
             } else {
-                if (Settings.getInstance().beVerbose()) {
+                if (Settings.getInstance().isVerbose()) {
                     ReportManager.log(EBakaLogType.LOG_ERR,
                             "Cílová organizační jednotka pro přesun objektu neexistuje.");
                 }
 
-                if (Settings.getInstance().debugMode()) {
+                if (Settings.getInstance().isDebug()) {
                     ReportManager.log(EBakaLogType.LOG_ERR_DEBUG,
                             "Nebylo možné přesunout objekt [" + objectDN + "] do umístění [" + ouName + "].");
                 }
@@ -176,11 +176,11 @@ class LdapObjectMover {
 
         // 3. Prvotní kontrola existence cílového objektu (kolize)
         if (queryEngine.checkDN(newObjectDN) && !renameObject) {
-            if (Settings.getInstance().beVerbose()) {
+            if (Settings.getInstance().isVerbose()) {
                 ReportManager.log(EBakaLogType.LOG_ERR, "Cílový název objektu již existuje, přesun nebude proveden.");
             }
 
-            if (Settings.getInstance().debugMode()) {
+            if (Settings.getInstance().isDebug()) {
                 ReportManager.log(EBakaLogType.LOG_ERR_DEBUG, "Nebylo možné přesunout objekt [" + objectDN + "] do umístění [" + ouName + "].");
             }
 
@@ -197,13 +197,13 @@ class LdapObjectMover {
 
             if (dnOccupied) {
 
-                if (Settings.getInstance().beVerbose()) {
+                if (Settings.getInstance().isVerbose()) {
                     ReportManager.log("Název přesunovaného objektu v cíli již exituje, bude vygenerován nový.");
                 }
 
                 newObjectDN = BakaUtils.nextDN(newObjectDN);
 
-                if (Settings.getInstance().debugMode()) {
+                if (Settings.getInstance().isDebug()) {
                     ReportManager.log(EBakaLogType.LOG_LDAP, "Byl vygenerován nový název [" + newObjectDN + "].");
                 }
             }

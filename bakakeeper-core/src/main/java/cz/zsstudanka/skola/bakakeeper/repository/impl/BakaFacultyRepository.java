@@ -13,7 +13,7 @@ import java.util.List;
 
 /**
  * Implementace FacultyRepository nad SQL konektorem Bakaláři.
- * Extrahuje logiku dotazování z původního SQLrecords konstruktoru pro učitele.
+ * Dotazování vyučujících z evidence Bakaláři.
  *
  * @author Jan Hladěna
  */
@@ -66,7 +66,7 @@ public class BakaFacultyRepository implements FacultyRepository {
 
     /**
      * Sestaví SELECT dotaz pro vyučující.
-     * Logika extrahována z původního SQLrecords konstruktoru.
+     * Sestavení SQL dotazu pro vyučující.
      */
     public static String buildFacultyQuery(boolean classTeachersOnly) {
         StringBuilder sb = new StringBuilder("SELECT ");

@@ -53,7 +53,7 @@ class LdapAttributeModifier {
      */
     boolean modifyAttribute(int modOp, String dn, EBakaLDAPAttributes attribute, String value) {
 
-        if (Settings.getInstance().debugMode()) {
+        if (Settings.getInstance().isDebug()) {
             ReportManager.log(EBakaLogType.LOG_LDAP, "Operace typu [" + modOp + "] nad objektem: [" + dn + "]. Atribut: [" + attribute.attribute().toString() + "], cílová hodnota: [" + value + "].");
         }
 
@@ -73,7 +73,7 @@ class LdapAttributeModifier {
                     ReportManager.handleException("Nebylo možné nastavit heslo.", e);
                 }
                 // změna UAC na Microsoft Active Directory
-            } else if (attribute.equals(EBakaLDAPAttributes.UAC) && Settings.getInstance().isLDAP_MSAD()) {
+            } else if (attribute.equals(EBakaLDAPAttributes.UAC)) {
                 // původní data v UAC
                 HashMap<String, String> queryOrig = new HashMap<String, String>();
                 queryOrig.put(EBakaLDAPAttributes.OC_USER.attribute(), EBakaLDAPAttributes.OC_USER.value());
@@ -141,7 +141,7 @@ class LdapAttributeModifier {
             // LDAP error 20 (AttributeInUseException) nebo 68 (NameAlreadyBoundException, Samba4) –
             // atribut (např. member) již existuje.
             // Při ADD_ATTRIBUTE je to očekávaný stav (idempotentní operace).
-            if (Settings.getInstance().debugMode()) {
+            if (Settings.getInstance().isDebug()) {
                 ReportManager.log(EBakaLogType.LOG_DEBUG,
                         "Atribut [" + attribute.attribute() + "] již existuje na objektu [" + dn + "] – přeskakuji.");
             }
@@ -221,7 +221,7 @@ class LdapAttributeModifier {
      * @return úspěch operace (true i pokud atribut neexistoval)
      */
     boolean removeAttributeEntirely(String dn, EBakaLDAPAttributes attribute) {
-        if (Settings.getInstance().debugMode()) {
+        if (Settings.getInstance().isDebug()) {
             ReportManager.log(EBakaLogType.LOG_LDAP,
                     "Odebrání atributu [" + attribute.attribute() + "] z objektu: [" + dn + "].");
         }
@@ -236,7 +236,7 @@ class LdapAttributeModifier {
             ctx.modifyAttributes(dn, mod);
         } catch (NoSuchAttributeException e) {
             // atribut neexistuje → idempotentní operace (úspěch)
-            if (Settings.getInstance().debugMode()) {
+            if (Settings.getInstance().isDebug()) {
                 ReportManager.log(EBakaLogType.LOG_DEBUG,
                         "Atribut [" + attribute.attribute() + "] neexistuje na [" + dn + "] – přeskakuji.");
             }
