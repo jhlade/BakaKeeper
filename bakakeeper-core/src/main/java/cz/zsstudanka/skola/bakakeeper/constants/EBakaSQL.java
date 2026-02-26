@@ -20,7 +20,7 @@ public enum EBakaSQL {
     LIT_WEB_ADMIN("S", "Kód pro označení webového účtu správce."),
     LIT_WEB_SYSSIG("NOUSR", ""),
 
-    LIT_LOGIN_UPD("H", "Kód H"), // TODO dokumentace???
+    LIT_LOGIN_UPD("H", "Literál pro typ aktualizace hesla webového přístupu."),
     LIT_LOGIN_ADMIN("*", "Název účtu správce systému."),
     LIT_DUMMY_ADMIN("ADMIN", "Univerzální označení pro účet správce."),
 
@@ -28,7 +28,7 @@ public enum EBakaSQL {
 
     // tabulky
     TBL_STU("dbo.zaci", "Tabulka s daty žáků."),
-    TBL_FAC("dbo.ucitele", "Tabulka s daty učitelů."), // TODO kontrola
+    TBL_FAC("dbo.ucitele", "Tabulka s daty učitelů."),
     TBL_GUA("dbo.zaci_zzd", "Tabulka s daty zákonných zástupců žáků."),
     TBL_STU_GUA("dbo.zaci_zzr", "Tabulka s definicí vztahů zákonných zástupců k žákům."),
     TBL_WEB_LOGIN("dbo.webuser", "Tabulka s definicí přístupů uživatelů webové aplikace."),
@@ -87,8 +87,8 @@ public enum EBakaSQL {
     F_LOGIN_LOGIN(TBL_LOGIN.field + "." + "LOGIN", "Přihlašovací jméno uživatatele."),
     F_LOGIN_TYPE(TBL_LOGIN.field + "." + "KOD1", "Typ uživatelského účtu definovaný literálem R/S/V/Z."),
     F_LOGIN_ACL(TBL_LOGIN.field + "." + "PRAVA", "Uživatelské oprávnění (1)."),
-    F_LOGIN_UPDTYPE(TBL_LOGIN.field + "." + "UPD_TYP", "UPD TYP definovaný literálem."), // TODO - dokumentace?
-    F_LOGIN_KODF(TBL_LOGIN.field + "." + "KODF", "Pole KODF."), // TODO - dokumentace?
+    F_LOGIN_UPDTYPE(TBL_LOGIN.field + "." + "UPD_TYP", "Typ poslední aktualizace záznamu (H = heslo)."),
+    F_LOGIN_KODF(TBL_LOGIN.field + "." + "KODF", "Kód formuláře (interní identifikátor Bakalářů)."),
     F_LOGIN_PWD(TBL_LOGIN.field + "." + "HESLO", "B64 hash hesla uživatele."),
     F_LOGIN_PWD_MET(TBL_LOGIN.field + "." + "METODA", "Hashovací metoda."),
     F_LOGIN_PWD_SALT(TBL_LOGIN.field + "." + "SALT", "Sůl hashe."),
@@ -145,10 +145,7 @@ public enum EBakaSQL {
             case TBL_GUA:
                 return F_GUA_ID;
 
-            // TODO
-            /*
-            case TBL_STU_GUA:
-                return F_STU_GUA_ID;  */
+            // TBL_STU_GUA (dbo.zaci_zzr) nemá jednoduchý PK – je to M:N relační tabulka
         }
 
         return null;

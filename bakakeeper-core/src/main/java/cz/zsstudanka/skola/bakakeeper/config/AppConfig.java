@@ -162,6 +162,25 @@ public interface AppConfig {
     /** Vývojový režim. */
     boolean isDevelMode();
 
+    // --- Odvozené hodnoty ---
+
+    /** SQL Server SPN pro Kerberos autentizaci (MSSQLSvc/host.domain@DOMAIN). */
+    default String getSqlSpn() {
+        String host = getSqlHost().toLowerCase().replace("." + getLdapDomain().toLowerCase(), "");
+        return "MSSQLSvc/" + host + "." + getLdapDomain().toLowerCase()
+                + "@" + getLdapDomain().toUpperCase();
+    }
+
+    /** Kerberos principal pro SQL spojení (user@DOMAIN). */
+    default String getKrbUser() {
+        return getSqlUser().toLowerCase() + "@" + getLdapDomain().toUpperCase();
+    }
+
+    /** Plná e-mailová adresa SMTP odesílatele (user@mailDomain). */
+    default String getSmtpUserAddress() {
+        return getSmtpUser() + "@" + getMailDomain();
+    }
+
     // --- Validita ---
 
     /** Konfigurace je kompletní a platná. */

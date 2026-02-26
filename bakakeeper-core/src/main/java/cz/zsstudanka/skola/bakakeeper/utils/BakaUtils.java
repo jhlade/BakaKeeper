@@ -1,5 +1,8 @@
 package cz.zsstudanka.skola.bakakeeper.utils;
 
+import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
+
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.text.Normalizer;
@@ -70,31 +73,6 @@ public class BakaUtils {
     }
 
     /**
-     * @deprecated
-     *
-     * Vytvoření neověřeného 4+2-INDOŠ loginu z celého jména. Projekt INDOŠ z roku 2001 formátoval přihlašovací
-     * jméno jako první čtyři písmena z příjmení a první dvě písmena z křestního jména uživatele.
-     * Např. Novák Josef - novajo.
-     *
-     * @param displayName zobrazované jméno (ve formátu Příjmení Jméno; př. Novák Josef, Svobodová Nováková Jana Kateřina)
-     * @return login 4+2 (Novák Josef = novajo, Svobodová Nováková Jana Kateřina = svobja)
-     */
-    public static String create4p2(String displayName) {
-        StringBuilder login = new StringBuilder();
-
-        String[] parts = removeAccents(displayName.toLowerCase()).split(" ");
-
-        if (parts.length == 1 || parts[0].length() < 4 || displayName.contains("-")) {
-            login.append(parts[0]);
-        } else {
-            login.append((parts[0]).substring(0, 4));
-            login.append((parts[1]).substring(0, 2)); // pouze první jméno
-        }
-
-        return login.toString();
-    }
-
-    /**
      * Vytvoření přihlašovacího jména (žáka) do webové aplikace Bakaláři. Ve výchozím stavu aplikace
      * je použito pět písmen z příjmení (bez diakritiky, první velké) a náhodné pětimístné číslo. Pro použití
      * webové aplikace musí být tento login nejprve vytvořen; heslo lze následně samostaně změnit žádostí o změnu hesla,
@@ -126,24 +104,25 @@ public class BakaUtils {
      * @param givenName jméno
      * @return jednotlivé části "sn" a "gn" + "snn" pro normalizované příjmení použitelné pro tvorbu hesla
      */
-    // TODO: rozšířit o další typy partiklů dle reálné DB:
-    //   - „bin"/„ibn"  (arabská patronymika: bin Rashid, ibn Battuta)
-    //   - případně další skupiny
-    // Partikl by se měl sloučit se jménem v snParts a odstranit v snNormalized
-    // (pro tvorbu hesla). Viz dev/seed/testdata.py – _MERGE_PARTICLES_SET.
     private static Map<String, String[]> createBaseNameParts(String surname, String givenName) {
+        // sloučení partiklu s příjmením (von Landitz → vonLanditz, bin Rashid → binRashid)
         String[] snParts = surname.replace("-", " ")
                 .replaceAll("\\s+", " ")
                 .replaceFirst("^(v|V)(a|o)n ", "$1$2n")
                 .replaceFirst("^(d|D)(a|e|i) ", "$1$2")
                 .replaceFirst("^(a|A)l ", "$1l")
+                .replaceFirst("^(b|B)in ", "$1in")
+                .replaceFirst("^(i|I)bn ", "$1bn")
                 .split(" ");
 
+        // normalizované příjmení bez partiklu (pro tvorbu hesla)
         String[] snNormalized = surname.replace("-", " ")
                 .replaceAll("\\s+", " ")
                 .replaceAll("^(d|D)(a|e|i) ", "")
                 .replaceAll("(v|V)(a|o)n ", "")
                 .replaceAll("(a|A)l ", "")
+                .replaceAll("^(b|B)in ", "")
+                .replaceAll("^(i|I)bn ", "")
                 .split(" ");
 
         String[] gnParts = givenName.replace("-", " ")
@@ -280,8 +259,10 @@ public class BakaUtils {
             hash = bytesToHex(digest.digest(
                     String.format("%02d", classID ^ (classYear + attempt)).getBytes()
             )).toLowerCase().substring(0, 3);
-        } catch (Exception e) {
-            // TODO ...
+        } catch (NoSuchAlgorithmException e) {
+            // SHA-256 by měl být vždy dostupný; pokud ne, použije se výchozí hash
+            ReportManager.log(EBakaLogType.LOG_ERR,
+                    "Hashovací algoritmus SHA-256 není dostupný: " + e.getMessage());
         }
 
         return removeAccents(base.get("snn")[0].substring(0, 2))

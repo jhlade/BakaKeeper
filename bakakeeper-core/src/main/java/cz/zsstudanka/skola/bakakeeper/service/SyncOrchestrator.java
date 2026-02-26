@@ -12,7 +12,9 @@ import cz.zsstudanka.skola.bakakeeper.repository.LDAPUserRepository;
 import cz.zsstudanka.skola.bakakeeper.repository.StudentRepository;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -109,8 +111,9 @@ public class SyncOrchestrator {
         allResults.addAll(studentService.retireOrphanedStudents(
                 sqlStudents, ldapStudents, repair, listener));
 
-        // 5. Synchronizace zákonných zástupců
-        allResults.addAll(syncGuardians(sqlStudents, repair, listener));
+        // 5. Synchronizace zákonných zástupců (s validací kontaktních údajů)
+        GuardianSyncOutcome guardianOutcome = syncGuardians(sqlStudents, repair, listener);
+        allResults.addAll(guardianOutcome.results());
 
         // 6. Aplikace deklarativních pravidel (konvergentní model)
         //    Pravidla se spouští VŽDY – i když je seznam pravidel prázdný.
@@ -136,8 +139,7 @@ public class SyncOrchestrator {
         int err = (int) allResults.stream().filter(r -> !r.isSuccess()).count();
         listener.onPhaseEnd("Kompletní synchronizace", ok, err);
 
-        // TODO: guardian validation errors budou sbírány z GuardianService v budoucnu
-        return new SyncReport(allResults, List.of());
+        return new SyncReport(allResults, guardianOutcome.validationErrors());
     }
 
     /**
@@ -177,7 +179,7 @@ public class SyncOrchestrator {
      * @param listener sledování průběhu
      * @return výsledky synchronizace
      */
-    public List<SyncResult> runGuardiansOnly(boolean repair, SyncProgressListener listener) {
+    public GuardianSyncOutcome runGuardiansOnly(boolean repair, SyncProgressListener listener) {
         List<StudentRecord> sqlStudents = studentRepo.findActive(null, null);
         return syncGuardians(sqlStudents, repair, listener);
     }
@@ -215,13 +217,32 @@ public class SyncOrchestrator {
     }
 
     /**
-     * Synchronizace zákonných zástupců (načte kontakty z LDAP).
+     * Synchronizace zákonných zástupců (načte kontakty z LDAP + mapování třídních učitelů).
      */
-    private List<SyncResult> syncGuardians(List<StudentRecord> sqlStudents,
-                                            boolean repair, SyncProgressListener listener) {
+    private GuardianSyncOutcome syncGuardians(List<StudentRecord> sqlStudents,
+                                               boolean repair, SyncProgressListener listener) {
         List<GuardianRecord> contacts = guardianRepo.findAllContacts(
                 config.getLdapBaseContacts());
-        return guardianService.syncGuardians(sqlStudents, contacts, repair, listener);
+
+        // sestavit mapování třída → e-mail třídního učitele
+        Map<String, String> classTeacherEmails = buildClassTeacherMap();
+
+        return guardianService.syncGuardians(
+                sqlStudents, contacts, classTeacherEmails, repair, listener);
+    }
+
+    /**
+     * Sestaví mapování třída (např. "5.A") → e-mail třídního učitele.
+     */
+    private Map<String, String> buildClassTeacherMap() {
+        List<FacultyRecord> teachers = facultyRepo.findActive(true);
+        Map<String, String> map = new HashMap<>();
+        for (FacultyRecord teacher : teachers) {
+            if (teacher.getClassLabel() != null && teacher.getEmail() != null) {
+                map.put(teacher.getClassLabel(), teacher.getEmail());
+            }
+        }
+        return map;
     }
 
     /**

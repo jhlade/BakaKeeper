@@ -210,16 +210,11 @@ PARTICLES = [
 _PARTICLES_SET = frozenset(PARTICLES)   # všechny partikly pro generování jmen
 
 # Pouze partikly, které BakaKeeper slučuje s příjmením do loginu (viz BakaUtils.createBaseNameParts).
-# „bin"/„ibn" BakaKeeper zatím nezná → bere je jako první slovo příjmení.
-#
-# TODO (BakaKeeper): rozšířit createBaseNameParts o další typy partiklů:
-#   - „bin"/„ibn"  (arabská patronymika: bin Rashid, ibn Battuta)
-#   - případně další skupiny podle reálné DB
-# Po rozšíření aktualizovat i tuto sadu.
 _MERGE_PARTICLES_SET = frozenset([
     "von", "Van",
     "da", "Da", "de", "De", "di", "Di",
     "al", "Al",
+    "bin", "Bin", "ibn", "Ibn",
 ])
 
 # --- Vietnamská jména --------------------------------------------------------
@@ -365,10 +360,8 @@ def _email_local(jmeno: str, prijmeni: str) -> str:
       - Více křestních jmen → první: „Jan Pavel" → „jan"
       - Hyphenované příjmení → pomlčka → mezera → první část:
           „Krkavoslav-Soumrák" → „krkavoslav"  (stejně jako BakaKeeper)
-      - Partikl von/Van, da/de/di, al → SLOUČÍ se s příjmením:
-          „von Liščák" → „vonliscak",  „Da Vinci" → „davinci"
-      - Nerozpoznaný partikl (bin, ibn) → BakaKeeper ho bere jako příjmení:
-          „bin Ráhím" → local začíná „bin"
+      - Partikl von/Van, da/de/di, al, bin/ibn → SLOUČÍ se s příjmením:
+          „von Liščák" → „vonliscak",  „Da Vinci" → „davinci", „bin Rashid" → „binrashid"
       - Složené španělské příjmení → první část: „García Rodríguez" → „garcia"
     """
     # Pomlčka → mezera (BakaKeeper dělá totéž v createBaseNameParts)

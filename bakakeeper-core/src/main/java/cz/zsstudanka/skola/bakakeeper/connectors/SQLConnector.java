@@ -22,4 +22,7 @@ public interface SQLConnector {
 
     /** Stav připojení. */
     Boolean isConnected();
+
+    /** Test spojení s databází (connect + jednoduchý dotaz). */
+    boolean testConnection();
 }

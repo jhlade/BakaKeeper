@@ -53,7 +53,7 @@ class LdapGroupManager {
         };
 
         // pouze první položka
-        Map<Integer, Map> rawResult = (Map<Integer, Map>) queryEngine.getObjectInfo(Settings.getInstance().getLDAP_base(), ldapQ, retAttributes);
+        Map<Integer, Map> rawResult = (Map<Integer, Map>) queryEngine.getObjectInfo(Settings.getInstance().getLdapBase(), ldapQ, retAttributes);
         if (rawResult == null || rawResult.isEmpty()) {
             return new ArrayList<>(0);
         }
@@ -106,7 +106,7 @@ class LdapGroupManager {
                 EBakaLDAPAttributes.DN.attribute(),
         };
 
-        Map<Integer, Map<String, String>> query = (Map<Integer, Map<String, String>>) queryEngine.getObjectInfo(Settings.getInstance().getLDAP_base(), ldapQ, retAttributes);
+        Map<Integer, Map<String, String>> query = (Map<Integer, Map<String, String>>) queryEngine.getObjectInfo(Settings.getInstance().getLdapBase(), ldapQ, retAttributes);
 
         if (query != null && query.size() > 0) {
             result = new ArrayList<String>(query.size());

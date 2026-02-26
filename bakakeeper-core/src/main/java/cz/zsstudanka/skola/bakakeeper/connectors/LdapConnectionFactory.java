@@ -44,8 +44,8 @@ class LdapConnectionFactory {
      * Konstruktor – provede autentizaci s výchozím nastavením.
      */
     LdapConnectionFactory() {
-        this.domain = Settings.getInstance().getLDAP_domain();
-        this.host = Settings.getInstance().getLDAP_host();
+        this.domain = Settings.getInstance().getLdapDomain();
+        this.host = Settings.getInstance().getLdapHost();
     }
 
     /**
@@ -75,12 +75,12 @@ class LdapConnectionFactory {
         this.env = new Hashtable();
 
         // FQDN LDAP serveru
-        String fqdn = Settings.getInstance().getLDAP_fqdn();
+        String fqdn = Settings.getInstance().getLdapFqdn();
         int port = Settings.getInstance().getLdapPort();
 
         env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
         env.put("com.sun.jndi.ldap.connect.pool", "true");
-        if (Settings.getInstance().useSSL()) {
+        if (Settings.getInstance().isLdapSsl()) {
             env.put(Context.SECURITY_PROTOCOL, "ssl");
             env.put("java.naming.ldap.factory.socket", "cz.zsstudanka.skola.bakakeeper.components.BakaSSLSocketFactory");
             env.put(Context.PROVIDER_URL, "ldaps://" + fqdn + ":" + port + "/");
@@ -127,7 +127,7 @@ class LdapConnectionFactory {
 
             this.authSucceeded = true;
 
-            if (Settings.getInstance().beVerbose()) {
+            if (Settings.getInstance().isVerbose()) {
                 ReportManager.log(EBakaLogType.LOG_VERBOSE, "Ověření proti Active Directory proběhlo úspěšně.");
             }
 
@@ -139,7 +139,7 @@ class LdapConnectionFactory {
                 userLDAPquery.put(EBakaLDAPAttributes.LOGIN.attribute(), user);
 
                 // hledání v celé doméně (servisní účet může být v jiné OU)
-                String domainRootDn = java.util.Arrays.stream(Settings.getInstance().getLDAP_domain().split("\\."))
+                String domainRootDn = java.util.Arrays.stream(Settings.getInstance().getLdapDomain().split("\\."))
                         .map(part -> "DC=" + part)
                         .collect(java.util.stream.Collectors.joining(","));
 
@@ -149,7 +149,7 @@ class LdapConnectionFactory {
                 });
             }
 
-            if (Settings.getInstance().debugMode()) {
+            if (Settings.getInstance().isDebug()) {
                 if (authUserInfo() != null) {
                     ReportManager.log(EBakaLogType.LOG_DEBUG, "Přihlášení do Active Directory pod účtem " + authUserInfo().get(EBakaLDAPAttributes.NAME_DISPLAY.attribute()) + " (" + authUserInfo().get(EBakaLDAPAttributes.UPN.attribute()) + ").");
                 } else {

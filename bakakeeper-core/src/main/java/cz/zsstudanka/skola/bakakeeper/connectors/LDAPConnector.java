@@ -15,6 +15,9 @@ import java.util.Map;
  */
 public interface LDAPConnector {
 
+    /** Ověření, zda je spojení s AD aktivní a autentizované. */
+    Boolean isAuthenticated();
+
     /** Dotaz na objekty v AD. */
     @SuppressWarnings("rawtypes")
     Map getObjectInfo(String baseOU, HashMap<String, String> findAttributes, String[] retAttributes);

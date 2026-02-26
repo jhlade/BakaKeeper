@@ -56,6 +56,9 @@ public class ServiceFactory {
     // hlášení
     private final SyncReportSender syncReportSender;
 
+    // kontrola konektivity
+    private final CheckService checkService;
+
     // audit
     private final InternalUserRepository internalUserRepo;
     private final AuditHistoryStore auditHistoryStore;
@@ -106,6 +109,9 @@ public class ServiceFactory {
         // hlášení
         this.syncReportSender = new SyncReportSender(config, BakaMailer.getInstance());
 
+        // kontrola konektivity
+        this.checkService = new CheckServiceImpl(config, ldap, sql, BakaMailer.getInstance());
+
         // audit
         this.internalUserRepo = new BakaInternalUserRepository(sql);
         char[] passphrase = Settings.getInstance().getPassphrase();
@@ -133,6 +139,8 @@ public class ServiceFactory {
     public SyncOrchestrator getOrchestrator() { return orchestrator; }
 
     public SyncReportSender getSyncReportSender() { return syncReportSender; }
+
+    public CheckService getCheckService() { return checkService; }
 
     public InternalUserRepository getInternalUserRepo() { return internalUserRepo; }
     public AuditHistoryStore getAuditHistoryStore() { return auditHistoryStore; }

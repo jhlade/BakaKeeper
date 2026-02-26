@@ -14,7 +14,7 @@ import java.util.Map;
 
 /**
  * Implementace GuardianRepository nad BakaADAuthenticator konektorem.
- * Extrahuje logiku dotazování kontaktů z původního LDAPrecords.
+ * Dotazování kontaktů zákonných zástupců v AD.
  *
  * @author Jan Hladěna
  */

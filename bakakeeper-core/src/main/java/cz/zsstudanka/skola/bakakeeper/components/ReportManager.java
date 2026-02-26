@@ -233,23 +233,23 @@ public class ReportManager {
             log(EBakaLogType.LOG_ERR, message);
         }
 
-        if (Settings.getInstance().beVerbose()) {
+        if (Settings.getInstance().isVerbose()) {
             exceptionMessage(e);
         }
 
-        if (Settings.getInstance().debugMode()) {
+        if (Settings.getInstance().isDebug()) {
             printStackTrace(e);
         }
     }
 
     /**
-     * TODO
+     * Odeslání souhrnného hlášení událostí e-mailem správci.
      *
-     * @param attachLogfile
+     * @param attachLogfile zda připojit protokolový soubor (dosud neimplementováno)
      */
     public void report(Boolean attachLogfile) {
 
-        // prázný seznam událostí
+        // prázdný seznam událostí
         if (this.events.size() < 1) {
             return;
         }
@@ -272,24 +272,10 @@ public class ReportManager {
             report.append("\n");
         }
 
-        /*
-        2020-04-29:
-        Do evidence byly zapsány nové e-mailové adresy:
-        [1.B] č. 4, Novák Adam - novak.adam@zs-studanka.cz
-
-        Bylo provedeno párování záznamů:
-        [DEV04] 1.B, č. 4, Novák Adam
-
-        Byli vytvořeni noví uživatelé:
-        [1.B] č.  4, Novák Adam - novak.adam - No.Ad.04
-        [1.B] č.  5, Sovák Padam - padam.sovak - So.Pa.05
-        [9.C] č. 29, Kociáš Vojtěch - kocias.vojtech - Ko.Vo.29
-
-        U následujících žáků nebyl v evidenci nalezen platný kontakt na zákonné zástupce:
-        [1.B] č. 4, Novák Adam
-        * */
-
-        // TODO log
+        if (RuntimeContext.FLAG_VERBOSE) {
+            ReportManager.log(EBakaLogType.LOG_VERBOSE,
+                    "Odesílání souhrnného hlášení (" + this.events.size() + " typů událostí).");
+        }
 
         // odeslání zprávy
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -298,12 +284,19 @@ public class ReportManager {
         BakaMailer.getInstance().mail("Hlášení z " + formatter.format(date), report.toString());
     }
 
-    // TODO
+    /**
+     * Odeslání souhrnného hlášení bez přiloženého protokolu.
+     */
     public void report() {
         report(false);
     }
 
-    // TODO
+    /**
+     * Zaznamenání události pro budoucí souhrnné hlášení.
+     *
+     * @param eventType typ události
+     * @param eventMessage popis události
+     */
     public void addEvent(EBakaEvents eventType, String eventMessage) {
 
         if (!this.events.containsKey(eventType)) {

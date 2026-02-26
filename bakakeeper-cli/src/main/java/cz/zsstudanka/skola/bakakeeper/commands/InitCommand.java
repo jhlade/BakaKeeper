@@ -57,7 +57,7 @@ public class InitCommand implements Callable<Integer> {
         Settings.getInstance().save();
 
         if (Settings.getInstance().isValid()) {
-            if (Settings.getInstance().useSSL()) {
+            if (Settings.getInstance().isLdapSsl()) {
                 if (KeyStoreManager.initialize()) {
                     ReportManager.log(EBakaLogType.LOG_OK, "Výchozí úložiště certifikátů bylo vytvořeno.");
                 } else {

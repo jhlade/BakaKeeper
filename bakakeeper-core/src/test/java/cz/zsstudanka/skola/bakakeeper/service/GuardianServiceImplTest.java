@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -74,11 +75,11 @@ class GuardianServiceImplTest {
         when(config.getLdapBaseDistributionLists()).thenReturn("OU=DL");
         when(ldapRepo.checkDN(anyString())).thenReturn(false);
 
-        List<SyncResult> results = service.syncGuardians(
-                List.of(s), List.of(), true, SyncProgressListener.SILENT);
+        GuardianSyncOutcome outcome = service.syncGuardians(
+                List.of(s), List.of(), Map.of(), true, SyncProgressListener.SILENT);
 
-        assertEquals(1, results.size());
-        assertEquals(SyncResult.Type.CREATED, results.get(0).getType());
+        assertEquals(1, outcome.results().size());
+        assertEquals(SyncResult.Type.CREATED, outcome.results().get(0).getType());
         verify(guardianRepo).createContact(eq("Nováková Marie"), any());
     }
 
@@ -87,11 +88,11 @@ class GuardianServiceImplTest {
         StudentRecord s = sqlStudent("S1", "G1", "Nováková", "Marie",
                 "novakova@email.cz", "777111222", "5.A");
 
-        List<SyncResult> results = service.syncGuardians(
-                List.of(s), List.of(), false, SyncProgressListener.SILENT);
+        GuardianSyncOutcome outcome = service.syncGuardians(
+                List.of(s), List.of(), Map.of(), false, SyncProgressListener.SILENT);
 
-        assertEquals(1, results.size());
-        assertEquals(SyncResult.Type.SKIPPED, results.get(0).getType());
+        assertEquals(1, outcome.results().size());
+        assertEquals(SyncResult.Type.SKIPPED, outcome.results().get(0).getType());
         verifyNoInteractions(guardianRepo, ldapRepo);
     }
 
@@ -105,11 +106,11 @@ class GuardianServiceImplTest {
         when(config.getLdapBaseDistributionLists()).thenReturn("OU=DL");
         when(ldapRepo.listDirectMembers(anyString())).thenReturn(List.of());
 
-        List<SyncResult> results = service.syncGuardians(
-                List.of(s), List.of(g), true, SyncProgressListener.SILENT);
+        GuardianSyncOutcome outcome = service.syncGuardians(
+                List.of(s), List.of(g), Map.of(), true, SyncProgressListener.SILENT);
 
-        assertEquals(1, results.size());
-        assertEquals(SyncResult.Type.NO_CHANGE, results.get(0).getType());
+        assertEquals(1, outcome.results().size());
+        assertEquals(SyncResult.Type.NO_CHANGE, outcome.results().get(0).getType());
     }
 
     @Test
@@ -123,11 +124,11 @@ class GuardianServiceImplTest {
         when(ldapRepo.listDirectMembers(anyString())).thenReturn(List.of());
         when(ldapRepo.updateAttribute(anyString(), any(), anyString())).thenReturn(true);
 
-        List<SyncResult> results = service.syncGuardians(
-                List.of(s), List.of(g), true, SyncProgressListener.SILENT);
+        GuardianSyncOutcome outcome = service.syncGuardians(
+                List.of(s), List.of(g), Map.of(), true, SyncProgressListener.SILENT);
 
-        assertEquals(1, results.size());
-        assertEquals(SyncResult.Type.UPDATED, results.get(0).getType());
+        assertEquals(1, outcome.results().size());
+        assertEquals(SyncResult.Type.UPDATED, outcome.results().get(0).getType());
         verify(ldapRepo).updateAttribute("CN=Nováková Marie,OU=Kontakty",
                 EBakaLDAPAttributes.MOBILE, "999888777");
     }
@@ -143,11 +144,11 @@ class GuardianServiceImplTest {
         when(ldapRepo.listDirectMembers(anyString())).thenReturn(List.of());
         when(ldapRepo.updateAttribute(anyString(), any(), anyString())).thenReturn(true);
 
-        List<SyncResult> results = service.syncGuardians(
-                List.of(s), List.of(g), true, SyncProgressListener.SILENT);
+        GuardianSyncOutcome outcome = service.syncGuardians(
+                List.of(s), List.of(g), Map.of(), true, SyncProgressListener.SILENT);
 
-        assertEquals(1, results.size());
-        assertEquals(SyncResult.Type.UPDATED, results.get(0).getType());
+        assertEquals(1, outcome.results().size());
+        assertEquals(SyncResult.Type.UPDATED, outcome.results().get(0).getType());
         verify(ldapRepo).updateAttribute("CN=Nováková Marie,OU=Kontakty",
                 EBakaLDAPAttributes.NAME_LAST, "Svobodová");
         verify(ldapRepo).updateAttribute("CN=Nováková Marie,OU=Kontakty",
@@ -161,12 +162,12 @@ class GuardianServiceImplTest {
         GuardianRecord g = existingContact("G1", "Nováková", "Marie",
                 "starý@email.cz", "777111222", "CN=Nováková Marie,OU=Kontakty");
 
-        List<SyncResult> results = service.syncGuardians(
-                List.of(s), List.of(g), false, SyncProgressListener.SILENT);
+        GuardianSyncOutcome outcome = service.syncGuardians(
+                List.of(s), List.of(g), Map.of(), false, SyncProgressListener.SILENT);
 
-        assertEquals(1, results.size());
-        assertEquals(SyncResult.Type.SKIPPED, results.get(0).getType());
-        assertTrue(results.get(0).getDescription().contains("Suchý běh"));
+        assertEquals(1, outcome.results().size());
+        assertEquals(SyncResult.Type.SKIPPED, outcome.results().get(0).getType());
+        assertTrue(outcome.results().get(0).getDescription().contains("Suchý běh"));
         verifyNoInteractions(ldapRepo);
     }
 
@@ -175,24 +176,29 @@ class GuardianServiceImplTest {
         GuardianRecord g = existingContact("G_ORPHAN", "Starý", "Kontakt",
                 "stary@email.cz", "111222333", "CN=Starý Kontakt,OU=Kontakty");
 
-        List<SyncResult> results = service.syncGuardians(
-                List.of(), List.of(g), true, SyncProgressListener.SILENT);
+        GuardianSyncOutcome outcome = service.syncGuardians(
+                List.of(), List.of(g), Map.of(), true, SyncProgressListener.SILENT);
 
-        assertEquals(1, results.size());
-        assertEquals(SyncResult.Type.RETIRED, results.get(0).getType());
+        assertEquals(1, outcome.results().size());
+        assertEquals(SyncResult.Type.RETIRED, outcome.results().get(0).getType());
         verify(guardianRepo).deleteContact("CN=Starý Kontakt,OU=Kontakty");
     }
 
     @Test
-    void syncGuardians_bezGuardianId_přeskočí() {
+    void syncGuardians_bezGuardianId_validačníChyba() {
         StudentRecord s = new StudentRecord();
         s.setInternalId("S1");
+        s.setSurname("Nový");
+        s.setGivenName("Žák");
         s.setGuardianInternalId(null);
 
-        List<SyncResult> results = service.syncGuardians(
-                List.of(s), List.of(), true, SyncProgressListener.SILENT);
+        GuardianSyncOutcome outcome = service.syncGuardians(
+                List.of(s), List.of(), Map.of(), true, SyncProgressListener.SILENT);
 
-        assertTrue(results.isEmpty());
+        assertTrue(outcome.results().isEmpty());
+        assertEquals(1, outcome.validationErrors().size());
+        assertEquals(GuardianValidationError.ErrorType.NO_PRIMARY_GUARDIAN,
+                outcome.validationErrors().get(0).type());
     }
 
     @Test
@@ -200,11 +206,11 @@ class GuardianServiceImplTest {
         StudentRecord s = sqlStudent("S1", "G1", null, "Marie",
                 "novakova@email.cz", "777111222", "5.A");
 
-        List<SyncResult> results = service.syncGuardians(
-                List.of(s), List.of(), true, SyncProgressListener.SILENT);
+        GuardianSyncOutcome outcome = service.syncGuardians(
+                List.of(s), List.of(), Map.of(), true, SyncProgressListener.SILENT);
 
-        assertEquals(1, results.size());
-        assertEquals(SyncResult.Type.ERROR, results.get(0).getType());
+        assertEquals(1, outcome.results().size());
+        assertEquals(SyncResult.Type.ERROR, outcome.results().get(0).getType());
     }
 
     @Test
@@ -219,11 +225,11 @@ class GuardianServiceImplTest {
         when(config.getLdapBaseDistributionLists()).thenReturn("OU=DL");
         when(ldapRepo.checkDN(anyString())).thenReturn(false);
 
-        List<SyncResult> results = service.syncGuardians(
-                List.of(s1, s2), List.of(), true, SyncProgressListener.SILENT);
+        GuardianSyncOutcome outcome = service.syncGuardians(
+                List.of(s1, s2), List.of(), Map.of(), true, SyncProgressListener.SILENT);
 
         // jen 1 vytvoření, ne 2
-        assertEquals(1, results.size());
-        assertEquals(SyncResult.Type.CREATED, results.get(0).getType());
+        assertEquals(1, outcome.results().size());
+        assertEquals(SyncResult.Type.CREATED, outcome.results().get(0).getType());
     }
 }

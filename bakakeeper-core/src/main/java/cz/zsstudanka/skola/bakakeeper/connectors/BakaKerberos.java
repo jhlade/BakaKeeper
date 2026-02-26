@@ -50,9 +50,9 @@ public class BakaKerberos implements Callable {
                 while ((confLine = reader.readLine()) != null) {
 
                     newKrb5Config.append(
-                            confLine.replace("{DOMAIN}", Settings.getInstance().getLocalDomain().toUpperCase())
-                            .replace("{domain_lower}", Settings.getInstance().getLocalDomain().toLowerCase())
-                            .replace("{AD_SRV}", Settings.getInstance().getLDAP_fqdn().toLowerCase())
+                            confLine.replace("{DOMAIN}", Settings.getInstance().getLdapDomain().toUpperCase())
+                            .replace("{domain_lower}", Settings.getInstance().getLdapDomain().toLowerCase())
+                            .replace("{AD_SRV}", Settings.getInstance().getLdapFqdn().toLowerCase())
                     );
                     newKrb5Config.append("\n");
                 }
@@ -88,7 +88,7 @@ public class BakaKerberos implements Callable {
         System.setProperty("sun.security.krb5.disableReferrals", "true");
 
         // Kerberos - podrobný ladící režim
-        if (Settings.getInstance().debugMode()) {
+        if (Settings.getInstance().isDebug()) {
             System.setProperty("sun.security.krb5.debug", "true");
         }
     }
@@ -109,14 +109,14 @@ public class BakaKerberos implements Callable {
 
         try {
             // attempt authentication
-            if (Settings.getInstance().beVerbose()) {
+            if (Settings.getInstance().isVerbose()) {
                 ReportManager.log(EBakaLogType.LOG_VERBOSE, "Probíhá pokus o přihlášení prostřednictvím Kerberos.");
             }
 
             // přihlášení
             lc.login();
 
-            if (Settings.getInstance().beVerbose()) {
+            if (Settings.getInstance().isVerbose()) {
                 ReportManager.log(EBakaLogType.LOG_OK, "Přihlášení Kerberos proběhlo úspěšně.");
             }
 
@@ -124,12 +124,12 @@ public class BakaKerberos implements Callable {
             Subject clientSubject = lc.getSubject();
             byte[] serviceTicket = (byte[]) Subject.callAs(clientSubject, new BakaKerberos());
 
-            if (Settings.getInstance().beVerbose()) {
+            if (Settings.getInstance().isVerbose()) {
                 ReportManager.log(EBakaLogType.LOG_OK, "Tiket služby MSSQL byl vygenerován (přijato " + serviceTicket.length + " bajtů).");
             }
 
             // uložení tokenu do souboru?
-            if (Settings.getInstance().debugMode()) {
+            if (Settings.getInstance().isDebug()) {
                 File krb5Ticket = new File("./debug.ticket");
                 try {
                     FileOutputStream ticketStream = new FileOutputStream(krb5Ticket);
@@ -159,10 +159,10 @@ public class BakaKerberos implements Callable {
             GSSManager manager = GSSManager.getInstance();
 
             // přihlášení pod systémovým účtem
-            GSSName client = manager.createName(Settings.getInstance().getKrb_user(), GSSName.NT_USER_NAME);
+            GSSName client = manager.createName(Settings.getInstance().getKrbUser(), GSSName.NT_USER_NAME);
 
             // SPN služby
-            GSSName service = manager.createName(Settings.getInstance().getSQL_SPN(), null);
+            GSSName service = manager.createName(Settings.getInstance().getSqlSpn(), null);
 
             GSSCredential clientCredentials = manager.createCredential(client, 8*60*60, kerberos5Oid, GSSCredential.INITIATE_ONLY);
             GSSContext gssContext = manager.createContext(service, kerberos5Oid, clientCredentials, GSSContext.DEFAULT_LIFETIME);

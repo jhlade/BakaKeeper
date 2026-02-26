@@ -85,10 +85,10 @@ public class BakaSQL implements SQLConnector {
             Class.forName("net.sourceforge.jtds.jdbc.Driver");
 
             int port = Settings.getInstance().getSqlPort();
-            String url = "jdbc:jtds:" + EBakaPorts.SRV_MSSQL.getScheme() + "://" + Settings.getInstance().getSQL_host()
+            String url = "jdbc:jtds:" + EBakaPorts.SRV_MSSQL.getScheme() + "://" + Settings.getInstance().getSqlHost()
                     + ":" + port
-                    + "/" + Settings.getInstance().getSQL_database()
-                    + ";domain=" + Settings.getInstance().getLocalDomain().toUpperCase() + ";useNTLMv2=true;CharacterSet=UTF-8";
+                    + "/" + Settings.getInstance().getSqlDatabase()
+                    + ";domain=" + Settings.getInstance().getLdapDomain().toUpperCase() + ";useNTLMv2=true;CharacterSet=UTF-8";
 
             con = DriverManager.getConnection(url, Settings.getInstance().getSqlUser(), Settings.getInstance().getSqlPass());
 
@@ -115,16 +115,16 @@ public class BakaSQL implements SQLConnector {
         // připojovací řetězec integrovaného ověřování
         int port = Settings.getInstance().getSqlPort();
         conString.append("jdbc:");
-        conString.append(EBakaPorts.SRV_MSSQL.getScheme() + "://" + Settings.getInstance().getSQL_host() + ":" + port + "; ");
-        conString.append("DatabaseName=" + Settings.getInstance().getSQL_database() + "; ");
+        conString.append(EBakaPorts.SRV_MSSQL.getScheme() + "://" + Settings.getInstance().getSqlHost() + ":" + port + "; ");
+        conString.append("DatabaseName=" + Settings.getInstance().getSqlDatabase() + "; ");
 
         // UPN + heslo pro Kerberos
-        conString.append("user=" + Settings.getInstance().getKrb_user() + "; ");
+        conString.append("user=" + Settings.getInstance().getKrbUser() + "; ");
         conString.append("password=" + Settings.getInstance().getSqlPass() + "; ");
         // SPN
-        conString.append("ServerSpn=" + Settings.getInstance().getSQL_SPN() + "; ");
+        conString.append("ServerSpn=" + Settings.getInstance().getSqlSpn() + "; ");
 
-        if (Settings.getInstance().useSSL()) {
+        if (Settings.getInstance().isLdapSsl()) {
             conString.append("EncryptionMethod=ssl; encrypt=false; integratedSecurity=true; authenticationScheme=JavaKerberos; loginTimeout=1; ");
         }
 
@@ -165,14 +165,14 @@ public class BakaSQL implements SQLConnector {
      * Ladící informace o spojení.
      */
     private void debugInfo() {
-        if (Settings.getInstance().beVerbose()) {
+        if (Settings.getInstance().isVerbose()) {
             ReportManager.log("SQL připojení bylo vytvořeno.");
         }
 
-        if (Settings.getInstance().debugMode()) {
+        if (Settings.getInstance().isDebug()) {
             try {
-                ReportManager.log(EBakaLogType.LOG_SQL, "Ověřování SQL: " + (Settings.getInstance().sql_NTLM() ? "NTLMv2" : "Kerberos V"));
-                ReportManager.log(EBakaLogType.LOG_SQL, "Uživatel SQL: " + Settings.getInstance().getKrb_user());
+                ReportManager.log(EBakaLogType.LOG_SQL, "Ověřování SQL: " + (Settings.getInstance().isSqlNtlm() ? "NTLMv2" : "Kerberos V"));
+                ReportManager.log(EBakaLogType.LOG_SQL, "Uživatel SQL: " + Settings.getInstance().getKrbUser());
 
                 DatabaseMetaData dbmd = con.getMetaData();
                 ReportManager.log(EBakaLogType.LOG_SQL, "dbmd:verze ovladače = " + dbmd.getDriverVersion());
@@ -195,9 +195,9 @@ public class BakaSQL implements SQLConnector {
 
             int port = Settings.getInstance().getSqlPort();
             SQLServerDataSource ds = new SQLServerDataSource();
-            ds.setServerName(Settings.getInstance().getSQL_host());
+            ds.setServerName(Settings.getInstance().getSqlHost());
             ds.setPortNumber(port);
-            ds.setDatabaseName(Settings.getInstance().getSQL_database());
+            ds.setDatabaseName(Settings.getInstance().getSqlDatabase());
             ds.setUser(Settings.getInstance().getSqlUser());
             ds.setPassword(Settings.getInstance().getSqlPass());
             ds.setEncrypt("true");
@@ -227,11 +227,11 @@ public class BakaSQL implements SQLConnector {
             return;
         }
 
-        if (Settings.getInstance().sql_Kerberos()) {
+        if (Settings.getInstance().isSqlKerberos()) {
             connectKerberos();
         }
 
-        if (Settings.getInstance().sql_NTLM()) {
+        if (Settings.getInstance().isSqlNtlm()) {
             connectNTLM();
         }
 
@@ -248,5 +248,10 @@ public class BakaSQL implements SQLConnector {
     public boolean testSQL() {
         connect();
         return valid;
+    }
+
+    @Override
+    public boolean testConnection() {
+        return testSQL();
     }
 }

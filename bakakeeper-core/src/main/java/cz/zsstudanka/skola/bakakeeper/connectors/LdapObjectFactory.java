@@ -145,7 +145,7 @@ class LdapObjectFactory {
 
             Object finalData = data.get(attrKey);
 
-            if (Settings.getInstance().debugMode()) {
+            if (Settings.getInstance().isDebug()) {
                 ReportManager.log(EBakaLogType.LOG_LDAP, "Mapuje se " + attrKey + " = [" + finalData + "]");
             }
 
@@ -164,7 +164,7 @@ class LdapObjectFactory {
         }
 
         // OU s kontakty
-        String targetOU = Settings.getInstance().getLDAP_baseContacts();
+        String targetOU = Settings.getInstance().getLdapBaseContacts();
 
         // vytvoření záznamu - kontaktu
         createRecord(cn, targetOU, objectClasses, attrs);
@@ -188,7 +188,7 @@ class LdapObjectFactory {
                 EBakaLDAPAttributes.DN.attribute(),
         };
 
-        Map info = queryEngine.getObjectInfo(Settings.getInstance().getLDAP_baseContacts(), ldapQ, retAttributes);
+        Map info = queryEngine.getObjectInfo(Settings.getInstance().getLdapBaseContacts(), ldapQ, retAttributes);
 
         // kontakt nenalezen
         if (info.size() != 1) {
