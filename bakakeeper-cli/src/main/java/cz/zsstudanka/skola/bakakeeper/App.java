@@ -12,6 +12,8 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.ScopeType;
 
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.Callable;
 
@@ -179,6 +181,10 @@ public class App implements Callable<Integer> {
      * @param args argumenty příkazového řádku
      */
     public static void main(String[] args) {
+        // Vynutit UTF-8 na stdout/stderr – Windows CMD jinak používá OEM code page (cp852/cp437)
+        System.setOut(new PrintStream(System.out, true, StandardCharsets.UTF_8));
+        System.setErr(new PrintStream(System.err, true, StandardCharsets.UTF_8));
+
         int exitCode = new CommandLine(new App())
                 .setExecutionExceptionHandler((ex, cmd, parseResult) -> {
                     ReportManager.log(EBakaLogType.LOG_ERR, ex.getMessage());
