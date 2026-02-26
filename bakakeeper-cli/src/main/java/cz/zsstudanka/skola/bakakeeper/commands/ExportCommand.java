@@ -31,7 +31,7 @@ public class ExportCommand implements Callable<Integer> {
         app.applyGlobalFlags();
 
         ServiceFactory sf = app.createServiceFactory();
-        Export.exportStudentCSVdata(scope, outFile, sf.getStudentRepo(), sf.getFacultyRepo());
+        Export.exportStudentCSVdata(scope, outFile, sf.getStudentRepo(), sf.getFacultyRepo(), sf.getConfig());
 
         return 0;
     }

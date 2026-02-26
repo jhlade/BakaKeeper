@@ -4,12 +4,11 @@ import cz.zsstudanka.skola.bakakeeper.App;
 import cz.zsstudanka.skola.bakakeeper.CliProgressListener;
 import cz.zsstudanka.skola.bakakeeper.RuntimeContext;
 import cz.zsstudanka.skola.bakakeeper.service.ServiceFactory;
-import cz.zsstudanka.skola.bakakeeper.service.SyncResult;
+import cz.zsstudanka.skola.bakakeeper.service.SyncReport;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.ParentCommand;
 
-import java.util.List;
 import java.util.concurrent.Callable;
 
 /**
@@ -35,10 +34,18 @@ public class SyncCommand implements Callable<Integer> {
         ServiceFactory sf = app.createServiceFactory();
 
         boolean repair = !RuntimeContext.FLAG_DRYRUN;
-        List<SyncResult> results = sf.getOrchestrator().runFullSync(
+        SyncReport report = sf.getOrchestrator().runFullSync(
                 repair, new CliProgressListener(RuntimeContext.FLAG_VERBOSE));
-        App.printSummary(results);
+        App.printSummary(report.results());
 
-        return 0;
+        // odeslání e-mailového hlášení (správci + třídním)
+        if (repair && report.totalActions() > 0) {
+            sf.getSyncReportSender().sendAll(report);
+        }
+
+        // automatická záloha hesla správce
+        sf.getAuditService().backupAdminPassword();
+
+        return report.isSuccess() ? 0 : 1;
     }
 }

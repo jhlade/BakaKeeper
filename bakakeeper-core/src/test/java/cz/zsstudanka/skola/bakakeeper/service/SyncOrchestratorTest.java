@@ -78,9 +78,10 @@ class SyncOrchestratorTest {
         // konvergentní model – pravidla se volají vždy (kvůli rekonciliaci)
         when(ruleService.applyRules(any(), any(), anyBoolean(), any())).thenReturn(List.of());
 
-        List<SyncResult> results = orchestrator.runFullSync(false, SyncProgressListener.SILENT);
+        SyncReport report = orchestrator.runFullSync(false, SyncProgressListener.SILENT);
 
-        assertNotNull(results);
+        assertNotNull(report);
+        assertNotNull(report.results());
         verify(structureService).checkAndRepairStructure(eq(false), any());
         verify(facultyService).syncClassTeachers(any(), eq(false), any());
         verify(studentService).initializeNewStudents(any(), any(), eq(false), any());
@@ -145,11 +146,12 @@ class SyncOrchestratorTest {
                 .thenReturn(List.of());
         when(ruleService.applyRules(any(), any(), anyBoolean(), any())).thenReturn(List.of());
 
-        List<SyncResult> results = orchestrator.runFullSync(false, SyncProgressListener.SILENT);
+        SyncReport report = orchestrator.runFullSync(false, SyncProgressListener.SILENT);
 
-        assertEquals(4, results.size());
-        assertEquals(3, results.stream().filter(SyncResult::isSuccess).count());
-        assertEquals(1, results.stream().filter(r -> !r.isSuccess()).count());
+        assertEquals(4, report.results().size());
+        assertEquals(3, report.results().stream().filter(SyncResult::isSuccess).count());
+        assertEquals(1, report.results().stream().filter(r -> !r.isSuccess()).count());
+        assertTrue(report.guardianErrors().isEmpty());
     }
 
     @Test

@@ -2,6 +2,7 @@ package cz.zsstudanka.skola.bakakeeper.commands;
 
 import cz.zsstudanka.skola.bakakeeper.App;
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
+import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.routines.Export;
 import cz.zsstudanka.skola.bakakeeper.routines.ReportData;
@@ -41,7 +42,7 @@ public class ResetPasswordCommand implements Callable<Integer> {
         ReportData data = Export.buildReportData(
                 scope, true,
                 sf.getStudentRepo(), sf.getFacultyRepo(),
-                sf.getPasswordService());
+                sf.getPasswordService(), sf.getConfig());
 
         // souhrn do konzole
         ReportManager.log(EBakaLogType.LOG_STDOUT,
@@ -50,7 +51,7 @@ public class ResetPasswordCommand implements Callable<Integer> {
 
         // fáze 2: volitelná sestava
         if (sendReport) {
-            Export.sendReports(data, "Reset hesel – ", Export.resetEmailBody());
+            Export.sendReports(data, "Reset hesel – ", Export.resetEmailBody(), sf.getConfig(), BakaMailer.getInstance());
         }
 
         return data.failureCount() > 0 ? 1 : 0;
