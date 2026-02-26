@@ -3,8 +3,10 @@
 Synchronizační nástroj evidence žáků v programu Bakaláři
 s uživatelskými účty vedenými v Active Directory. Předpokládá
 se celoškolní použití Office365, ale není to nezbytně nutné.
-Nástroj byl původně vytvořen během pandemie Covid-19 a počítá se správou
-žákovských hesel v předdefinovaném tvaru a automaticky aktivovanými účty.
+Nástroj byl původně vytvořen během pandemie Covid-19
+během prvotního nsazaování Office365 a počítá se správou
+žákovských hesel v předdefinovaném tvaru
+a automaticky aktivovanými účty.
 
 ### Vlastnosti
 
@@ -13,7 +15,6 @@ získaných v evidenci Bakalářů (jména, zařazení do ročníku/třídy
 v OU a skupinách včetně povýšení školního roku, tvorba nového
 přihlašovacího jména, e-mailu a počátečního hesla, vyřazení
 účtů po ukončení vzdělávání, správa účtu podle stanovených politik).
-* Atomický, transakční postup.
 * Tvorba distribučních skupin třídních učitelů.
 * Tvorba anonymizovaných distribučních skupin s kontakty
 na zákonné zástupce žáků třídy/ročníku/stupně/školy.
@@ -22,16 +23,12 @@ na zákonné zástupce žáků třídy/ročníku/stupně/školy.
 
 ### Co je výhledově v plánu
 
-* Sjednocený generátor sestav (iTextPDF).
-* Grafické uživatelské rozhraní (JavaFX), webová aplikace.
-* YAML konfigurace s deklarativními pravidly pro AD atributy.
-* Granulární workflows (jednotlivec, třída, ročník, stupeň, škola).
-* Zálohování a obnova interních uživatelů v případě nežádoucího zásahu.
+* Grafické uživatelské rozhraní (JavaFX), příp. jako webová aplikace.
 * Možnost specifikace jiných výchozích tvarů hesel a režimu aktivace účtů.
 
 ### Struktura projektu
 
-Projekt je organizován jako multi-modulární Maven build:
+📚 Projekt je organizován jako multi-modulární Maven build:
 
 ```
 bakakeeper-parent/          (rodičovský POM)
@@ -41,14 +38,15 @@ bakakeeper-parent/          (rodičovský POM)
 
 ### Prerekvizity
 
-* LDAP server (řadič Microsoft Active Directory) s rozšířenými
+* LDAP server (on-premise řadič Microsoft Active Directory) s rozšířenými
   atributy Microsoft Exchange (správce s oprávněním skupiny Schema
   Admins je snadno doinstaluje na řadič AD z balíčku pro Exchange Server, nebo pomocí `.ldif` shchématu, viz [dev/samba4](dev/samba4/)).
 * Microsoft SQL Server (nebo MS SQL kompatibilní server)
-  s daty aplikace Bakaláři s doménovým ověřováním uživatele (NTLM nebo Kerberos), nebo účtem správce `sa`.
+  s daty aplikace Bakaláři s doménovým ověřováním uživatele (NTLM nebo Kerberos),
+* nebo účtem správce `sa` (případně aplikačním účtem s právy čtení a zápisu
+  do databáze používané aplikací Bakaláři).
 * Dedikovaný neinteraktivní doménový účet s přístupem k SMTP,
-  právy minimálně Account Operator v AD nad žáky, právy ke čtení i zápisu
-  v SQL databázi s Bakaláři.
+  právy minimálně Account Operator v AD nad žáky (příapdně učiteli).
 * JVM kompatibilní s Java 25 se síťovým přístupem k serverům AD a SQL.
 * *Nepovinně* – v případě použití O365 je možné nastavit poštovní
   filtrovací pravidlo na základě hodnoty `CustomAttribute2:TRUE`
@@ -70,38 +68,38 @@ bakakeeper-parent/          (rodičovský POM)
 
 ### Použití
 
-1) Rychlá inicializace – vytvoření persistentního nastavení:
-   `java -jar BakaKeeper.jar --init --interactive [-passphrase <heslo>]`
+```
+bakakeeper check -p heslo            Kontrola konektivity
+bakakeeper sync --verbose            Synchronizace s podrobným výstupem
+bakakeeper report 5.A                Odeslání sestavy s výchozími přihlašovacími údaji
+bakakeeper reset 5.A --report        Reset hesel a odeslání sestavy pro třídu 5.A
+bakakeeper reset *                   Reset hesel všech žáků celé školy
+bakakeeper suspend 5.A               Zakázání všech účtů třídy 5.A
+bakakeeper unsuspend 5.A             Povolení účtů třídy 5.A
+bakakeeper export 5 -o seznam.csv    CSV export celého 5. ročníku
+bakakeeper init -f settings.yml      Inicializace z plain-text konfiguračního souboru
+```
 
-2) Kontrola synchronizace:
-   `java -jar BakaKeeper.jar --status [-passphrase <heslo>]`
+Více viz `bakakeeper --help`.
 
-3) Provedení synchronizace:
-   `java -jar BakaKeeper.jar --sync [-passphrase <heslo>]`
+### Závislosti pro sestavení
 
-4) Identifikace účtu:
-   `java -jar BakaKeeper.jar -id <login> [-passphrase <heslo>]`
-
-5) Reset hesla žáka:
-   `java -jar BakaKeeper.jar -reset <login> [-passphrase <heslo>]`
-
-6) Více viz `java -jar BakaKeeper.jar --help`
-
-### Závislosti
-
-Spravovány přes Maven (`bakakeeper-core/pom.xml`):
+🪶 Spravovány přes Maven (`bakakeeper-core/pom.xml`, `bakakeeper-cli/pom.xml`):
 * `com.sun.mail:javax.mail` 1.6.2
-* `com.microsoft.sqlserver:mssql-jdbc` 10.2.4
+* `com.microsoft.sqlserver:mssql-jdbc` 13.2.1.jre11
 * `net.sourceforge.jtds:jtds` 1.3.1
 * `net.tirasa:adsddl` 1.9
 * `org.projectlombok:lombok` 1.18.42
 * `org.yaml:snakeyaml` 2.3
-* `org.junit.jupiter:junit-jupiter` 5.11.4 (testy)
-* `org.mockito:mockito-core` 5.14.2 (testy)
+* `com.itextpdf:layout` 8.0.5 (PDF sestavy)
+* `info.picocli:picocli` 4.7.6 (CLI)
 
 ### Vývojové prostředí
 
-Podman-based dev environment se Samba4 AD, MSSQL a Mailpit:
+🦭 Podman-based dev environment se
+- Samba4 AD (simulace doménového řadiče),
+- MSSQL (Edge varianta Microsoft SQL Server),
+- Mailpit (simulace SMTP serveru s webovým rozhraním pro testování mailů)
 ```bash
 cd dev && ./setup-dev.sh
 ```
