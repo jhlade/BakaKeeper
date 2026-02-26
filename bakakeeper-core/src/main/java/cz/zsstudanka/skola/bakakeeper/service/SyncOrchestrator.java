@@ -71,9 +71,9 @@ public class SyncOrchestrator {
      *
      * @param repair provést zápis (true) nebo jen kontrolu (false)
      * @param listener sledování průběhu
-     * @return agregované výsledky ze všech fází
+     * @return strukturovaný výsledek synchronizace
      */
-    public List<SyncResult> runFullSync(boolean repair, SyncProgressListener listener) {
+    public SyncReport runFullSync(boolean repair, SyncProgressListener listener) {
         listener.onPhaseStart("Kompletní synchronizace");
         List<SyncResult> allResults = new ArrayList<>();
 
@@ -136,7 +136,8 @@ public class SyncOrchestrator {
         int err = (int) allResults.stream().filter(r -> !r.isSuccess()).count();
         listener.onPhaseEnd("Kompletní synchronizace", ok, err);
 
-        return allResults;
+        // TODO: guardian validation errors budou sbírány z GuardianService v budoucnu
+        return new SyncReport(allResults, List.of());
     }
 
     /**

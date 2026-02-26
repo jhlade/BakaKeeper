@@ -476,6 +476,15 @@ public class Settings implements AppConfig {
         return config;
     }
 
+    /**
+     * Vrátí passphrase pro šifrování dat (audit, settings).
+     *
+     * @return passphrase jako char array, nebo prázdné pole pokud není nastavena
+     */
+    public char[] getPassphrase() {
+        return PASSPHRASE != null ? PASSPHRASE : new char[0];
+    }
+
     private boolean useEncryption() {
         return PASSPHRASE != null && PASSPHRASE.length > 0;
     }

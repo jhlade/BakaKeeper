@@ -2,22 +2,18 @@ package cz.zsstudanka.skola.bakakeeper.routines;
 
 import cz.zsstudanka.skola.bakakeeper.RuntimeContext;
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
-import cz.zsstudanka.skola.bakakeeper.connectors.BakaADAuthenticator;
+import cz.zsstudanka.skola.bakakeeper.config.AppConfig;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
-import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaSQL;
 import cz.zsstudanka.skola.bakakeeper.model.FacultyRecord;
 import cz.zsstudanka.skola.bakakeeper.model.StudentRecord;
-import cz.zsstudanka.skola.bakakeeper.model.collections.SQLrecords;
-import cz.zsstudanka.skola.bakakeeper.model.entities.DataSQL;
 import cz.zsstudanka.skola.bakakeeper.repository.FacultyRepository;
 import cz.zsstudanka.skola.bakakeeper.repository.StudentRepository;
 import cz.zsstudanka.skola.bakakeeper.service.PasswordResetResult;
 import cz.zsstudanka.skola.bakakeeper.service.PasswordService;
 import cz.zsstudanka.skola.bakakeeper.service.RangeSelector;
 import cz.zsstudanka.skola.bakakeeper.service.ResolvedSelection;
-import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
 import cz.zsstudanka.skola.bakakeeper.utils.PdfReportGenerator;
 
@@ -35,9 +31,6 @@ import java.util.*;
  */
 public class Export {
 
-    /** Maximální počet pokusů pro generování hesla (legacy cesta bez PasswordService). */
-    private static final int MAX_PASSWORD_ATTEMPTS = 25;
-
     /**
      * Export žákovských informací ve formě CSV.
      * Používá {@link RangeSelector} pro parsování rozsahu – stejný formát jako {@code --report}.
@@ -46,19 +39,21 @@ public class Export {
      * @param outFile výstupní soubor (null = stdout)
      * @param studentRepo repozitář žáků
      * @param facultyRepo repozitář vyučujících
+     * @param config konfigurace aplikace
      */
     public static void exportStudentCSVdata(String query, String outFile,
                                              StudentRepository studentRepo,
-                                             FacultyRepository facultyRepo) {
+                                             FacultyRepository facultyRepo,
+                                             AppConfig config) {
 
-        if (Settings.getInstance().debugMode()) {
+        if (config.isDebug()) {
             ReportManager.log(EBakaLogType.LOG_DEBUG, "====== [ EXPORT ] ======");
         }
 
         // parsování a vyhodnocení rozsahu
         RangeSelector selector = RangeSelector.parse(query);
         ResolvedSelection selection = selector.resolve(studentRepo, facultyRepo,
-                Settings.getInstance().getMailDomain());
+                config.getMailDomain());
 
         // varování pro nenalezené žáky
         for (String nf : selection.notFound()) {
@@ -119,99 +114,8 @@ public class Export {
             ReportManager.log(EBakaLogType.LOG_STDOUT, outputBuffer.toString());
         }
 
-        if (Settings.getInstance().debugMode()) {
+        if (config.isDebug()) {
             ReportManager.log(EBakaLogType.LOG_DEBUG, "====== [ /EXPORT ] ======");
-        }
-    }
-
-    /**
-     * Identifikace účtu.
-     *
-     * @param upn UPN účtu
-     */
-    public static void identify(String upn) {
-        // získání aktivního účtu
-        Map<Integer, Map<String, String>> data = BakaADAuthenticator.getInstance().getUserInfo(upn.toLowerCase(Locale.ROOT) + "@" + Settings.getInstance().getMailDomain(), Settings.getInstance().getLDAP_base());
-
-        if (data.size() == 1) {
-
-            ReportManager.log(EBakaLogType.LOG_STDOUT, "Celé jméno: \t\t" + data.get(0).get(EBakaLDAPAttributes.NAME_DISPLAY.attribute()));
-            ReportManager.log(EBakaLogType.LOG_STDOUT, "E-mailová adresa: \t" + data.get(0).get(EBakaLDAPAttributes.MAIL.attribute()));
-
-            Date current = new Date();
-            SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
-
-            Date logonDate = new Date((Long.parseLong("10000") / 10000L) - +11644473600000L);
-            try {
-                logonDate = new Date((Long.parseLong(data.get(0).get(EBakaLDAPAttributes.LAST_LOGON.attribute())) / 10000L) - +11644473600000L);
-            } catch (NumberFormatException e) {
-                ReportManager.log(EBakaLogType.LOG_VERBOSE, "Nebylo nalezeno žádné předchozí přihlášení uživatele.");
-            }
-            long logonDiff = (current.getTime() - logonDate.getTime()) / 1000 / 3600 / 24;
-            ReportManager.log(EBakaLogType.LOG_STDOUT, "Poslední přihlášení: \t" + dateFormat.format(logonDate) + " (" + ((logonDiff > 10000) ? "nikdy" : "před " + logonDiff + " dny") + ")");
-
-            Date pwdDate = new Date((Long.parseLong(data.get(0).get(EBakaLDAPAttributes.PW_LASTSET.attribute())) / 10000L) - + 11644473600000L);
-            long pwdDiff = (current.getTime() - pwdDate.getTime()) / 1000 / 3600 / 24;
-            ReportManager.log(EBakaLogType.LOG_STDOUT, "Poslední změna hesla: \t" + dateFormat.format(pwdDate) + " ("+ ((pwdDiff > 10000) ? "nikdy" : "před " + pwdDiff + " dny") + ")");
-
-            ReportManager.log(EBakaLogType.LOG_STDOUT, "Typ účtu: \t\t" + ((data.get(0).get(EBakaLDAPAttributes.DN.attribute()).contains(Settings.getInstance().getLDAP_baseStudents())) ? "žák" : ((data.get(0).get(EBakaLDAPAttributes.DN.attribute()).contains(Settings.getInstance().getLDAP_baseTeachers()) ? "učitel" : "zaměstnanec"))));
-
-            ArrayList<String> userGroups = BakaADAuthenticator.getInstance().listMembership(data.get(0).get(EBakaLDAPAttributes.DN.attribute()));
-
-            if (userGroups.size() > 0) {
-
-                StringBuilder groups = new StringBuilder();
-
-                Iterator<String> groupIterator = userGroups.iterator();
-                while (groupIterator.hasNext()) {
-                    groups.append(BakaUtils.parseCN(groupIterator.next()));
-                    if (groupIterator.hasNext()) {
-                        groups.append(", ");
-                    }
-                }
-
-                ReportManager.log(EBakaLogType.LOG_STDOUT, "Skupiny: \t\t" + "(" + userGroups.size() + ") " + groups.toString());
-            }
-
-            // vyřazený žák
-            if (data.get(0).get(EBakaLDAPAttributes.DN.attribute()).contains(Settings.getInstance().getLDAP_baseStudents()) && data.get(0).get(EBakaLDAPAttributes.DN.attribute()).contains(Settings.getInstance().getLDAP_baseAlumni())) {
-                ReportManager.log(EBakaLogType.LOG_STDOUT, "Účet vyřazen: \t\t" + BakaUtils.parseLastOU(data.get(0).get(EBakaLDAPAttributes.DN.attribute())));
-            }
-
-            // žák
-            if (data.get(0).get(EBakaLDAPAttributes.DN.attribute()).contains(Settings.getInstance().getLDAP_baseStudents()) && !data.get(0).get(EBakaLDAPAttributes.DN.attribute()).contains(Settings.getInstance().getLDAP_baseAlumni())) {
-
-                // parciální načtení z evidence
-                SQLrecords catalog = new SQLrecords(BakaUtils.classYearFromDn(data.get(0).get(EBakaLDAPAttributes.DN.attribute())), BakaUtils.classLetterFromDn(data.get(0).get(EBakaLDAPAttributes.DN.attribute())));
-                DataSQL studentRecord = catalog.getBy(EBakaSQL.F_STU_MAIL, data.get(0).get(EBakaLDAPAttributes.MAIL.attribute()));
-
-                // třídní učitelé
-                SQLrecords faculty = new SQLrecords(true);
-                DataSQL classTeacher = faculty.getBy(EBakaSQL.F_CLASS_LABEL, BakaUtils.classYearFromDn(data.get(0).get(EBakaLDAPAttributes.DN.attribute())) + "." + BakaUtils.classLetterFromDn(data.get(0).get(EBakaLDAPAttributes.DN.attribute())));
-
-                // třída (1..1) (třídní, 1..1)
-                ReportManager.log(EBakaLogType.LOG_STDOUT, "Třída: \t\t\t" + BakaUtils.classYearFromDn(data.get(0).get(EBakaLDAPAttributes.DN.attribute())) + "." + BakaUtils.classLetterFromDn(data.get(0).get(EBakaLDAPAttributes.DN.attribute())) + " (" + classTeacher.get(EBakaSQL.F_FAC_SURNAME.basename()) + " " + classTeacher.get(EBakaSQL.F_FAC_GIVENNAME.basename()) + ")");
-
-                // výchozí heslo v tomto roce
-                ReportManager.log(EBakaLogType.LOG_STDOUT, "Výchozí heslo žáka: \t" + BakaUtils.createInitialPassword(data.get(0).get(EBakaLDAPAttributes.NAME_LAST.attribute()),
-                        data.get(0).get(EBakaLDAPAttributes.NAME_FIRST.attribute()),
-                        BakaUtils.classYearFromDn(data.get(0).get(EBakaLDAPAttributes.DN.attribute())),
-                        Integer.parseInt( studentRecord.get(EBakaSQL.F_STU_CLASS_ID.basename()))) );
-
-                // zákonný zástupce
-                ReportManager.log(EBakaLogType.LOG_STDOUT, "Zákonný zástupce:\t" + studentRecord.get(EBakaSQL.F_GUA_BK_SURNAME.basename()) +
-                        " " + studentRecord.get(EBakaSQL.F_GUA_BK_GIVENNAME.basename()) +
-                        " (" + studentRecord.get(EBakaSQL.F_GUA_BK_MAIL.basename()) + ", " + studentRecord.get(EBakaSQL.F_GUA_BK_MOBILE.basename()) +
-                        ")");
-            }
-
-            // učitel
-            if (data.get(0).get(EBakaLDAPAttributes.DN.attribute()).contains(Settings.getInstance().getLDAP_baseTeachers())) {
-                // třídnictví (0..N)
-            }
-
-        } else {
-            ReportManager.log(EBakaLogType.LOG_ERR, "Uživatel se zadaným UPN nebyl nalezen.");
         }
     }
 
@@ -224,17 +128,19 @@ public class Export {
      * @param studentRepo repozitář žáků
      * @param facultyRepo repozitář vyučujících
      * @param passwordService služba pro reset hesel (použita jen pokud resetPassword=true; může být null pro report bez resetu)
+     * @param config konfigurace aplikace
      * @return agregovaná data sestavy
      */
     public static ReportData buildReportData(String query, boolean resetPassword,
                                               StudentRepository studentRepo,
                                               FacultyRepository facultyRepo,
-                                              PasswordService passwordService) {
+                                              PasswordService passwordService,
+                                              AppConfig config) {
 
         // parsování a vyhodnocení rozsahu
         RangeSelector selector = RangeSelector.parse(query);
         ResolvedSelection selection = selector.resolve(studentRepo, facultyRepo,
-                Settings.getInstance().getMailDomain());
+                config.getMailDomain());
 
         // varování pro nenalezené žáky
         for (String nf : selection.notFound()) {
@@ -344,8 +250,11 @@ public class Export {
      * @param data data sestavy z {@link #buildReportData}
      * @param emailSubjectPrefix prefix předmětu e-mailu (před názvem třídy)
      * @param emailBodyTemplate šablona těla e-mailu ({@code {class}} bude nahrazeno názvem třídy)
+     * @param config konfigurace aplikace
+     * @param mailer poštovní služba
      */
-    public static void sendReports(ReportData data, String emailSubjectPrefix, String emailBodyTemplate) {
+    public static void sendReports(ReportData data, String emailSubjectPrefix, String emailBodyTemplate,
+                                    AppConfig config, BakaMailer mailer) {
 
         // inicializace generátoru PDF
         PdfReportGenerator pdfGen;
@@ -358,7 +267,7 @@ public class Export {
 
         // konfigurace poznámek pod tabulkou (URL portálu se odvodí z mailové domény)
         pdfGen.setFootnotePassword("Žáci si mohou své heslo sami změnit na\u00a0portálu https://heslo."
-                + Settings.getInstance().getMailDomain() + "/.");
+                + config.getMailDomain() + "/.");
 
         String schoolYear = PdfReportGenerator.currentSchoolYear();
 
@@ -412,13 +321,13 @@ public class Export {
 
             String[] addresses;
             if (!RuntimeContext.FLAG_DRYRUN && classTeacherEmail != null) {
-                addresses = new String[]{classTeacherEmail, Settings.getInstance().getAdminMail()};
+                addresses = new String[]{classTeacherEmail, config.getAdminMail()};
             } else {
-                addresses = new String[]{Settings.getInstance().getAdminMail()};
+                addresses = new String[]{config.getAdminMail()};
             }
 
             // e-mail pro třídního a správce
-            BakaMailer.getInstance().mail(addresses,
+            mailer.mail(addresses,
                     emailSubjectPrefix + classN, message,
                     new String[]{reportFile});
 
@@ -462,35 +371,20 @@ public class Export {
      * @param studentRepo repozitář žáků
      * @param facultyRepo repozitář vyučujících
      * @param passwordService služba pro reset hesel
+     * @param config konfigurace aplikace
+     * @param mailer poštovní služba
      */
     public static void genericReport(String query, boolean resetPassword,
                                       StudentRepository studentRepo,
                                       FacultyRepository facultyRepo,
-                                      PasswordService passwordService) {
+                                      PasswordService passwordService,
+                                      AppConfig config, BakaMailer mailer) {
 
         ReportData data = buildReportData(query, resetPassword,
-                studentRepo, facultyRepo, passwordService);
+                studentRepo, facultyRepo, passwordService, config);
 
         String emailBody = resetPassword ? resetEmailBody() : reportEmailBody();
-        sendReports(data, "Přístupové údaje žáků ", emailBody);
-    }
-
-    /**
-     * Zpětně kompatibilní verze bez {@link PasswordService}.
-     * Při resetu používá přímé volání {@link BakaADAuthenticator} (legacy cesta).
-     *
-     * @param query dotazované objekty
-     * @param resetPassword provede reset hesla
-     * @param studentRepo repozitář žáků
-     * @param facultyRepo repozitář vyučujících
-     * @deprecated Použijte {@link #genericReport(String, boolean, StudentRepository, FacultyRepository, PasswordService)}.
-     */
-    @Deprecated
-    public static void genericReport(String query, boolean resetPassword,
-                                      StudentRepository studentRepo,
-                                      FacultyRepository facultyRepo) {
-        // legacy cesta – null PasswordService → buildReportData použije dry-run větev pro hesla
-        genericReport(query, resetPassword, studentRepo, facultyRepo, null);
+        sendReports(data, "Přístupové údaje žáků ", emailBody, config, mailer);
     }
 
     /**

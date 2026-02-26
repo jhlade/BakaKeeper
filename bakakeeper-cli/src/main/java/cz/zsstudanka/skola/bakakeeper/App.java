@@ -37,7 +37,9 @@ import java.util.concurrent.Callable;
                 "  bakakeeper suspend 5.A               Zakázání účtů třídy",
                 "  bakakeeper unsuspend 5.A             Povolení účtů třídy",
                 "  bakakeeper export 5 -o seznam.csv    CSV export ročníku",
-                "  bakakeeper init -f settings.yml      Inicializace ze souboru"
+                "  bakakeeper init -f settings.yml      Inicializace ze souboru",
+                "  bakakeeper audit                     Audit interních dat",
+                "  bakakeeper audit --revert-admin      Obnovení hesla správce"
         },
         subcommands = {
                 CheckCommand.class,
@@ -51,7 +53,7 @@ import java.util.concurrent.Callable;
                 SetPasswordCommand.class,
                 SuspendCommand.class,
                 UnsuspendCommand.class,
-                InternalDbCommand.class
+                AuditCommand.class
         })
 public class App implements Callable<Integer> {
 

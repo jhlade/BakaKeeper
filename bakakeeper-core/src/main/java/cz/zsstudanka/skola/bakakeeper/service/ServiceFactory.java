@@ -2,6 +2,7 @@ package cz.zsstudanka.skola.bakakeeper.service;
 
 import cz.zsstudanka.skola.bakakeeper.config.AppConfig;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaADAuthenticator;
+import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaSQL;
 import cz.zsstudanka.skola.bakakeeper.connectors.LDAPConnector;
 import cz.zsstudanka.skola.bakakeeper.connectors.SQLConnector;
@@ -9,10 +10,13 @@ import cz.zsstudanka.skola.bakakeeper.repository.FacultyRepository;
 import cz.zsstudanka.skola.bakakeeper.repository.GuardianRepository;
 import cz.zsstudanka.skola.bakakeeper.repository.LDAPUserRepository;
 import cz.zsstudanka.skola.bakakeeper.repository.StudentRepository;
+import cz.zsstudanka.skola.bakakeeper.repository.InternalUserRepository;
 import cz.zsstudanka.skola.bakakeeper.repository.impl.BakaFacultyRepository;
 import cz.zsstudanka.skola.bakakeeper.repository.impl.BakaGuardianRepository;
+import cz.zsstudanka.skola.bakakeeper.repository.impl.BakaInternalUserRepository;
 import cz.zsstudanka.skola.bakakeeper.repository.impl.BakaLDAPUserRepository;
 import cz.zsstudanka.skola.bakakeeper.repository.impl.BakaStudentRepository;
+import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 
 /**
  * Centrální factory pro sestavení DI grafu aplikace.
@@ -48,6 +52,14 @@ public class ServiceFactory {
 
     // orchestrátor
     private final SyncOrchestrator orchestrator;
+
+    // hlášení
+    private final SyncReportSender syncReportSender;
+
+    // audit
+    private final InternalUserRepository internalUserRepo;
+    private final AuditHistoryStore auditHistoryStore;
+    private final AuditService auditService;
 
     /**
      * Produkční konstruktor – vytvoří konektory z globálních singletonů.
@@ -90,6 +102,15 @@ public class ServiceFactory {
         this.orchestrator = new SyncOrchestrator(
                 config, studentRepo, ldapUserRepo, facultyRepo, guardianRepo,
                 structureService, studentService, facultyService, guardianService, ruleService);
+
+        // hlášení
+        this.syncReportSender = new SyncReportSender(config, BakaMailer.getInstance());
+
+        // audit
+        this.internalUserRepo = new BakaInternalUserRepository(sql);
+        char[] passphrase = Settings.getInstance().getPassphrase();
+        this.auditHistoryStore = new AuditHistoryStore(passphrase);
+        this.auditService = new AuditServiceImpl(internalUserRepo, auditHistoryStore);
     }
 
     public AppConfig getConfig() { return config; }
@@ -110,4 +131,10 @@ public class ServiceFactory {
     public IdentifyService getIdentifyService() { return identifyService; }
 
     public SyncOrchestrator getOrchestrator() { return orchestrator; }
+
+    public SyncReportSender getSyncReportSender() { return syncReportSender; }
+
+    public InternalUserRepository getInternalUserRepo() { return internalUserRepo; }
+    public AuditHistoryStore getAuditHistoryStore() { return auditHistoryStore; }
+    public AuditService getAuditService() { return auditService; }
 }

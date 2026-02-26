@@ -2,6 +2,7 @@ package cz.zsstudanka.skola.bakakeeper.commands;
 
 import cz.zsstudanka.skola.bakakeeper.App;
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
+import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.routines.Export;
 import cz.zsstudanka.skola.bakakeeper.service.ServiceFactory;
@@ -43,7 +44,7 @@ public class ReportCommand implements Callable<Integer> {
         ServiceFactory sf = app.createServiceFactory();
         Export.genericReport(scope, resetPassword,
                 sf.getStudentRepo(), sf.getFacultyRepo(),
-                sf.getPasswordService());
+                sf.getPasswordService(), sf.getConfig(), BakaMailer.getInstance());
 
         return 0;
     }

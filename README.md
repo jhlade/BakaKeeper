@@ -98,6 +98,7 @@ Více viz `bakakeeper --help`.
 
 🦭 Podman-based dev environment se
 - Samba4 AD (simulace doménového řadiče),
+- phpLDAPAdmin (nahlížení do simulovaného řadiče),
 - MSSQL (Edge varianta Microsoft SQL Server),
 - Mailpit (simulace SMTP serveru s webovým rozhraním pro testování mailů)
 ```bash
