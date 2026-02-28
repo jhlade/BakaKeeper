@@ -36,6 +36,10 @@ class BakaUtilsTest {
         assertEquals("vesela.julie2", BakaUtils.createSAMloginFromName("Veselá-Smutná", "Julie Magdaléna", 2));
         assertEquals("davinci.leonardo", BakaUtils.createSAMloginFromName("Da Vinci", "Leonardo"));
         assertEquals("davinci.leonardo", BakaUtils.createSAMloginFromName("Da-Vinci", "Leonardo"));
+        // arabské patronymické partikly
+        assertEquals("binrashid.ahmed", BakaUtils.createSAMloginFromName("bin Rashid", "Ahmed"));
+        assertEquals("ibnbattuta.mohammed", BakaUtils.createSAMloginFromName("ibn Battuta", "Mohammed"));
+        assertEquals("binrahim.fatima", BakaUtils.createSAMloginFromName("Bin Ráhím", "Fátima"));
     }
 
     @Test
@@ -57,6 +61,10 @@ class BakaUtilsTest {
         assertEquals("vesela.julie2@test.org", BakaUtils.createUPNfromName("Veselá-Smutná", "Julie Magdaléna", DOMAIN, 2));
         assertEquals("davinci.leonardo@test.org", BakaUtils.createUPNfromName("Da Vinci", "Leonardo", DOMAIN));
         assertEquals("davinci.leonardo@test.org", BakaUtils.createUPNfromName("Da-Vinci", "Leonardo", DOMAIN));
+        // arabské patronymické partikly
+        assertEquals("binrashid.ahmed@test.org", BakaUtils.createUPNfromName("bin Rashid", "Ahmed", DOMAIN));
+        assertEquals("ibnbattuta.mohammed@test.org", BakaUtils.createUPNfromName("ibn Battuta", "Mohammed", DOMAIN));
+        assertEquals("binrahim.fatima@test.org", BakaUtils.createUPNfromName("Bin Ráhím", "Fátima", DOMAIN));
     }
 
     @Test

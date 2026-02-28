@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>cz.zsstudanka.skola</groupId>
+        <artifactId>bakakeeper-parent</artifactId>
+        <version>26.3.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>bakakeeper-gui</artifactId>
+    <packaging>jar</packaging>
+
+    <name>BakaKeeper GUI</name>
+    <description>Grafické uživatelské rozhraní aplikace BakaKeeper.</description>
+
+    <properties>
+        <project.app.mainClass>cz.zsstudanka.skola.bakakeeper.gui.Launcher</project.app.mainClass>
+        <!-- jpackage vyžaduje číslo verze bez -SNAPSHOT -->
+        <jpackage.app.version>26.3.0</jpackage.app.version>
+    </properties>
+
+    <dependencies>
+        <!-- core modul -->
+        <dependency>
+            <groupId>cz.zsstudanka.skola</groupId>
+            <artifactId>bakakeeper-core</artifactId>
+        </dependency>
+
+        <!-- JavaFX – provided, runtime dodá JRE -->
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-fxml</artifactId>
+        </dependency>
+
+        <!-- testy -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>lib/</classpathPrefix>
+                            <mainClass>${project.app.mainClass}</mainClass>
+                        </manifest>
+                        <manifestEntries>
+                            <Built-By>${user.name}</Built-By>
+                            <Build-Jdk>${java.version} (${java.vendor} ${java.vm.version})</Build-Jdk>
+                            <Build-Timestamp>${maven.build.timestamp}</Build-Timestamp>
+                            <Build-OS>${os.name} ${os.arch} ${os.version}</Build-OS>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+
+            <!-- fat jar se všemi závislostmi (bez JavaFX – provided) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>${project.app.mainClass}</mainClass>
+                                </transformer>
+                                <!-- sloučení META-INF/services z iText/BouncyCastle -->
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                            </transformers>
+                            <filters>
+                                <!-- odstranit signatury z podepsaných závislostí -->
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                            <finalName>BakaKeeper-GUI-${project.version}</finalName>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <!--
+            Profil pro vytvoření nativního instalátoru/app-image pomocí jpackage.
+            Spuštění: ./mvnw -pl bakakeeper-gui package -Pjpackage
+            Vyžaduje:
+              - JDK 25+ (Zulu FX) s nástrojem jpackage na PATH
+              - Předchozí `mvn package` (fat JAR musí existovat)
+            Výstup: target/jpackage/
+        -->
+        <profile>
+            <id>jpackage</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>3.5.0</version>
+                        <executions>
+                            <execution>
+                                <id>jpackage-app-image</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>jpackage</executable>
+                                    <arguments>
+                                        <!-- typ: app-image (adresář / .app bundle) -->
+                                        <argument>--type</argument>
+                                        <argument>app-image</argument>
+
+                                        <!-- vstup: fat JAR z shade pluginu -->
+                                        <argument>--input</argument>
+                                        <argument>${project.build.directory}</argument>
+                                        <argument>--main-jar</argument>
+                                        <argument>BakaKeeper-GUI-${project.version}.jar</argument>
+                                        <argument>--main-class</argument>
+                                        <argument>${project.app.mainClass}</argument>
+
+                                        <!-- metadata aplikace -->
+                                        <argument>--name</argument>
+                                        <argument>BakaKeeper</argument>
+                                        <argument>--app-version</argument>
+                                        <argument>${jpackage.app.version}</argument>
+                                        <argument>--vendor</argument>
+                                        <argument>ZŠ Studánka</argument>
+                                        <argument>--description</argument>
+                                        <argument>${project.description}</argument>
+                                        <argument>--copyright</argument>
+                                        <argument>Copyright © 2019–2026 ZŠ Studánka</argument>
+
+                                        <!-- JVM argumenty -->
+                                        <argument>--java-options</argument>
+                                        <argument>--enable-native-access=javafx.graphics</argument>
+
+                                        <!-- ikona – platforma si vybere správný formát -->
+                                        <argument>--icon</argument>
+                                        <argument>${project.basedir}/src/main/jpackage/BakaKeeper${jpackage.icon.ext}</argument>
+
+                                        <!-- výstup -->
+                                        <argument>--dest</argument>
+                                        <argument>${project.build.directory}/jpackage</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- Detekce platformy – nastaví příponu ikony pro jpackage -->
+        <profile>
+            <id>jpackage-macos</id>
+            <activation>
+                <os><family>mac</family></os>
+            </activation>
+            <properties>
+                <jpackage.icon.ext>.icns</jpackage.icon.ext>
+            </properties>
+        </profile>
+        <profile>
+            <id>jpackage-windows</id>
+            <activation>
+                <os><family>windows</family></os>
+            </activation>
+            <properties>
+                <jpackage.icon.ext>.ico</jpackage.icon.ext>
+            </properties>
+        </profile>
+        <profile>
+            <id>jpackage-linux</id>
+            <activation>
+                <os><family>unix</family><name>Linux</name></os>
+            </activation>
+            <properties>
+                <jpackage.icon.ext>.png</jpackage.icon.ext>
+            </properties>
+        </profile>
+    </profiles>
+
+</project>

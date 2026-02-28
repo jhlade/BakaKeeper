@@ -93,27 +93,27 @@ public class SyncOrchestrator {
         listener.onProgress("Nalezeno " + ldapStudents.size() + " žáků v LDAP.");
 
         // 1. Synchronizace distribučních skupin třídních učitelů
-        allResults.addAll(syncFaculty(repair, listener));
+        addAndNotify(allResults, syncFaculty(repair, listener), listener);
 
         // 2. Inicializace nových žáků
-        allResults.addAll(studentService.initializeNewStudents(
-                sqlStudents, ldapStudents, repair, listener));
+        addAndNotify(allResults, studentService.initializeNewStudents(
+                sqlStudents, ldapStudents, repair, listener), listener);
 
         // 3. Kontrola a srovnání dat (znovu načíst LDAP – mohly přibýt nové účty)
         if (repair) {
             ldapStudents = ldapUserRepo.findAllStudents(
                     config.getLdapBaseStudents(), config.getLdapBaseAlumni());
         }
-        allResults.addAll(studentService.syncStudentData(
-                sqlStudents, ldapStudents, repair, listener));
+        addAndNotify(allResults, studentService.syncStudentData(
+                sqlStudents, ldapStudents, repair, listener), listener);
 
         // 4. Vyřazení osiřelých žáků
-        allResults.addAll(studentService.retireOrphanedStudents(
-                sqlStudents, ldapStudents, repair, listener));
+        addAndNotify(allResults, studentService.retireOrphanedStudents(
+                sqlStudents, ldapStudents, repair, listener), listener);
 
         // 5. Synchronizace zákonných zástupců (s validací kontaktních údajů)
         GuardianSyncOutcome guardianOutcome = syncGuardians(sqlStudents, repair, listener);
-        allResults.addAll(guardianOutcome.results());
+        addAndNotify(allResults, guardianOutcome.results(), listener);
 
         // 6. Aplikace deklarativních pravidel (konvergentní model)
         //    Pravidla se spouští VŽDY – i když je seznam pravidel prázdný.
@@ -130,14 +130,88 @@ public class SyncOrchestrator {
             List<StudentRecord> ruleTargets = buildRuleTargets(
                     config.getRules(), ldapStudents, listener);
 
-            allResults.addAll(ruleService.applyRules(
-                    config.getRules(), ruleTargets, repair, listener));
+            addAndNotify(allResults, ruleService.applyRules(
+                    config.getRules(), ruleTargets, repair, listener), listener);
         }
 
         // --- Souhrn ---
         int ok = (int) allResults.stream().filter(SyncResult::isSuccess).count();
         int err = (int) allResults.stream().filter(r -> !r.isSuccess()).count();
         listener.onPhaseEnd("Kompletní synchronizace", ok, err);
+
+        return new SyncReport(allResults, guardianOutcome.validationErrors());
+    }
+
+    /**
+     * Spustí omezenou synchronizaci – jen pro daný ročník/třídu.
+     * Filtruje SQL studenty podle rozsahu a LDAP studenty podle DN struktury.
+     *
+     * @param classYear  ročník (null = nefiltrovat)
+     * @param classLetter písmeno třídy (null = nefiltrovat)
+     * @param repair     provést zápis (true) nebo jen kontrolu (false)
+     * @param listener   sledování průběhu
+     * @return strukturovaný výsledek synchronizace
+     */
+    public SyncReport runPartialSync(Integer classYear, String classLetter,
+                                      boolean repair, SyncProgressListener listener) {
+        String scopeLabel = (classYear != null ? classYear.toString() : "vše")
+                + (classLetter != null ? "." + classLetter : "");
+        listener.onPhaseStart("Synchronizace rozsahu: " + scopeLabel);
+        List<SyncResult> allResults = new ArrayList<>();
+
+        // načíst filtrované SQL studenty
+        listener.onProgress("Načítání dat z SQL evidence (rozsah: " + scopeLabel + ")...");
+        List<StudentRecord> sqlStudents = studentRepo.findActive(classYear, classLetter);
+        listener.onProgress("Nalezeno " + sqlStudents.size() + " žáků v SQL.");
+
+        // načíst všechny LDAP studenty (nutné pro párování)
+        listener.onProgress("Načítání dat z Active Directory...");
+        List<StudentRecord> ldapStudents = ldapUserRepo.findAllStudents(
+                config.getLdapBaseStudents(), config.getLdapBaseAlumni());
+        listener.onProgress("Nalezeno " + ldapStudents.size() + " žáků v LDAP.");
+
+        // 1. Inicializace nových žáků (filtrovaní SQL vs. všichni LDAP)
+        addAndNotify(allResults, studentService.initializeNewStudents(
+                sqlStudents, ldapStudents, repair, listener), listener);
+
+        // 2. Kontrola a srovnání dat (znovu načíst LDAP – mohly přibýt nové účty)
+        if (repair) {
+            ldapStudents = ldapUserRepo.findAllStudents(
+                    config.getLdapBaseStudents(), config.getLdapBaseAlumni());
+        }
+        addAndNotify(allResults, studentService.syncStudentData(
+                sqlStudents, ldapStudents, repair, listener), listener);
+
+        // 3. Vyřazení osiřelých žáků – filtrovat LDAP na stejný rozsah
+        List<StudentRecord> ldapFiltered = ldapStudents.stream()
+                .filter(s -> {
+                    if (s.getDn() == null) return false;
+                    try {
+                        if (classYear != null) {
+                            Integer dnYear = cz.zsstudanka.skola.bakakeeper.utils.BakaUtils.classYearFromDn(s.getDn());
+                            if (dnYear == null || !dnYear.equals(classYear)) return false;
+                        }
+                        if (classLetter != null) {
+                            String dnLetter = cz.zsstudanka.skola.bakakeeper.utils.BakaUtils.classLetterFromDn(s.getDn());
+                            if (!classLetter.equalsIgnoreCase(dnLetter)) return false;
+                        }
+                        return true;
+                    } catch (Exception e) {
+                        return false;
+                    }
+                })
+                .toList();
+        addAndNotify(allResults, studentService.retireOrphanedStudents(
+                sqlStudents, ldapFiltered, repair, listener), listener);
+
+        // 4. Synchronizace zákonných zástupců pro filtrované žáky
+        GuardianSyncOutcome guardianOutcome = syncGuardians(sqlStudents, repair, listener);
+        addAndNotify(allResults, guardianOutcome.results(), listener);
+
+        // --- Souhrn ---
+        int ok = (int) allResults.stream().filter(SyncResult::isSuccess).count();
+        int err = (int) allResults.stream().filter(r -> !r.isSuccess()).count();
+        listener.onPhaseEnd("Synchronizace rozsahu: " + scopeLabel, ok, err);
 
         return new SyncReport(allResults, guardianOutcome.validationErrors());
     }
@@ -204,6 +278,19 @@ public class SyncOrchestrator {
      */
     public List<SyncResult> runStructureOnly(boolean repair, SyncProgressListener listener) {
         return structureService.checkAndRepairStructure(repair, listener);
+    }
+
+    /**
+     * Přidá výsledky do seznamu a přepošle je listeneru.
+     * Služby vracejí výsledky jako seznam, ale listener potřebuje
+     * každý výsledek individuálně pro real-time zobrazení v GUI.
+     */
+    private void addAndNotify(List<SyncResult> target, List<SyncResult> results,
+                               SyncProgressListener listener) {
+        for (SyncResult r : results) {
+            target.add(r);
+            listener.onResult(r);
+        }
     }
 
     // --- Interní pomocné metody ---

@@ -1,0 +1,273 @@
+/*
+ * BakaKeeper GUI – hlavní stylesheet
+ * Primární barva #370087 (fialová z ikony hexagonálního štítu).
+ */
+
+.root {
+    -bk-primary: #370087;
+    -bk-primary-light: #5a1aad;
+    -bk-success: #22c55e;
+    -bk-error: #ef4444;
+    -bk-warning: #f59e0b;
+    -bk-info: #3b82f6;
+    -bk-bg: #fafafa;
+    -bk-text: #1f2937;
+    -bk-muted: #6b7280;
+
+    -fx-font-family: "Segoe UI", "System", "Helvetica Neue", sans-serif;
+    -fx-font-size: 13px;
+    -fx-background-color: -bk-bg;
+    -fx-text-fill: -bk-text;
+}
+
+/* ---- Úvodní obrazovka (WelcomeView) ---- */
+
+.welcome-view {
+    -fx-background-color: linear-gradient(to bottom, #f8f6ff, #fafafa);
+}
+
+.welcome-title {
+    -fx-font-size: 26px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -bk-primary;
+}
+
+.welcome-version {
+    -fx-font-size: 13px;
+    -fx-text-fill: -bk-muted;
+}
+
+.welcome-subtitle {
+    -fx-font-size: 12px;
+    -fx-text-fill: -bk-muted;
+    -fx-padding: 0 0 16 0;
+}
+
+.welcome-button {
+    -fx-min-width: 220;
+    -fx-min-height: 36;
+    -fx-font-size: 13px;
+    -fx-background-color: -bk-primary;
+    -fx-text-fill: white;
+    -fx-background-radius: 4;
+    -fx-cursor: hand;
+}
+
+.welcome-button:hover {
+    -fx-background-color: -bk-primary-light;
+}
+
+.welcome-button:pressed {
+    -fx-background-color: derive(-bk-primary, -15%);
+}
+
+/* ---- Stavový řádek ---- */
+
+.status-bar {
+    -fx-background-color: #f1f5f9;
+    -fx-border-color: #e2e8f0;
+    -fx-border-width: 1 0 0 0;
+    -fx-min-height: 28;
+}
+
+.status-lock {
+    -fx-font-size: 14px;
+}
+
+.status-file-path {
+    -fx-font-size: 11px;
+    -fx-text-fill: -bk-muted;
+}
+
+.status-text {
+    -fx-font-size: 12px;
+    -fx-text-fill: -bk-text;
+}
+
+/* ---- Záhlaví panelů ---- */
+
+.panel-header {
+    -fx-background-color: -bk-primary;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+    -fx-background-radius: 2;
+}
+
+/* ---- Strom – buňky dle stavu ---- */
+
+.tree-cell-ok {
+    -fx-text-fill: -bk-success;
+}
+
+.tree-cell-mismatch {
+    -fx-text-fill: -bk-warning;
+    -fx-font-weight: bold;
+}
+
+.tree-cell-missing {
+    -fx-text-fill: -bk-muted;
+    -fx-font-style: italic;
+}
+
+.tree-cell-error {
+    -fx-text-fill: -bk-error;
+    -fx-font-weight: bold;
+}
+
+/* ---- Strom – kategorie ---- */
+
+.tree-cell-category {
+    -fx-font-weight: bold;
+    -fx-text-fill: -bk-primary;
+}
+
+/* ---- Detail panel ---- */
+
+.detail-pane {
+    -fx-background-color: white;
+}
+
+.detail-label {
+    -fx-font-weight: bold;
+    -fx-text-fill: -bk-muted;
+    -fx-font-size: 12px;
+}
+
+.detail-value {
+    -fx-font-size: 12px;
+}
+
+/* ---- CheckDialog – stav kontrol ---- */
+
+.check-service-name {
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+}
+
+.check-state-label {
+    -fx-font-size: 16px;
+}
+
+.check-ok {
+    -fx-text-fill: -bk-success;
+}
+
+.check-fail {
+    -fx-text-fill: -bk-error;
+}
+
+.check-message {
+    -fx-font-size: 11px;
+    -fx-text-fill: -bk-muted;
+}
+
+/* ---- Detail – zvýraznění rozdílů ---- */
+
+.detail-diff {
+    -fx-text-fill: -bk-error;
+    -fx-font-weight: bold;
+}
+
+.detail-header {
+    -fx-font-weight: bold;
+    -fx-text-fill: -bk-primary;
+    -fx-border-color: #e2e8f0;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 2 4 2 4;
+}
+
+/* ---- Synchronizace – seznam výsledků ---- */
+
+.sync-ok {
+    -fx-text-fill: -bk-text;
+}
+
+.sync-error {
+    -fx-text-fill: -bk-error;
+    -fx-font-weight: bold;
+}
+
+.sync-warn {
+    -fx-text-fill: -bk-warning;
+}
+
+/* ---- Průvodce konfigurací ---- */
+
+.wizard-step-list {
+    -fx-background-color: #f8f6ff;
+}
+
+.wizard-step {
+    -fx-font-size: 12px;
+    -fx-text-fill: -bk-muted;
+}
+
+.wizard-step-current {
+    -fx-font-weight: bold;
+    -fx-text-fill: -bk-primary;
+    -fx-background-color: #ede9fe;
+    -fx-background-radius: 3;
+}
+
+.wizard-step-completed {
+    -fx-text-fill: -bk-success;
+}
+
+/* ---- Dialogy – hesla ---- */
+
+.password-result {
+    -fx-font-size: 12px;
+}
+
+/* ---- Obecné tlačítka ---- */
+
+.button:default {
+    -fx-background-color: -bk-primary;
+    -fx-text-fill: white;
+}
+
+.button:default:hover {
+    -fx-background-color: -bk-primary-light;
+}
+
+/* ---- Menu bar ---- */
+
+.menu-bar {
+    -fx-background-color: #f8f6ff;
+    -fx-border-color: #e2e8f0;
+    -fx-border-width: 0 0 1 0;
+}
+
+/* ---- TabPane ---- */
+
+.tab-pane > .tab-header-area > .tab-header-background {
+    -fx-background-color: #f1f5f9;
+}
+
+.tab:selected {
+    -fx-background-color: white;
+}
+
+.tab:selected .tab-label {
+    -fx-text-fill: -bk-primary;
+    -fx-font-weight: bold;
+}
+
+/* ---- Progress bar ---- */
+
+.progress-bar > .bar {
+    -fx-background-color: -bk-primary;
+    -fx-background-radius: 2;
+}
+
+.progress-bar > .track {
+    -fx-background-color: #e2e8f0;
+    -fx-background-radius: 2;
+}
+
+/* ---- ScrollPane ---- */
+
+.scroll-pane {
+    -fx-background-color: transparent;
+}
