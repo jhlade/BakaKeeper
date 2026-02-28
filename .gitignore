@@ -25,3 +25,4 @@ settings.dat
 ssl.jks
 *.jar
 !dev/.data/**/.gitkeep
+/bakakeeper-gui/target/

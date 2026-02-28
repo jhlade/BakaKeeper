@@ -7,7 +7,7 @@
     <parent>
         <groupId>cz.zsstudanka.skola</groupId>
         <artifactId>bakakeeper-parent</artifactId>
-        <version>26.2.0-SNAPSHOT</version>
+        <version>26.3.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>bakakeeper-core</artifactId>
@@ -87,5 +87,26 @@
             <artifactId>mockito-junit-jupiter</artifactId>
         </dependency>
     </dependencies>
+
+    <build>
+        <resources>
+            <!-- filtrovaný version.properties – Maven dosadí ${project.version} -->
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>version.properties</include>
+                </includes>
+            </resource>
+            <!-- ostatní resources beze změny (fonty, konfigy apod.) -->
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>version.properties</exclude>
+                </excludes>
+            </resource>
+        </resources>
+    </build>
 
 </project>

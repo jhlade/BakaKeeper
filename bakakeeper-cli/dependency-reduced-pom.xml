@@ -3,7 +3,7 @@
   <parent>
     <artifactId>bakakeeper-parent</artifactId>
     <groupId>cz.zsstudanka.skola</groupId>
-    <version>26.2.0-SNAPSHOT</version>
+    <version>26.3.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>bakakeeper-cli</artifactId>

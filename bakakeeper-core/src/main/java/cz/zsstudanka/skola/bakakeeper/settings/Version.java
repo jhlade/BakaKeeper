@@ -1,11 +1,22 @@
 package cz.zsstudanka.skola.bakakeeper.settings;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
+
 /**
  * Informace o verzi a sestavení programu.
+ *
+ * <p>Verze se načítá z {@code version.properties} generovaného Mavenem
+ * (resource filtering). Pro změnu verze stačí upravit {@code <version>}
+ * v parent {@code pom.xml} – Maven dosadí hodnotu automaticky.
+ * Suffix {@code -SNAPSHOT} se v zobrazení nahrazuje na {@code -dev}.</p>
  *
  * @author Jan Hladěna
  */
 public class Version {
+
+    private static final String FALLBACK_VERSION = "26.3.0-dev";
 
     private static Version instance = null;
 
@@ -13,8 +24,28 @@ public class Version {
     private final String purpose      = "Synchronizační nástroj evidence žáků v programu Bakaláři s uživatelskými účty vedenými v Active Directory.";
     private final String author       = "Jan Hladěna <jan.hladena@zs-studanka.cz>";
     private final String organization = "ZŠ Pardubice - Studánka";
-    private final String version      = "26.2.0-dev";
+    private final String version;
     private final String year         = "2020";
+
+    private Version() {
+        this.version = loadVersion();
+    }
+
+    /** Načte verzi z version.properties (Maven resource filtering), fallback na FALLBACK_VERSION. */
+    private static String loadVersion() {
+        try (InputStream is = Version.class.getResourceAsStream("/version.properties")) {
+            if (is != null) {
+                Properties props = new Properties();
+                props.load(is);
+                String v = props.getProperty("bk.version", FALLBACK_VERSION);
+                // Maven SNAPSHOT → zobrazení jako dev
+                return v.replace("-SNAPSHOT", "-dev");
+            }
+        } catch (IOException ignored) {
+            // fallback
+        }
+        return FALLBACK_VERSION;
+    }
 
     /**
      * Implementováno jako singleton.

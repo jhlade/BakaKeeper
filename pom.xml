@@ -6,7 +6,7 @@
 
     <groupId>cz.zsstudanka.skola</groupId>
     <artifactId>bakakeeper-parent</artifactId>
-    <version>26.2.0-SNAPSHOT</version>
+    <version>26.3.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>BakaKeeper</name>
@@ -16,6 +16,7 @@
 
     <modules>
         <module>bakakeeper-core</module>
+        <module>bakakeeper-gui</module>
         <module>bakakeeper-cli</module>
     </modules>
 
@@ -44,6 +45,9 @@
         <maven-surefire-plugin.version>3.5.2</maven-surefire-plugin.version>
         <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
         <maven-shade-plugin.version>3.6.0</maven-shade-plugin.version>
+
+        <!-- JavaFX -->
+        <javafx.version>25</javafx.version>
     </properties>
 
     <dependencyManagement>
@@ -52,6 +56,11 @@
             <dependency>
                 <groupId>cz.zsstudanka.skola</groupId>
                 <artifactId>bakakeeper-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>cz.zsstudanka.skola</groupId>
+                <artifactId>bakakeeper-gui</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
@@ -127,6 +136,26 @@
                 <groupId>info.picocli</groupId>
                 <artifactId>picocli</artifactId>
                 <version>${picocli.version}</version>
+            </dependency>
+
+            <!-- JavaFX (provided – JRE s FX podporou je garantováno) -->
+            <dependency>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-controls</artifactId>
+                <version>${javafx.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-fxml</artifactId>
+                <version>${javafx.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-graphics</artifactId>
+                <version>${javafx.version}</version>
+                <scope>provided</scope>
             </dependency>
 
             <!-- JUnit 5 -->
