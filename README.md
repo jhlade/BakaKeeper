@@ -4,7 +4,7 @@ Synchronizační nástroj evidence žáků v programu Bakaláři
 s uživatelskými účty vedenými v Active Directory. Předpokládá
 se celoškolní použití Office365, ale není to nezbytně nutné.
 Nástroj byl původně vytvořen během pandemie Covid-19
-během prvotního nsazaování Office365 a počítá se správou
+při prvotním nasazování Office365 a počítá se správou
 žákovských hesel v předdefinovaném tvaru
 a automaticky aktivovanými účty.
 
@@ -19,11 +19,11 @@ přihlašovacího jména, e-mailu a počátečního hesla, vyřazení
 * Tvorba anonymizovaných distribučních skupin s kontakty
 na zákonné zástupce žáků třídy/ročníku/stupně/školy.
 * Generování sestav pro třídní učitele.
-* Navrženo pro neinteraktivní periodický běh.
+* Grafické uživatelské rozhraní (JavaFX) pro interaktivní správu.
+* Navrženo pro neinteraktivní periodický běh i interaktivní provoz.
 
 ### Co je výhledově v plánu
 
-* Grafické uživatelské rozhraní (JavaFX), příp. jako webová aplikace.
 * Možnost specifikace jiných výchozích tvarů hesel a režimu aktivace účtů.
 
 ### Struktura projektu
@@ -33,14 +33,15 @@ na zákonné zástupce žáků třídy/ročníku/stupně/školy.
 ```
 bakakeeper-parent/          (rodičovský POM)
 ├── bakakeeper-core/        (jádro – model, služby, konektory)
-└── bakakeeper-cli/         (příkazový řádek)
+├── bakakeeper-cli/         (příkazový řádek)
+└── bakakeeper-gui/         (grafické rozhraní – JavaFX)
 ```
 
 ### Prerekvizity
 
 * LDAP server (on-premise řadič Microsoft Active Directory) s rozšířenými
   atributy Microsoft Exchange (správce s oprávněním skupiny Schema
-  Admins je snadno doinstaluje na řadič AD z balíčku pro Exchange Server, nebo pomocí `.ldif` shchématu, viz [dev/samba4](dev/samba4/)).
+  Admins je snadno doinstaluje na řadič AD z balíčku pro Exchange Server, nebo pomocí `.ldif` schématu, viz [dev/samba4](dev/samba4/)).
 * Microsoft SQL Server (nebo MS SQL kompatibilní server)
   s daty aplikace Bakaláři s doménovým ověřováním uživatele (NTLM nebo Kerberos),
 * nebo účtem správce `sa` (případně aplikačním účtem s právy čtení a zápisu
@@ -48,6 +49,7 @@ bakakeeper-parent/          (rodičovský POM)
 * Dedikovaný neinteraktivní doménový účet s přístupem k SMTP,
   právy minimálně Account Operator v AD nad žáky (příapdně učiteli).
 * JVM kompatibilní s Java 25 se síťovým přístupem k serverům AD a SQL.
+* Pro GUI – JRE s podporou JavaFX 25 (např. Azul Zulu FX).
 * *Nepovinně* – v případě použití O365 je možné nastavit poštovní
   filtrovací pravidlo na základě hodnoty `CustomAttribute2:TRUE`
   a odesílatele v doméně mimo organizaci. Na AD se lokálně ukládá
@@ -63,10 +65,14 @@ bakakeeper-parent/          (rodičovský POM)
 
 ```bash
 ./mvnw clean compile test        # kompilace a testy
-./mvnw package                   # sestavení JAR (fat jar v bakakeeper-cli/target/)
+./mvnw package                   # sestavení JAR
+                                 #   CLI: bakakeeper-cli/target/
+                                 #   GUI: bakakeeper-gui/target/
 ```
 
 ### Použití
+
+**Příkazový řádek:**
 
 ```
 bakakeeper check -p heslo            Kontrola konektivity
@@ -82,9 +88,15 @@ bakakeeper init -f settings.yml      Inicializace z plain-text konfiguračního 
 
 Více viz `bakakeeper --help`.
 
+**Grafické rozhraní:**
+
+```
+java -jar bakakeeper-gui.jar
+```
+
 ### Závislosti pro sestavení
 
-🪶 Spravovány přes Maven (`bakakeeper-core/pom.xml`, `bakakeeper-cli/pom.xml`):
+🪶 Spravovány přes Maven (`bakakeeper-core/pom.xml`, `bakakeeper-cli/pom.xml`, `bakakeeper-gui/pom.xml`):
 * `com.sun.mail:javax.mail` 1.6.2
 * `com.microsoft.sqlserver:mssql-jdbc` 13.2.1.jre11
 * `net.sourceforge.jtds:jtds` 1.3.1
@@ -93,6 +105,7 @@ Více viz `bakakeeper --help`.
 * `org.yaml:snakeyaml` 2.3
 * `com.itextpdf:layout` 8.0.5 (PDF sestavy)
 * `info.picocli:picocli` 4.7.6 (CLI)
+* `org.openjfx:javafx-controls` 25 (GUI)
 
 ### Vývojové prostředí
 
