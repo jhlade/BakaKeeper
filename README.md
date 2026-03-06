@@ -94,6 +94,8 @@ Více viz `bakakeeper --help`.
 java -jar bakakeeper-gui.jar
 ```
 
+![Grafické rozhraní](https://github.com/jhlade/BakaKeeper/blob/assets/assets/bakacli-26-3.png?raw=true)
+
 ### Závislosti pro sestavení
 
 🪶 Spravovány přes Maven (`bakakeeper-core/pom.xml`, `bakakeeper-cli/pom.xml`, `bakakeeper-gui/pom.xml`):
