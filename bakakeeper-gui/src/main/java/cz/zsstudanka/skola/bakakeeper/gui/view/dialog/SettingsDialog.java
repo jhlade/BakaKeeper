@@ -550,8 +550,11 @@ public class SettingsDialog extends Dialog<Boolean> {
                 EncryptedConfigLoader.savePlain(yamlConfig, file);
             }
 
-            // znovu načíst konfiguraci
-            Settings.getInstance().load(filePath);
+            // znovu načíst konfiguraci stejnou passphrase, kterou jsme právě použili pro uložení
+            if (isEncrypted && pp != null && !pp.isBlank()) {
+                Settings.getInstance().setPassphrase(pp);
+            }
+            Settings.getInstance().loadOrThrow(filePath);
 
             saveStatus.setText("Konfigurace uložena.");
             saveStatus.setStyle("-fx-text-fill: #22c55e;");
