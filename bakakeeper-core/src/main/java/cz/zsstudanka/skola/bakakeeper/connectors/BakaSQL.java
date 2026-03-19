@@ -7,6 +7,8 @@ import cz.zsstudanka.skola.bakakeeper.constants.EBakaPorts;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 
 import java.sql.*;
+import javax.sql.rowset.CachedRowSet;
+import javax.sql.rowset.RowSetProvider;
 
 /**
  * Konektor pro Microsoft SQL Server.
@@ -22,7 +24,7 @@ public class BakaSQL implements SQLConnector {
     private Connection con = null;
 
     /** stav připojení */
-    private Boolean valid;
+    private Boolean valid = false;
 
     /**
      * Vytvoření instance připojení.
@@ -46,7 +48,31 @@ public class BakaSQL implements SQLConnector {
      * @return spojení je nenulové
      */
     public Boolean isConnected() {
-        return (this.con != null) ? true : false;
+        if (this.con == null) {
+            return false;
+        }
+
+        try {
+            if (this.con.isClosed()) {
+                closeConnectionQuietly();
+                valid = false;
+                return false;
+            }
+            try {
+                if (!this.con.isValid(2)) {
+                    closeConnectionQuietly();
+                    valid = false;
+                    return false;
+                }
+            } catch (AbstractMethodError | SQLFeatureNotSupportedException ignored) {
+                // fallback pouze na isClosed() pro starší/neúplné JDBC ovladače
+            }
+            return true;
+        } catch (SQLException e) {
+            closeConnectionQuietly();
+            valid = false;
+            return false;
+        }
     }
 
     public Connection getConnection() {
@@ -64,13 +90,15 @@ public class BakaSQL implements SQLConnector {
             return null;
         }
 
-        try {
-            Statement stmt = BakaSQL.getInstance().getConnection().createStatement();
-            ResultSet rs = stmt.executeQuery(sql);
-
-            return rs;
+        try (Statement stmt = getConnection().createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            CachedRowSet cached = RowSetProvider.newFactory().createCachedRowSet();
+            cached.populate(rs);
+            return cached;
         } catch (Exception e) {
             ReportManager.handleException("Nebylo možné provést SQL dotaz.", e);
+            closeConnectionQuietly();
+            valid = false;
         }
 
         return null;
@@ -81,6 +109,8 @@ public class BakaSQL implements SQLConnector {
      */
     private void connectNTLM() {
         try {
+            closeConnectionQuietly();
+
             // JTDS ovladač
             Class.forName("net.sourceforge.jtds.jdbc.Driver");
 
@@ -101,6 +131,7 @@ public class BakaSQL implements SQLConnector {
 
         } catch (Exception e) {
             ReportManager.handleException("Nebylo možné vytvořit NTLM spojení se SQL serverem.", e);
+            closeConnectionQuietly();
             valid = false;
         }
     }
@@ -109,6 +140,7 @@ public class BakaSQL implements SQLConnector {
      * Připojení pomocí ověření protokolem Kerberos 5.
      */
     private void connectKerberos() {
+        closeConnectionQuietly();
 
         StringBuilder conString = new StringBuilder();
 
@@ -123,10 +155,7 @@ public class BakaSQL implements SQLConnector {
         conString.append("password=" + Settings.getInstance().getSqlPass() + "; ");
         // SPN
         conString.append("ServerSpn=" + Settings.getInstance().getSqlSpn() + "; ");
-
-        if (Settings.getInstance().isLdapSsl()) {
-            conString.append("EncryptionMethod=ssl; encrypt=false; integratedSecurity=true; authenticationScheme=JavaKerberos; loginTimeout=1; ");
-        }
+        conString.append("integratedSecurity=true; authenticationScheme=JavaKerberos; loginTimeout=1; ");
 
         String connectionUrl = conString.toString();
 
@@ -157,6 +186,7 @@ public class BakaSQL implements SQLConnector {
 
         } catch (Exception e) {
             ReportManager.handleException("Nebylo možné vytvořit Kerberos spojení se SQL serverem.", e);
+            closeConnectionQuietly();
             valid = false;
         }
     }
@@ -171,8 +201,14 @@ public class BakaSQL implements SQLConnector {
 
         if (Settings.getInstance().isDebug()) {
             try {
-                ReportManager.log(EBakaLogType.LOG_SQL, "Ověřování SQL: " + (Settings.getInstance().isSqlNtlm() ? "NTLMv2" : "Kerberos V"));
-                ReportManager.log(EBakaLogType.LOG_SQL, "Uživatel SQL: " + Settings.getInstance().getKrbUser());
+                String authMethod = Settings.getInstance().isSqlNtlm()
+                        ? "NTLMv2"
+                        : (Settings.getInstance().isSqlKerberos() ? "Kerberos V" : "SQL Server");
+                ReportManager.log(EBakaLogType.LOG_SQL, "Ověřování SQL: " + authMethod);
+                String sqlUser = Settings.getInstance().isSqlAuth()
+                        ? Settings.getInstance().getSqlUser()
+                        : Settings.getInstance().getKrbUser();
+                ReportManager.log(EBakaLogType.LOG_SQL, "Uživatel SQL: " + sqlUser);
 
                 DatabaseMetaData dbmd = con.getMetaData();
                 ReportManager.log(EBakaLogType.LOG_SQL, "dbmd:verze ovladače = " + dbmd.getDriverVersion());
@@ -191,6 +227,7 @@ public class BakaSQL implements SQLConnector {
      */
     private void connectSQL() {
         try {
+            closeConnectionQuietly();
             Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
 
             int port = Settings.getInstance().getSqlPort();
@@ -214,6 +251,7 @@ public class BakaSQL implements SQLConnector {
 
         } catch (Exception e) {
             ReportManager.handleException("Nebylo možné vytvořit SQL Server spojení.", e);
+            closeConnectionQuietly();
             valid = false;
         }
     }
@@ -226,6 +264,9 @@ public class BakaSQL implements SQLConnector {
         if (isConnected()) {
             return;
         }
+
+        closeConnectionQuietly();
+        valid = false;
 
         if (Settings.getInstance().isSqlKerberos()) {
             connectKerberos();
@@ -253,5 +294,18 @@ public class BakaSQL implements SQLConnector {
     @Override
     public boolean testConnection() {
         return testSQL();
+    }
+
+    private void closeConnectionQuietly() {
+        if (this.con == null) {
+            return;
+        }
+        try {
+            this.con.close();
+        } catch (Exception ignored) {
+            // spojení už může být neplatné nebo zavřené
+        } finally {
+            this.con = null;
+        }
     }
 }

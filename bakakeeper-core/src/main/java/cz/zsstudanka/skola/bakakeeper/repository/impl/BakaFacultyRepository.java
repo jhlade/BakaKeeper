@@ -41,8 +41,7 @@ public class BakaFacultyRepository implements FacultyRepository {
         String query = buildFacultyQuery(classTeachersOnly);
         List<FacultyRecord> result = new ArrayList<>();
 
-        try {
-            ResultSet rs = sql.select(query);
+        try (ResultSet rs = sql.select(query)) {
             while (rs != null && rs.next()) {
                 DataSQL row = mapRow(rs);
                 FacultyRecord record = FacultyMapper.fromSQL(row);
