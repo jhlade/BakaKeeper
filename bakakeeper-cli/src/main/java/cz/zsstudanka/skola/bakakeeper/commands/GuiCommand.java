@@ -44,8 +44,14 @@ public class GuiCommand implements Callable<Integer> {
         } catch (Throwable e) {
             Throwable cause = e.getCause() != null ? e.getCause() : e;
             ReportManager.log(EBakaLogType.LOG_ERR,
-                    "Chyba při spuštění GUI: " + cause.getMessage());
-            ReportManager.handleException("Spuštění GUI selhalo", (Exception) cause);
+                    "Chyba při spuštění GUI: "
+                            + (cause.getMessage() != null ? cause.getMessage() : cause.getClass().getSimpleName()));
+            if (cause instanceof Exception ex) {
+                ReportManager.handleException("Spuštění GUI selhalo", ex);
+            } else {
+                ReportManager.log(EBakaLogType.LOG_ERR_VERBOSE,
+                        "Spuštění GUI selhalo: " + cause);
+            }
             return 1;
         }
     }
