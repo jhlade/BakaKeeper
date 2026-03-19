@@ -70,7 +70,11 @@ public class ServiceFactory {
      * @param config konfigurace aplikace
      */
     public ServiceFactory(AppConfig config) {
-        this(config, BakaADAuthenticator.getInstance(), BakaSQL.getInstance());
+        this(config,
+                BakaADAuthenticator.getInstance(),
+                BakaSQL.getInstance(),
+                BakaMailer.getInstance(),
+                new AuditHistoryStore(Settings.getInstance().getPassphrase()));
     }
 
     /**
@@ -81,6 +85,28 @@ public class ServiceFactory {
      * @param sql    SQL konektor
      */
     public ServiceFactory(AppConfig config, LDAPConnector ldap, SQLConnector sql) {
+        this(config,
+                ldap,
+                sql,
+                BakaMailer.getInstance(),
+                new AuditHistoryStore(Settings.getInstance().getPassphrase()));
+    }
+
+    /**
+     * Rozšířený konstruktor pro testy – umožňuje injektovat i mailer
+     * a úložiště auditní historie bez závislosti na globálních singletons.
+     *
+     * @param config konfigurace aplikace
+     * @param ldap   LDAP konektor
+     * @param sql    SQL konektor
+     * @param mailer mailový konektor
+     * @param auditHistoryStore úložiště auditní historie
+     */
+    public ServiceFactory(AppConfig config,
+                          LDAPConnector ldap,
+                          SQLConnector sql,
+                          BakaMailer mailer,
+                          AuditHistoryStore auditHistoryStore) {
         this.config = config;
 
         // repozitáře
@@ -107,15 +133,14 @@ public class ServiceFactory {
                 structureService, studentService, facultyService, guardianService, ruleService);
 
         // hlášení
-        this.syncReportSender = new SyncReportSender(config, BakaMailer.getInstance());
+        this.syncReportSender = new SyncReportSender(config, mailer);
 
         // kontrola konektivity
-        this.checkService = new CheckServiceImpl(config, ldap, sql, BakaMailer.getInstance());
+        this.checkService = new CheckServiceImpl(config, ldap, sql, mailer);
 
         // audit
         this.internalUserRepo = new BakaInternalUserRepository(sql);
-        char[] passphrase = Settings.getInstance().getPassphrase();
-        this.auditHistoryStore = new AuditHistoryStore(passphrase);
+        this.auditHistoryStore = auditHistoryStore;
         this.auditService = new AuditServiceImpl(internalUserRepo, auditHistoryStore);
     }
 

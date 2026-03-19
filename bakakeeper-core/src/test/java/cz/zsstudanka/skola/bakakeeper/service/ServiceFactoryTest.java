@@ -1,6 +1,7 @@
 package cz.zsstudanka.skola.bakakeeper.service;
 
 import cz.zsstudanka.skola.bakakeeper.config.AppConfig;
+import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
 import cz.zsstudanka.skola.bakakeeper.connectors.LDAPConnector;
 import cz.zsstudanka.skola.bakakeeper.connectors.SQLConnector;
 import org.junit.jupiter.api.Test;
@@ -21,10 +22,12 @@ class ServiceFactoryTest {
     @Mock AppConfig config;
     @Mock LDAPConnector ldap;
     @Mock SQLConnector sql;
+    @Mock BakaMailer mailer;
+    @Mock AuditHistoryStore auditHistoryStore;
 
     @Test
     void createAllComponents() {
-        ServiceFactory factory = new ServiceFactory(config, ldap, sql);
+        ServiceFactory factory = new ServiceFactory(config, ldap, sql, mailer, auditHistoryStore);
 
         // repozitáře
         assertNotNull(factory.getStudentRepo());
@@ -50,7 +53,7 @@ class ServiceFactoryTest {
 
     @Test
     void componentsSameInstance() {
-        ServiceFactory factory = new ServiceFactory(config, ldap, sql);
+        ServiceFactory factory = new ServiceFactory(config, ldap, sql, mailer, auditHistoryStore);
 
         // opakované volání vrací stejnou instanci (ne novou)
         assertSame(factory.getStudentRepo(), factory.getStudentRepo());
