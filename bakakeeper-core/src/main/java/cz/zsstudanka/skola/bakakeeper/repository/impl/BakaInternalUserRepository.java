@@ -10,6 +10,7 @@ import cz.zsstudanka.skola.bakakeeper.repository.InternalUserRepository;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Connection;
 import java.util.Date;
 import java.util.Optional;
 
@@ -40,27 +41,26 @@ public class BakaInternalUserRepository implements InternalUserRepository {
                 "FROM " + EBakaSQL.TBL_LOGIN.field() +
                 " WHERE LOGIN = ?";
 
-        try {
-            PreparedStatement ps = sql.getConnection().prepareStatement(query);
+        try (PreparedStatement ps = sql.getConnection().prepareStatement(query)) {
             ps.setString(1, dbLogin);
-            ResultSet rs = ps.executeQuery();
-
-            if (rs != null && rs.next()) {
-                InternalUserSnapshot snapshot = new InternalUserSnapshot(
-                        rs.getString("INTERN_KOD"),
-                        rs.getString("LOGIN"),
-                        rs.getString("KOD1"),
-                        rs.getString("PRAVA"),
-                        rs.getString("UPD_TYP"),
-                        rs.getString("KODF"),
-                        rs.getString("HESLO"),
-                        rs.getString("METODA"),
-                        rs.getString("SALT"),
-                        rs.getTimestamp("MODIFIED") != null
-                                ? new Date(rs.getTimestamp("MODIFIED").getTime()) : null,
-                        rs.getString("MODIFIEDBY")
-                );
-                return Optional.of(snapshot);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs != null && rs.next()) {
+                    InternalUserSnapshot snapshot = new InternalUserSnapshot(
+                            rs.getString("INTERN_KOD"),
+                            rs.getString("LOGIN"),
+                            rs.getString("KOD1"),
+                            rs.getString("PRAVA"),
+                            rs.getString("UPD_TYP"),
+                            rs.getString("KODF"),
+                            rs.getString("HESLO"),
+                            rs.getString("METODA"),
+                            rs.getString("SALT"),
+                            rs.getTimestamp("MODIFIED") != null
+                                    ? new Date(rs.getTimestamp("MODIFIED").getTime()) : null,
+                            rs.getString("MODIFIEDBY")
+                    );
+                    return Optional.of(snapshot);
+                }
             }
         } catch (SQLException e) {
             ReportManager.log(EBakaLogType.LOG_ERR,
@@ -78,8 +78,9 @@ public class BakaInternalUserRepository implements InternalUserRepository {
                 " SET HESLO = ?, METODA = ?, SALT = ?, MODIFIED = ?, MODIFIEDBY = ? " +
                 "WHERE LOGIN = ?";
 
-        try {
-            PreparedStatement ps = sql.getConnection().prepareStatement(update);
+        Connection connection = sql.getConnection();
+
+        try (PreparedStatement ps = connection.prepareStatement(update)) {
             ps.setString(1, snapshot.pwdHash());
             ps.setString(2, snapshot.pwdMethod());
             ps.setString(3, snapshot.pwdSalt());

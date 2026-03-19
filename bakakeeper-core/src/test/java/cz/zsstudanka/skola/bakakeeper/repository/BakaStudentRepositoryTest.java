@@ -114,7 +114,9 @@ class BakaStudentRepositoryTest {
 
     @Test
     void findByEmailReturnsStudent() throws Exception {
-        when(sql.select(anyString())).thenReturn(rs);
+        when(sql.getConnection()).thenReturn(conn);
+        when(conn.prepareStatement(anyString())).thenReturn(ps);
+        when(ps.executeQuery()).thenReturn(rs);
         when(rs.next()).thenReturn(true);
         when(rs.getString(EBakaSQL.F_STU_ID.basename())).thenReturn("12345");
         when(rs.getString(EBakaSQL.F_STU_SURNAME.basename())).thenReturn("Novák");
@@ -136,13 +138,15 @@ class BakaStudentRepositoryTest {
         assertEquals("12345", result.getInternalId());
         assertEquals("novak.tomas@skola.cz", result.getEmail());
 
-        // ověření, že dotaz obsahuje filtr na e-mail
-        verify(sql).select(argThat(q -> q.contains("novak.tomas@skola.cz")));
+        verify(conn).prepareStatement(argThat(q -> q.contains(EBakaSQL.F_STU_MAIL.field() + " = ?")));
+        verify(ps).setString(1, "novak.tomas@skola.cz");
     }
 
     @Test
     void findByEmailReturnsNullWhenNotFound() throws Exception {
-        when(sql.select(anyString())).thenReturn(rs);
+        when(sql.getConnection()).thenReturn(conn);
+        when(conn.prepareStatement(anyString())).thenReturn(ps);
+        when(ps.executeQuery()).thenReturn(rs);
         when(rs.next()).thenReturn(false);
 
         StudentRecord result = repo.findByEmail("neexistuje@skola.cz");

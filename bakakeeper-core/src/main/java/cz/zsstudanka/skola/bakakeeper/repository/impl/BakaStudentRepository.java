@@ -7,6 +7,7 @@ import cz.zsstudanka.skola.bakakeeper.model.entities.DataSQL;
 import cz.zsstudanka.skola.bakakeeper.model.mapping.StudentMapper;
 import cz.zsstudanka.skola.bakakeeper.repository.StudentRepository;
 
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
@@ -50,8 +51,7 @@ public class BakaStudentRepository implements StudentRepository {
         String query = buildStudentQuery(classYear, classLetter);
         List<StudentRecord> result = new ArrayList<>();
 
-        try {
-            ResultSet rs = sql.select(query);
+        try (ResultSet rs = sql.select(query)) {
             while (rs != null && rs.next()) {
                 DataSQL row = mapRow(rs);
                 StudentRecord record = StudentMapper.fromSQL(row);
@@ -83,14 +83,15 @@ public class BakaStudentRepository implements StudentRepository {
         String baseQuery = buildStudentQuery(null, null);
         // vloží podmínku na e-mail před ORDER BY
         String query = baseQuery.replace("ORDER BY",
-                "AND " + EBakaSQL.F_STU_MAIL.field() + " = '"
-                        + email.replace("'", "''") + "' ORDER BY");
+                "AND " + EBakaSQL.F_STU_MAIL.field() + " = ? ORDER BY");
 
-        try {
-            ResultSet rs = sql.select(query);
+        try (PreparedStatement ps = sql.getConnection().prepareStatement(query)) {
+            ps.setString(1, email);
+            try (ResultSet rs = ps.executeQuery()) {
             if (rs != null && rs.next()) {
                 DataSQL row = mapRow(rs);
                 return StudentMapper.fromSQL(row);
+            }
             }
         } catch (Exception e) {
             throw new RuntimeException("Chyba při vyhledávání žáka podle e-mailu.", e);
@@ -107,26 +108,27 @@ public class BakaStudentRepository implements StudentRepository {
                 + " SET " + EBakaSQL.F_STU_MAIL.field() + " = ?"
                 + " WHERE " + EBakaSQL.F_STU_ID.field() + " = ?";
 
+        Connection connection = sql.getConnection();
         try {
-            sql.getConnection().setAutoCommit(false);
-            try (PreparedStatement ps = sql.getConnection().prepareStatement(update)) {
+            connection.setAutoCommit(false);
+            try (PreparedStatement ps = connection.prepareStatement(update)) {
                 ps.setString(1, email);
                 ps.setString(2, internalId);
 
                 int affected = ps.executeUpdate();
-                sql.getConnection().commit();
+                connection.commit();
                 return affected == 1;
             }
         } catch (Exception e) {
             try {
-                sql.getConnection().rollback();
+                connection.rollback();
             } catch (Exception rollbackEx) {
                 // rollback selhal – nemůžeme udělat víc
             }
             throw new RuntimeException("Chyba při zápisu e-mailu do SQL.", e);
         } finally {
             try {
-                sql.getConnection().setAutoCommit(true);
+                connection.setAutoCommit(true);
             } catch (Exception ignored) {
                 // obnovení autocommitu selhalo
             }
