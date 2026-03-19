@@ -121,13 +121,36 @@ public class Settings implements AppConfig {
      * @param filename cesta k souboru (.dat nebo .yml)
      */
     public void load(String filename) {
+        try {
+            loadInternal(filename, false);
+        } catch (Exception ignored) {
+            // kompatibilní chování – veřejná varianta bez výjimky pouze zaloguje chybu
+        }
+    }
+
+    /**
+     * Načtení konfigurace ze zadaného souboru s propagací chyby volajícímu.
+     *
+     * @param filename cesta k souboru (.dat nebo .yml)
+     * @throws Exception při selhání čtení/dešifrování
+     */
+    public void loadOrThrow(String filename) throws Exception {
+        loadInternal(filename, true);
+    }
+
+    private void loadInternal(String filename, boolean rethrow) throws Exception {
         File file = new File(filename);
         if (!file.isFile()) {
+            this.config = null;
             ReportManager.log(EBakaLogType.LOG_ERR, "Konfigurační soubor nebyl nalezen: " + filename);
+            if (rethrow) {
+                throw new FileNotFoundException("Konfigurační soubor nebyl nalezen: " + filename);
+            }
             return;
         }
 
         try {
+            this.config = null;
             if (filename.endsWith(".dat")) {
                 this.config = EncryptedConfigLoader.load(file, PASSPHRASE);
             } else {
@@ -135,15 +158,19 @@ public class Settings implements AppConfig {
             }
             syncRuntimeFlags();
         } catch (Exception e) {
+            this.config = null;
             if (debugMode) {
                 ReportManager.exceptionMessage(e);
             }
+            String message;
             if (useEncryption()) {
-                ReportManager.log(EBakaLogType.LOG_ERR,
-                        "Chyba při čtení konfigurace. Možná nesprávné heslo?");
+                message = "Chyba při čtení konfigurace. Možná nesprávné heslo?";
             } else {
-                ReportManager.log(EBakaLogType.LOG_ERR,
-                        "Chyba při čtení konfigurace: " + e.getMessage());
+                message = "Chyba při čtení konfigurace: " + e.getMessage();
+            }
+            ReportManager.log(EBakaLogType.LOG_ERR, message);
+            if (rethrow) {
+                throw new IllegalStateException(message, e);
             }
         }
     }

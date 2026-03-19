@@ -51,6 +51,10 @@ public class MainViewModel {
      */
     public void loadEncryptedConfig(File file, String passphrase) {
         lastError.set("");
+        configLoaded.set(false);
+        config = null;
+        currentFile = null;
+        configFilePath.set("");
         statusText.set("Načítám konfiguraci\u2026");
 
         Task<Void> task = new Task<>() {
@@ -58,7 +62,7 @@ public class MainViewModel {
             protected Void call() throws Exception {
                 Settings settings = Settings.getInstance();
                 settings.setPassphrase(passphrase);
-                settings.load(file.getAbsolutePath());
+                settings.loadOrThrow(file.getAbsolutePath());
                 return null;
             }
         };
@@ -72,6 +76,9 @@ public class MainViewModel {
         });
 
         task.setOnFailed(e -> {
+            config = null;
+            currentFile = null;
+            configFilePath.set("");
             configLoaded.set(false);
             String msg = task.getException() != null
                     ? task.getException().getMessage() : "Neznámá chyba";
@@ -87,13 +94,17 @@ public class MainViewModel {
      */
     public void loadPlainConfig(File file) {
         lastError.set("");
+        configLoaded.set(false);
+        config = null;
+        currentFile = null;
+        configFilePath.set("");
         statusText.set("Načítám konfiguraci\u2026");
 
         Task<Void> task = new Task<>() {
             @Override
             protected Void call() throws Exception {
                 Settings settings = Settings.getInstance();
-                settings.load(file.getAbsolutePath());
+                settings.loadOrThrow(file.getAbsolutePath());
                 return null;
             }
         };
@@ -107,6 +118,9 @@ public class MainViewModel {
         });
 
         task.setOnFailed(e -> {
+            config = null;
+            currentFile = null;
+            configFilePath.set("");
             configLoaded.set(false);
             String msg = task.getException() != null
                     ? task.getException().getMessage() : "Neznámá chyba";
