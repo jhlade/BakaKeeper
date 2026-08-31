@@ -214,4 +214,17 @@ class BakaUtilsTest {
         int year = BakaUtils.getCurrentClassYear();
         assertTrue(year >= 2020 && year <= 2100);
     }
+
+    @Test
+    void getCurrentClassYearOverride() {
+        // ruční přepis v RuntimeContext má přednost před výpočtem z data
+        cz.zsstudanka.skola.bakakeeper.RuntimeContext.SCHOOL_YEAR_OVERRIDE = 2099;
+        try {
+            assertEquals(2099, BakaUtils.getCurrentClassYear());
+        } finally {
+            cz.zsstudanka.skola.bakakeeper.RuntimeContext.SCHOOL_YEAR_OVERRIDE = null;
+        }
+        // po zrušení přepisu se opět počítá automaticky z data
+        assertEquals(BakaUtils.computeCurrentClassYear(), BakaUtils.getCurrentClassYear());
+    }
 }

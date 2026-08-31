@@ -34,6 +34,8 @@ import java.util.concurrent.Callable;
                 "  bakakeeper report 5.A                Sestava přihlašovacích údajů",
                 "  bakakeeper reset 5.A --report        Reset hesel a sestava třídy",
                 "  bakakeeper reset *                   Reset hesel celé školy",
+                "  bakakeeper reset * --school-year 2026",
+                "                                        Reset s vynuceným školním rokem 2026/2027",
                 "  bakakeeper suspend 5.A               Zakázání účtů třídy",
                 "  bakakeeper unsuspend 5.A             Povolení účtů třídy",
                 "  bakakeeper export 5 -o seznam.csv    CSV export ročníku",
@@ -67,6 +69,11 @@ public class App implements Callable<Integer> {
 
     @Option(names = "--develmode", description = "Vývojový režim – neprobíhá zápis do ostrých dat.", scope = ScopeType.INHERIT)
     boolean develMode;
+
+    @Option(names = "--school-year", description = "Ruční přepis počátečního kalendářního roku školního roku " +
+            "(např. 2026 pro školní rok 2026/2027) použitého při generování počátečních hesel. " +
+            "Bez zadání se počítá automaticky z aktuálního data.", scope = ScopeType.INHERIT)
+    Integer schoolYear;
 
     @Option(names = {"-p", "--passphrase"}, description = "Heslo ke konfiguraci.", scope = ScopeType.INHERIT)
     String passphrase;
@@ -124,6 +131,12 @@ public class App implements Callable<Integer> {
         if (passphrase != null) {
             RuntimeContext.PASSPHRASE = passphrase;
             Settings.getInstance().setPassphrase(RuntimeContext.PASSPHRASE);
+        }
+
+        if (schoolYear != null) {
+            RuntimeContext.SCHOOL_YEAR_OVERRIDE = schoolYear;
+            ReportManager.log(EBakaLogType.LOG_ERR_VERBOSE,
+                    "Počáteční rok školního roku ručně nastaven na " + schoolYear + ".");
         }
     }
 

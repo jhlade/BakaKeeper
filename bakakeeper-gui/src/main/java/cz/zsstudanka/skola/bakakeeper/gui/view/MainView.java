@@ -133,6 +133,9 @@ public class MainView extends BorderPane {
         settingsItem.disableProperty().bind(viewModel.configLoadedProperty().not());
         settingsItem.setOnAction(e -> handleSettings());
 
+        MenuItem schoolYearItem = new MenuItem("Vynutit školní rok…");
+        schoolYearItem.setOnAction(e -> handleSchoolYearOverride());
+
         menuResetPwd = new MenuItem("Reset hesla\u2026");
         menuResetPwd.setDisable(true);
         menuResetPwd.setOnAction(e -> handleResetPassword(activeTree));
@@ -146,7 +149,7 @@ public class MainView extends BorderPane {
         menuToggleAccount.setOnAction(e -> handleToggleAccount(activeTree));
 
         toolsMenu.getItems().addAll(syncItem, checkItem,
-                new SeparatorMenuItem(), settingsItem,
+                new SeparatorMenuItem(), settingsItem, schoolYearItem,
                 new SeparatorMenuItem(), menuResetPwd, menuSetPwd, menuToggleAccount);
 
         // Zobrazení
@@ -324,6 +327,8 @@ public class MainView extends BorderPane {
         viewModel.operationRunningProperty().addListener((obs, oldVal, newVal) ->
                 statusBar.setProgressVisible(newVal));
         statusBar.progressProperty().bind(viewModel.progressProperty());
+
+        updateSchoolYearIndicator();
 
         setBottom(statusBar);
     }
@@ -1330,7 +1335,22 @@ public class MainView extends BorderPane {
             CheckBox sendReport = new CheckBox("Odeslat sestavu třídnímu učiteli");
             sendReport.setSelected(true);
 
-            VBox dialogContent = new VBox(12, infoLabel, new Separator(), sendReport);
+            CheckBox sendAdmin = new CheckBox("Odeslat sestavu správci");
+            sendAdmin.setSelected(true);
+            sendAdmin.setDisable(true);
+
+            // pokud jde sestava třídnímu, správce dostává kopii automaticky (nelze odškrtnout);
+            // pokud třídní nedostává nic, lze o zaslání správci rozhodnout samostatně
+            sendReport.selectedProperty().addListener((obs, wasSelected, isSelected) -> {
+                if (isSelected) {
+                    sendAdmin.setSelected(true);
+                    sendAdmin.setDisable(true);
+                } else {
+                    sendAdmin.setDisable(false);
+                }
+            });
+
+            VBox dialogContent = new VBox(12, infoLabel, new Separator(), sendReport, sendAdmin);
             dialogContent.setPadding(new Insets(10));
             confirm.getDialogPane().setContent(dialogContent);
             confirm.getDialogPane().setPrefWidth(400);
@@ -1344,7 +1364,7 @@ public class MainView extends BorderPane {
             confirm.showAndWait().ifPresent(result -> {
                 if (Boolean.TRUE.equals(result)) {
                     runBatchPasswordReset(students, sf.getPasswordService(),
-                            scopeLabel, sendReport.isSelected());
+                            scopeLabel, sendReport.isSelected(), sendAdmin.isSelected());
                 }
             });
         }
@@ -1362,7 +1382,8 @@ public class MainView extends BorderPane {
     private void runBatchPasswordReset(List<StudentRecord> students,
                                         PasswordService passwordService,
                                         String scopeLabel,
-                                        boolean sendReport) {
+                                        boolean sendReport,
+                                        boolean sendAdmin) {
         viewModel.operationRunningProperty().set(true);
         viewModel.statusTextProperty().set("Resetuji hesla\u2026");
 
@@ -1428,8 +1449,8 @@ public class MainView extends BorderPane {
                         logEvent(msg);
                         loadTreeData();
 
-                        if (sendReport && !result.reportRows().isEmpty()) {
-                            sendBatchReport(result.reportRows());
+                        if ((sendReport || sendAdmin) && !result.reportRows().isEmpty()) {
+                            sendBatchReport(result.reportRows(), sendReport, sendAdmin);
                         }
                     }
 
@@ -1444,10 +1465,12 @@ public class MainView extends BorderPane {
     }
 
     /**
-     * Odešle PDF sestavy s resetovanými hesly třídním učitelům a správci.
+     * Odešle PDF sestavy s resetovanými hesly třídním učitelům a/nebo správci
+     * dle zaškrtnutých voleb v potvrzovacím dialogu.
      */
     private void sendBatchReport(
-            Map<String, List<PdfReportGenerator.StudentReportRow>> reportRows) {
+            Map<String, List<PdfReportGenerator.StudentReportRow>> reportRows,
+            boolean notifyClassTeacher, boolean notifyAdmin) {
         logEvent("Odesílám sestavy\u2026");
 
         cz.zsstudanka.skola.bakakeeper.gui.service.BackgroundTaskRunner.run(
@@ -1480,7 +1503,8 @@ public class MainView extends BorderPane {
                                 reportRows, classTeachers, true, totalOk, 0);
                         Export.sendReports(data, "Přístupové údaje žáků ",
                                 Export.resetEmailBody(), config,
-                                BakaMailer.getInstance());
+                                BakaMailer.getInstance(),
+                                notifyClassTeacher, notifyAdmin);
                         return null;
                     }
 
@@ -1639,6 +1663,72 @@ public class MainView extends BorderPane {
                 logEvent("Nastavení uloženo a znovu načteno.");
             }
         });
+    }
+
+    /**
+     * Dialog pro ruční přepis počátečního kalendářního roku školního roku,
+     * podle kterého se generují počáteční hesla žáků (viz
+     * {@link BakaUtils#getCurrentClassYear()}). Přepis platí jen pro běžící
+     * relaci GUI a nikam se neukládá.
+     */
+    private void handleSchoolYearOverride() {
+        int autoYear = BakaUtils.computeCurrentClassYear();
+        Integer current = cz.zsstudanka.skola.bakakeeper.RuntimeContext.SCHOOL_YEAR_OVERRIDE;
+
+        Dialog<Optional<Integer>> dialog = new Dialog<>();
+        dialog.initOwner(stage);
+        dialog.setTitle("Vynutit školní rok");
+        dialog.setHeaderText("Ruční přepis školního roku pro generování počátečních hesel.");
+
+        Label infoLabel = new Label(String.format(
+                "Automaticky vypočtený školní rok dle data: %d/%d.", autoYear, autoYear + 1));
+        infoLabel.setWrapText(true);
+
+        Spinner<Integer> yearSpinner = new Spinner<>(2000, 2100,
+                current != null ? current : autoYear);
+        yearSpinner.setEditable(true);
+        yearSpinner.setPrefWidth(120);
+
+        Label activeLabel = new Label(current != null
+                ? String.format("Aktuálně vynucen školní rok %d/%d.", current, current + 1)
+                : "Aktuálně se používá automatický výpočet.");
+
+        VBox content = new VBox(12, infoLabel, new Separator(),
+                new Label("Počáteční rok vynuceného školního roku:"), yearSpinner, activeLabel);
+        content.setPadding(new Insets(10));
+        dialog.getDialogPane().setContent(content);
+        dialog.getDialogPane().setPrefWidth(420);
+
+        ButtonType applyType = new ButtonType("Vynutit", ButtonBar.ButtonData.OK_DONE);
+        ButtonType clearType = new ButtonType("Zrušit vynucení", ButtonBar.ButtonData.OTHER);
+        ButtonType closeType = new ButtonType("Zavřít", ButtonBar.ButtonData.CANCEL_CLOSE);
+        dialog.getDialogPane().getButtonTypes().addAll(applyType, clearType, closeType);
+
+        dialog.setResultConverter(bt -> {
+            if (bt == applyType) return Optional.of(yearSpinner.getValue());
+            if (bt == clearType) return Optional.empty();
+            return null;
+        });
+
+        dialog.showAndWait().ifPresent(result -> {
+            if (result.isPresent()) {
+                cz.zsstudanka.skola.bakakeeper.RuntimeContext.SCHOOL_YEAR_OVERRIDE = result.get();
+                logEvent(String.format("Vynucen školní rok %d/%d pro generování hesel.",
+                        result.get(), result.get() + 1));
+            } else {
+                cz.zsstudanka.skola.bakakeeper.RuntimeContext.SCHOOL_YEAR_OVERRIDE = null;
+                logEvent("Vynucení školního roku zrušeno, používá se automatický výpočet.");
+            }
+            updateSchoolYearIndicator();
+        });
+    }
+
+    /** Aktualizuje upozornění ve stavovém řádku dle {@code RuntimeContext.SCHOOL_YEAR_OVERRIDE}. */
+    private void updateSchoolYearIndicator() {
+        Integer override = cz.zsstudanka.skola.bakakeeper.RuntimeContext.SCHOOL_YEAR_OVERRIDE;
+        statusBar.setSchoolYearOverrideText(override != null
+                ? String.format("⚠ Vynucen školní rok %d/%d", override, override + 1)
+                : null);
     }
 
     // ---- Vnořené pomocné třídy ----

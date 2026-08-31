@@ -16,7 +16,7 @@ import java.util.Properties;
  */
 public class Version {
 
-    private static final String FALLBACK_VERSION = "26.3.0-dev";
+    private static final String FALLBACK_VERSION = "26.8.0-dev";
 
     private static Version instance = null;
 

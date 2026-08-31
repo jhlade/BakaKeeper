@@ -1,5 +1,6 @@
 package cz.zsstudanka.skola.bakakeeper.utils;
 
+import cz.zsstudanka.skola.bakakeeper.RuntimeContext;
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 
@@ -296,10 +297,26 @@ public class BakaUtils {
 
     /**
      * Začátek aktuálního školního roku.
+     * Pokud je nastaven {@link RuntimeContext#SCHOOL_YEAR_OVERRIDE}, vrací se
+     * přímo tato ručně zadaná hodnota namísto výpočtu z aktuálního data.
      *
      * @return počáteční kalendářní rok aktuálního školního roku
      */
     public static int getCurrentClassYear() {
+        if (RuntimeContext.SCHOOL_YEAR_OVERRIDE != null) {
+            return RuntimeContext.SCHOOL_YEAR_OVERRIDE;
+        }
+
+        return computeCurrentClassYear();
+    }
+
+    /**
+     * Vypočte začátek aktuálního školního roku z aktuálního data,
+     * bez ohledu na {@link RuntimeContext#SCHOOL_YEAR_OVERRIDE}.
+     *
+     * @return počáteční kalendářní rok aktuálního školního roku dle kalendáře
+     */
+    public static int computeCurrentClassYear() {
         int year = ZonedDateTime.now(ZoneId.of("Europe/Prague")).getYear();
         int month = ZonedDateTime.now(ZoneId.of("Europe/Prague")).getMonthValue();
 

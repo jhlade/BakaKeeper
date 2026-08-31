@@ -89,6 +89,20 @@ public class PasswordResetDialog extends Dialog<Void> {
         CheckBox sendReport = new CheckBox("Odeslat sestavu třídnímu učiteli");
         sendReport.setSelected(false);
 
+        CheckBox sendAdmin = new CheckBox("Odeslat sestavu správci");
+        sendAdmin.setSelected(false);
+
+        // pokud jde sestava třídnímu, správce dostává kopii automaticky (nelze odškrtnout);
+        // pokud třídní nedostává nic, lze o zaslání správci rozhodnout samostatně
+        sendReport.selectedProperty().addListener((obs, wasSelected, isSelected) -> {
+            if (isSelected) {
+                sendAdmin.setSelected(true);
+                sendAdmin.setDisable(true);
+            } else {
+                sendAdmin.setDisable(false);
+            }
+        });
+
         CheckBox mustChange = new CheckBox("Vyžadovat změnu hesla při příštím přihlášení");
         mustChange.setSelected(false);
 
@@ -101,6 +115,7 @@ public class PasswordResetDialog extends Dialog<Void> {
                 new Separator(),
                 mustChange,
                 sendReport,
+                sendAdmin,
                 new Separator(),
                 new Label("Výchozí heslo:"),
                 passwordBox,
@@ -143,10 +158,12 @@ public class PasswordResetDialog extends Dialog<Void> {
 
                 if (onComplete != null) onComplete.run();
 
-                // odeslat sestavu třídnímu učiteli
-                if (sendReport.isSelected() && serviceFactory != null && config != null) {
+                // odeslat sestavu třídnímu učiteli a/nebo správci
+                if ((sendReport.isSelected() || sendAdmin.isSelected())
+                        && serviceFactory != null && config != null) {
                     sendPasswordReport(student, pwd, serviceFactory, config,
-                            eventLogger, resultLabel, progress);
+                            eventLogger, resultLabel, progress,
+                            sendReport.isSelected(), sendAdmin.isSelected());
                 }
             });
 
@@ -165,12 +182,14 @@ public class PasswordResetDialog extends Dialog<Void> {
     }
 
     /**
-     * Odešle PDF sestavu s novým heslem třídnímu učiteli a správci.
+     * Odešle PDF sestavu s novým heslem třídnímu učiteli a/nebo správci
+     * dle zaškrtnutých voleb v dialogu.
      */
     private void sendPasswordReport(StudentRecord student, String password,
                                      ServiceFactory sf, AppConfig config,
                                      Consumer<String> eventLogger,
-                                     Label statusLabel, ProgressIndicator progress) {
+                                     Label statusLabel, ProgressIndicator progress,
+                                     boolean notifyClassTeacher, boolean notifyAdmin) {
         statusLabel.setText("Odesílám sestavu\u2026");
         progress.setVisible(true);
 
@@ -205,7 +224,8 @@ public class PasswordResetDialog extends Dialog<Void> {
 
                 ReportData data = new ReportData(reportRows, classTeachers, true, 1, 0);
                 Export.sendReports(data, "Přístupové údaje žáka ",
-                        Export.resetEmailBody(), config, BakaMailer.getInstance());
+                        Export.resetEmailBody(), config, BakaMailer.getInstance(),
+                        notifyClassTeacher, notifyAdmin);
                 return null;
             }
         };
