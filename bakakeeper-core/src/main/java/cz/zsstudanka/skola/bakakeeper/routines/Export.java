@@ -246,6 +246,7 @@ public class Export {
 
     /**
      * Fáze 2: Generování PDF sestav a odeslání e-mailem.
+     * Odesílá třídnímu i správci (výchozí chování zachováno pro CLI).
      *
      * @param data data sestavy z {@link #buildReportData}
      * @param emailSubjectPrefix prefix předmětu e-mailu (před názvem třídy)
@@ -255,6 +256,25 @@ public class Export {
      */
     public static void sendReports(ReportData data, String emailSubjectPrefix, String emailBodyTemplate,
                                     AppConfig config, BakaMailer mailer) {
+        sendReports(data, emailSubjectPrefix, emailBodyTemplate, config, mailer, true, true);
+    }
+
+    /**
+     * Fáze 2: Generování PDF sestav a odeslání e-mailem.
+     * Umožňuje nezávisle řídit, zda se sestava pošle třídnímu učiteli a/nebo správci
+     * (např. GUI checkbox „Odeslat sestavu správci“, pokud třídní není notifikován).
+     *
+     * @param data data sestavy z {@link #buildReportData}
+     * @param emailSubjectPrefix prefix předmětu e-mailu (před názvem třídy)
+     * @param emailBodyTemplate šablona těla e-mailu ({@code {class}} bude nahrazeno názvem třídy)
+     * @param config konfigurace aplikace
+     * @param mailer poštovní služba
+     * @param notifyClassTeacher odeslat sestavu i třídnímu učiteli (pokud je znám)
+     * @param notifyAdmin odeslat sestavu i správci
+     */
+    public static void sendReports(ReportData data, String emailSubjectPrefix, String emailBodyTemplate,
+                                    AppConfig config, BakaMailer mailer,
+                                    boolean notifyClassTeacher, boolean notifyAdmin) {
 
         // inicializace generátoru PDF
         PdfReportGenerator pdfGen;
@@ -317,19 +337,22 @@ public class Export {
             }
 
             // identifikace třídního učitele – e-mail
-            String classTeacherEmail = (teacher != null) ? teacher.getEmail() : null;
+            String classTeacherEmail = (notifyClassTeacher && teacher != null) ? teacher.getEmail() : null;
 
-            String[] addresses;
+            List<String> addresses = new ArrayList<>();
             if (!RuntimeContext.FLAG_DRYRUN && classTeacherEmail != null) {
-                addresses = new String[]{classTeacherEmail, config.getAdminMail()};
-            } else {
-                addresses = new String[]{config.getAdminMail()};
+                addresses.add(classTeacherEmail);
+            }
+            if (notifyAdmin) {
+                addresses.add(config.getAdminMail());
             }
 
-            // e-mail pro třídního a správce
-            mailer.mail(addresses,
-                    emailSubjectPrefix + classN, message,
-                    new String[]{reportFile});
+            // e-mail pro třídního a/nebo správce (dle zadaných příznaků)
+            if (!addresses.isEmpty()) {
+                mailer.mail(addresses.toArray(new String[0]),
+                        emailSubjectPrefix + classN, message,
+                        new String[]{reportFile});
+            }
 
             // úklid – pouze PDF
             new File(reportFile).delete();

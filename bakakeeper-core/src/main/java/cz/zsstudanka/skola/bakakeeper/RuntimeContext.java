@@ -26,4 +26,13 @@ public class RuntimeContext {
 
     /** příznak ladění */
     public static Boolean FLAG_DEBUG = false;
+
+    /**
+     * Ruční přepis počátečního kalendářního roku aktuálního školního roku
+     * (viz {@link cz.zsstudanka.skola.bakakeeper.utils.BakaUtils#getCurrentClassYear()}).
+     * Pokud je {@code null}, počítá se automaticky z aktuálního data.
+     * Slouží např. k předgenerování hesel pro nový školní rok ještě před jeho
+     * skutečným začátkem (1. září).
+     */
+    public static Integer SCHOOL_YEAR_OVERRIDE = null;
 }
