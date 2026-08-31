@@ -156,6 +156,11 @@ public class BakaSQL implements SQLConnector {
         // SPN
         conString.append("ServerSpn=" + Settings.getInstance().getSqlSpn() + "; ");
         conString.append("integratedSecurity=true; authenticationScheme=JavaKerberos; loginTimeout=1; ");
+        // ovladač od verze 10+ defaultně vyžaduje plně důvěryhodný certifikát (encrypt=true,
+        // trustServerCertificate=false) – u interního/self-signed certifikátu SQL Serveru
+        // by handshake selhal (PKIX path building failed), proto stejně jako connectSQL()
+        // důvěřujeme certifikátu serveru bez plné validace řetězu CA
+        conString.append("encrypt=true; trustServerCertificate=true; ");
 
         String connectionUrl = conString.toString();
 
