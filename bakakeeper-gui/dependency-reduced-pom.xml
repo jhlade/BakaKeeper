@@ -3,7 +3,7 @@
   <parent>
     <artifactId>bakakeeper-parent</artifactId>
     <groupId>cz.zsstudanka.skola</groupId>
-    <version>26.3.0-SNAPSHOT</version>
+    <version>26.11.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>bakakeeper-gui</artifactId>
@@ -69,7 +69,7 @@
           <plugin>
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>exec-maven-plugin</artifactId>
-            <version>3.5.0</version>
+            <version>3.6.4</version>
             <executions>
               <execution>
                 <id>jpackage-app-image</id>
@@ -147,7 +147,7 @@
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
-      <version>5.11.4</version>
+      <version>5.14.4</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -166,7 +166,7 @@
     </dependency>
   </dependencies>
   <properties>
-    <jpackage.app.version>26.3.0</jpackage.app.version>
+    <jpackage.app.version>26.11.0</jpackage.app.version>
     <project.app.mainClass>cz.zsstudanka.skola.bakakeeper.gui.Launcher</project.app.mainClass>
   </properties>
 </project>
