@@ -70,6 +70,17 @@ bakakeeper-parent/          (rodičovský POM)
                                  #   GUI: bakakeeper-gui/target/
 ```
 
+### Vydání
+
+Vydání vytváří automaticky GitHub Actions po pushnutí tagu `vRR.M.P`, který odpovídá verzi v `pom.xml`
+(bez `-SNAPSHOT`). Workflow sestaví a otestuje projekt a k vydání přiloží JAR pro CLI a GUI se SHA-256 součty.
+Tag s příponou (např. `v26.12.0-pre1`) se vydá jako pre-release.
+
+```bash
+git tag v26.11.0
+git push origin v26.11.0
+```
+
 ### Použití
 
 **Příkazový řádek:**
