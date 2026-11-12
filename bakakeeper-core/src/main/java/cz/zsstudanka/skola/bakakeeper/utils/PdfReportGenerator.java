@@ -176,7 +176,7 @@ public class PdfReportGenerator {
             document.add(new Paragraph("ZKUŠEBNÍ SESTAVA")
                     .setFont(fontRoman)
                     .setFontSize(16f)
-                    .setBold()
+                    .simulateBold()
                     .setFontColor(ColorConstants.RED)
                     .setTextAlignment(TextAlignment.CENTER)
                     .setMarginBottom(5f));
@@ -186,7 +186,7 @@ public class PdfReportGenerator {
         document.add(new Paragraph("Třída " + classId)
                 .setFont(fontRoman)
                 .setFontSize(TITLE_FONT_SIZE)
-                .setBold()
+                .simulateBold()
                 .setMarginBottom(10f));
 
         // tabulka – 6 sloupců
@@ -337,7 +337,7 @@ public class PdfReportGenerator {
                 .add(new Paragraph(text)
                         .setFont(font)
                         .setFontSize(TABLE_HEADER_FONT_SIZE)
-                        .setBold())
+                        .simulateBold())
                 .setTextAlignment(TextAlignment.CENTER)
                 .setVerticalAlignment(VerticalAlignment.MIDDLE)
                 .setPadding(CELL_PADDING);
