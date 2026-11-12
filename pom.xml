@@ -6,7 +6,7 @@
 
     <groupId>cz.zsstudanka.skola</groupId>
     <artifactId>bakakeeper-parent</artifactId>
-    <version>26.8.0-SNAPSHOT</version>
+    <version>26.11.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>BakaKeeper</name>
