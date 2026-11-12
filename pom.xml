@@ -26,25 +26,25 @@
         <maven.compiler.target>25</maven.compiler.target>
 
         <!-- verze závislostí -->
-        <lombok.version>1.18.42</lombok.version>
+        <lombok.version>1.18.48</lombok.version>
         <javax.mail.version>1.6.2</javax.mail.version>
-        <mssql-jdbc.version>13.2.1.jre11</mssql-jdbc.version>
+        <mssql-jdbc.version>13.6.2.jre11</mssql-jdbc.version>
         <jtds.version>1.3.1</jtds.version>
         <adsddl.version>1.9</adsddl.version>
-        <slf4j.version>1.7.10</slf4j.version>
-        <snakeyaml.version>2.3</snakeyaml.version>
-        <itext.version>8.0.5</itext.version>
-        <picocli.version>4.7.6</picocli.version>
+        <slf4j.version>2.0.20</slf4j.version>
+        <snakeyaml.version>2.7</snakeyaml.version>
+        <itext.version>9.8.0</itext.version>
+        <picocli.version>4.7.7</picocli.version>
 
         <!-- verze testovacích závislostí -->
-        <junit-jupiter.version>5.11.4</junit-jupiter.version>
-        <mockito.version>5.21.0</mockito.version>
+        <junit-jupiter.version>5.14.4</junit-jupiter.version>
+        <mockito.version>5.24.0</mockito.version>
 
         <!-- verze pluginů -->
-        <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
-        <maven-surefire-plugin.version>3.5.2</maven-surefire-plugin.version>
-        <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
-        <maven-shade-plugin.version>3.6.0</maven-shade-plugin.version>
+        <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
+        <maven-surefire-plugin.version>3.5.6</maven-surefire-plugin.version>
+        <maven-jar-plugin.version>3.5.0</maven-jar-plugin.version>
+        <maven-shade-plugin.version>3.6.2</maven-shade-plugin.version>
 
         <!-- JavaFX -->
         <javafx.version>25</javafx.version>
@@ -98,6 +98,13 @@
                 <artifactId>lombok</artifactId>
                 <version>${lombok.version}</version>
                 <scope>provided</scope>
+            </dependency>
+
+            <!-- SLF4J API – sjednocení verze (ADSDDL tranzitivně táhne zastaralou 1.7.x) -->
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>${slf4j.version}</version>
             </dependency>
 
             <!-- SLF4J NOP (vypnutí logování od ADSDDL) -->
