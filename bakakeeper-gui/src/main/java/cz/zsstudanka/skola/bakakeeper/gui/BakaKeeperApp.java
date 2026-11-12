@@ -86,6 +86,8 @@ public class BakaKeeperApp extends Application {
         Optional<Boolean> result = checkDialog.showAndWait();
 
         if (result.isPresent() && result.get()) {
+            // nedostupné SMTP neblokuje práci – jen se vypne odesílání e-mailů
+            viewModel.setMailAvailable(checkDialog.isSmtpAvailable());
             showMainView();
         } else {
             // uživatel zrušil kontrolu – zůstat na welcome

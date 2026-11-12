@@ -18,6 +18,7 @@ public class StatusBar extends HBox {
     private final Label lockIcon = new Label("\uD83D\uDD12"); // zamknutý zámek
     private final Label filePathLabel = new Label();
     private final Label schoolYearLabel = new Label();
+    private final Label mailWarningLabel = new Label();
     private final Label statusLabel = new Label();
     private final ProgressBar progressBar = new ProgressBar();
 
@@ -44,6 +45,12 @@ public class StatusBar extends HBox {
         schoolYearLabel.setVisible(false);
         schoolYearLabel.setManaged(false);
 
+        // upozornění na nedostupné SMTP (skryté, pokud je pošta v pořádku)
+        mailWarningLabel.getStyleClass().add("status-mail-warning");
+        mailWarningLabel.setStyle("-fx-text-fill: #f59e0b;");
+        mailWarningLabel.setVisible(false);
+        mailWarningLabel.setManaged(false);
+
         // oddělovač
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -60,7 +67,7 @@ public class StatusBar extends HBox {
         progressBar.setVisible(false);
         progressBar.setManaged(false);
 
-        getChildren().addAll(lockIcon, filePathLabel, schoolYearLabel, spacer, statusLabel, spacer2, progressBar);
+        getChildren().addAll(lockIcon, filePathLabel, schoolYearLabel, mailWarningLabel, spacer, statusLabel, spacer2, progressBar);
     }
 
     // -- Binding vlastnosti --
@@ -98,5 +105,16 @@ public class StatusBar extends HBox {
         schoolYearLabel.setText(show ? text : "");
         schoolYearLabel.setVisible(show);
         schoolYearLabel.setManaged(show);
+    }
+
+    /**
+     * Nastaví text upozornění na nedostupné SMTP.
+     * Pokud je {@code text} {@code null} nebo prázdný, štítek se skryje.
+     */
+    public void setMailWarningText(String text) {
+        boolean show = text != null && !text.isBlank();
+        mailWarningLabel.setText(show ? text : "");
+        mailWarningLabel.setVisible(show);
+        mailWarningLabel.setManaged(show);
     }
 }

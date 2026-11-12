@@ -3,6 +3,7 @@ package cz.zsstudanka.skola.bakakeeper.gui.view.dialog;
 import cz.zsstudanka.skola.bakakeeper.config.AppConfig;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
 import cz.zsstudanka.skola.bakakeeper.gui.service.BackgroundTaskRunner;
+import cz.zsstudanka.skola.bakakeeper.gui.view.MainView;
 import cz.zsstudanka.skola.bakakeeper.model.FacultyRecord;
 import cz.zsstudanka.skola.bakakeeper.model.StudentRecord;
 import cz.zsstudanka.skola.bakakeeper.routines.Export;
@@ -37,7 +38,8 @@ public class PasswordResetDialog extends Dialog<Void> {
                                Consumer<String> eventLogger,
                                Runnable onComplete,
                                ServiceFactory serviceFactory,
-                               AppConfig config) {
+                               AppConfig config,
+                               boolean mailAvailable) {
         setTitle("Reset hesla");
         setHeaderText("Reset hesla: " + student.getDisplayName());
         initOwner(owner);
@@ -121,6 +123,14 @@ public class PasswordResetDialog extends Dialog<Void> {
                 passwordBox,
                 new HBox(8, progress, resultLabel));
         content.setPadding(new Insets(10));
+
+        // SMTP nedostupné – heslo lze resetovat, sestava se neodešle
+        if (!mailAvailable) {
+            MainView.disableMailOptions(sendReport, sendAdmin);
+            content.getChildren().add(content.getChildren().indexOf(sendAdmin) + 1,
+                    MainView.mailUnavailableNotice());
+        }
+
         getDialogPane().setContent(content);
         getDialogPane().setPrefWidth(420);
 
