@@ -9,7 +9,8 @@ import javax.security.auth.Subject;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
 import java.io.*;
-import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.security.PrivilegedActionException;
 import java.util.concurrent.Callable;
 
@@ -78,9 +79,13 @@ public class BakaKerberos implements Callable {
         // cesta ke konfiguraci pro Kerberos V
         System.setProperty("java.security.krb5.conf", customKrb5Config.getAbsolutePath());
 
-        // použití interní konfigurace sezení - SQLJDBCDriver.conf
-        URL url = BakaKerberos.class.getClassLoader().getResource("SQLJDBCDriver.conf");
-        System.setProperty("java.security.auth.login.config", url.toExternalForm());
+        // použití interní konfigurace sezení - SQLJDBCDriver.conf;
+        // MSSQL JDBC ovladač (13.6+) odmítá konfiguraci uvnitř JARu (jar: URL),
+        // vyžaduje lokální soubor nebo file: URI – konfigurace se proto zapíše do dočasného souboru
+        File jaasConfig = extractJaasConfig();
+        if (jaasConfig != null) {
+            System.setProperty("java.security.auth.login.config", jaasConfig.toURI().toString());
+        }
 
         System.setProperty("javax.security.auth.useSubjectCredsOnly", "false");
 
@@ -90,6 +95,27 @@ public class BakaKerberos implements Callable {
         // Kerberos - podrobný ladící režim
         if (Settings.getInstance().isDebug()) {
             System.setProperty("sun.security.krb5.debug", "true");
+        }
+    }
+
+    /**
+     * Zkopíruje JAAS konfiguraci SQLJDBCDriver.conf z resources do dočasného souboru.
+     *
+     * @return dočasný soubor s konfigurací, nebo {@code null} při chybě
+     */
+    static File extractJaasConfig() {
+        try (InputStream in = BakaKerberos.class.getResourceAsStream("/SQLJDBCDriver.conf")) {
+            if (in == null) {
+                ReportManager.log(EBakaLogType.LOG_ERR, "Nebyla nalezena interní konfigurace SQLJDBCDriver.conf.");
+                return null;
+            }
+            File jaasConfig = File.createTempFile("bakajaas_", ".conf", null);
+            jaasConfig.deleteOnExit();
+            Files.copy(in, jaasConfig.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            return jaasConfig;
+        } catch (Exception e) {
+            ReportManager.handleException("Nebylo možné vytvořit konfiguraci přihlášení pro Kerberos (JAAS).", e);
+            return null;
         }
     }
 
