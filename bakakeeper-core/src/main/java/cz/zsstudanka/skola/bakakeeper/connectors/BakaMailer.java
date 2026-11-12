@@ -1,6 +1,7 @@
 package cz.zsstudanka.skola.bakakeeper.connectors;
 
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
+import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaPorts;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.settings.Version;
@@ -30,7 +31,18 @@ public class BakaMailer {
     /** singleton mailového klienta */
     private static BakaMailer instance = null;
 
+    /** časový limit navázání spojení se SMTP serverem (ms) */
+    private static final int SMTP_CONNECTION_TIMEOUT_MS = 15_000;
+    /** časový limit čtení/zápisu při komunikaci se SMTP serverem (ms) */
+    private static final int SMTP_IO_TIMEOUT_MS = 30_000;
+
     private Session session;
+
+    /**
+     * Odesílání e-mailů povoleno. Při nedostupnosti SMTP (např. výpadek MS 365)
+     * lze odesílání vypnout – aplikace pak pracuje dál, jen bez zasílání zpráv.
+     */
+    private volatile boolean enabled = true;
 
     public BakaMailer() {
     }
@@ -49,6 +61,22 @@ public class BakaMailer {
     }
 
     /**
+     * Povolí nebo zakáže odesílání e-mailů.
+     *
+     * @param enabled {@code false} = zprávy se nebudou odesílat (pouze se zaprotokoluje varování)
+     */
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    /**
+     * @return {@code true}, pokud je odesílání e-mailů povoleno
+     */
+    public boolean isEnabled() {
+        return this.enabled;
+    }
+
+    /**
      * Autentizace proti SMTP serveru.
      * Port, autentizace a STARTTLS jsou konfigurovatelné v settings.yml.
      */
@@ -64,6 +92,11 @@ public class BakaMailer {
         props.put("mail.smtp.port", smtpPort);
         props.put("mail.smtp.auth", Boolean.toString(smtpAuth));
         props.put("mail.smtp.starttls.enable", Boolean.toString(smtpStarttls));
+
+        // časové limity – bez nich může při výpadku SMTP spojení viset neomezeně dlouho
+        props.put("mail.smtp.connectiontimeout", Integer.toString(SMTP_CONNECTION_TIMEOUT_MS));
+        props.put("mail.smtp.timeout", Integer.toString(SMTP_IO_TIMEOUT_MS));
+        props.put("mail.smtp.writetimeout", Integer.toString(SMTP_IO_TIMEOUT_MS));
 
         if (smtpAuth) {
             Authenticator auth = new Authenticator() {
@@ -97,6 +130,13 @@ public class BakaMailer {
      * @param attachments pole se seznamem cest k souborům, které budou vloženy jako přílohy
      */
     public void mail(String[] recipients, String subject, String message, String[] attachments) {
+
+        // odesílání vypnuto (nedostupný SMTP server)
+        if (!this.enabled) {
+            ReportManager.log(EBakaLogType.LOG_WARN,
+                    "Odesílání e-mailů je vypnuto (SMTP nedostupné), zpráva „" + subject + "“ nebyla odeslána.");
+            return;
+        }
 
         // TLS autentizace
         this.authenticate();

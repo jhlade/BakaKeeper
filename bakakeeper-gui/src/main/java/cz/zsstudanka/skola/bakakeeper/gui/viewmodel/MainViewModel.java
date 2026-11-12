@@ -3,6 +3,7 @@ package cz.zsstudanka.skola.bakakeeper.gui.viewmodel;
 import cz.zsstudanka.skola.bakakeeper.gui.service.BackgroundTaskRunner;
 import cz.zsstudanka.skola.bakakeeper.gui.service.GuiProgressListener;
 import cz.zsstudanka.skola.bakakeeper.config.AppConfig;
+import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
 import cz.zsstudanka.skola.bakakeeper.service.*;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import javafx.application.Platform;
@@ -25,6 +26,8 @@ public class MainViewModel {
     private final DoubleProperty progress = new SimpleDoubleProperty(-1);
     private final BooleanProperty operationRunning = new SimpleBooleanProperty(false);
     private final StringProperty lastError = new SimpleStringProperty("");
+    /** SMTP dostupné – při výpadku aplikace běží bez odesílání e-mailů */
+    private final BooleanProperty mailAvailable = new SimpleBooleanProperty(true);
 
     private final ObservableList<SyncResult> syncResults = FXCollections.observableArrayList();
 
@@ -40,6 +43,8 @@ public class MainViewModel {
     public DoubleProperty progressProperty() { return progress; }
     public BooleanProperty operationRunningProperty() { return operationRunning; }
     public ReadOnlyStringProperty lastErrorProperty() { return lastError; }
+    public ReadOnlyBooleanProperty mailAvailableProperty() { return mailAvailable; }
+    public boolean isMailAvailable() { return mailAvailable.get(); }
     public ObservableList<SyncResult> getSyncResults() { return syncResults; }
     public ServiceFactory getServiceFactory() { return serviceFactory; }
     public AppConfig getConfig() { return config; }
@@ -141,6 +146,17 @@ public class MainViewModel {
     }
 
     /**
+     * Nastaví dostupnost SMTP. Při nedostupnosti se odesílání e-mailů vypne
+     * i na úrovni mailového klienta, aby žádná operace nečekala na nefunkční server.
+     *
+     * @param available {@code true} = SMTP dostupné, e-maily lze odesílat
+     */
+    public void setMailAvailable(boolean available) {
+        BakaMailer.getInstance().setEnabled(available);
+        mailAvailable.set(available);
+    }
+
+    /**
      * Zavře aktuální konfiguraci a vrátí do výchozího stavu.
      */
     public void closeConfig() {
@@ -152,6 +168,7 @@ public class MainViewModel {
         statusText.set("Připraven");
         lastError.set("");
         syncResults.clear();
+        setMailAvailable(true);
     }
 
     /**

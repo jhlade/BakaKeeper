@@ -9,11 +9,15 @@ import javafx.concurrent.Task;
 /**
  * ViewModel pro dialog kontroly konektivity.
  * Drží stav jednotlivých kontrol (config, LDAP, SQL, SMTP).
+ *
+ * Kritické služby jsou konfigurace, AD a SQL – bez nich nelze pokračovat.
+ * SMTP je nekritické: jeho selhání se projeví jen varováním
+ * a aplikace poběží v režimu bez odesílání e-mailů.
  */
 public class CheckViewModel {
 
-    /** Stav jedné kontroly – spinner / ok / chyba. */
-    public enum CheckState { PENDING, RUNNING, OK, FAILED }
+    /** Stav jedné kontroly – spinner / ok / varování (nekritická služba nedostupná) / chyba. */
+    public enum CheckState { PENDING, RUNNING, OK, WARNING, FAILED }
 
     private final ObjectProperty<CheckState> configState = new SimpleObjectProperty<>(CheckState.PENDING);
     private final ObjectProperty<CheckState> ldapState = new SimpleObjectProperty<>(CheckState.PENDING);
@@ -27,6 +31,7 @@ public class CheckViewModel {
 
     private final BooleanProperty allDone = new SimpleBooleanProperty(false);
     private final BooleanProperty allOk = new SimpleBooleanProperty(false);
+    private final BooleanProperty smtpOk = new SimpleBooleanProperty(false);
 
     // -- vlastnosti pro binding --
 
@@ -41,7 +46,10 @@ public class CheckViewModel {
     public StringProperty smtpMessageProperty() { return smtpMessage; }
 
     public BooleanProperty allDoneProperty() { return allDone; }
+    /** Kritické služby (konfigurace, AD, SQL) jsou v pořádku – lze pokračovat. */
     public BooleanProperty allOkProperty() { return allOk; }
+    /** SMTP je dostupné – lze odesílat e-maily. */
+    public BooleanProperty smtpOkProperty() { return smtpOk; }
 
     /**
      * Spustí všechny kontroly paralelně.
@@ -50,11 +58,21 @@ public class CheckViewModel {
         runCheck(checkService, "config", configState, configMessage);
         runCheck(checkService, "ldap", ldapState, ldapMessage);
         runCheck(checkService, "sql", sqlState, sqlMessage);
-        runCheck(checkService, "smtp", smtpState, smtpMessage);
+        runCheck(checkService, "smtp", smtpState, smtpMessage, false);
     }
 
     private void runCheck(CheckService checkService, String type,
                           ObjectProperty<CheckState> state, StringProperty message) {
+        runCheck(checkService, type, state, message, true);
+    }
+
+    /**
+     * @param critical {@code false} = selhání se zobrazí jako varování a neblokuje pokračování
+     */
+    private void runCheck(CheckService checkService, String type,
+                          ObjectProperty<CheckState> state, StringProperty message,
+                          boolean critical) {
+        CheckState failState = critical ? CheckState.FAILED : CheckState.WARNING;
         state.set(CheckState.RUNNING);
         message.set("");
 
@@ -73,35 +91,48 @@ public class CheckViewModel {
 
         task.setOnSucceeded(e -> {
             CheckResult result = task.getValue();
-            state.set(result.ok() ? CheckState.OK : CheckState.FAILED);
-            message.set(result.message());
+            state.set(result.ok() ? CheckState.OK : failState);
+            message.set(result.ok() || critical
+                    ? result.message()
+                    : nonCriticalMessage(result.message()));
             updateAllDone();
         });
 
         task.setOnFailed(e -> {
-            state.set(CheckState.FAILED);
-            message.set(task.getException() != null
+            state.set(failState);
+            String msg = task.getException() != null
                     ? task.getException().getMessage()
-                    : "Neznámá chyba");
+                    : "Neznámá chyba";
+            message.set(critical ? msg : nonCriticalMessage(msg));
             updateAllDone();
         });
 
         BackgroundTaskRunner.run(task);
     }
 
+    private static String nonCriticalMessage(String detail) {
+        String base = (detail == null || detail.isBlank()) ? "Služba není dostupná." : detail;
+        return base + " Aplikace poběží bez odesílání e-mailů.";
+    }
+
+    private static boolean isFinished(CheckState s) {
+        return s != CheckState.PENDING && s != CheckState.RUNNING;
+    }
+
     private void updateAllDone() {
-        boolean done = configState.get() != CheckState.PENDING && configState.get() != CheckState.RUNNING
-                && ldapState.get() != CheckState.PENDING && ldapState.get() != CheckState.RUNNING
-                && sqlState.get() != CheckState.PENDING && sqlState.get() != CheckState.RUNNING
-                && smtpState.get() != CheckState.PENDING && smtpState.get() != CheckState.RUNNING;
+        boolean done = isFinished(configState.get())
+                && isFinished(ldapState.get())
+                && isFinished(sqlState.get())
+                && isFinished(smtpState.get());
 
         // allOk MUSÍ být nastaveno DŘÍVE než allDone –
-        // listener na allDone čte allOk, takže by jinak viděl starou hodnotu
+        // listener na allDone čte allOk, takže by jinak viděl starou hodnotu;
+        // SMTP se do allOk nezapočítává (nekritická služba)
         if (done) {
+            smtpOk.set(smtpState.get() == CheckState.OK);
             allOk.set(configState.get() == CheckState.OK
                     && ldapState.get() == CheckState.OK
-                    && sqlState.get() == CheckState.OK
-                    && smtpState.get() == CheckState.OK);
+                    && sqlState.get() == CheckState.OK);
         }
 
         allDone.set(done);
@@ -121,6 +152,7 @@ public class CheckViewModel {
         smtpMessage.set("");
         allDone.set(false);
         allOk.set(false);
+        smtpOk.set(false);
     }
 
     /**
@@ -134,5 +166,6 @@ public class CheckViewModel {
         smtpState.set(CheckState.RUNNING);
         allDone.set(false);
         allOk.set(false);
+        smtpOk.set(false);
     }
 }

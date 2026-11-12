@@ -31,7 +31,8 @@ public class SetPasswordDialog extends Dialog<Void> {
     public SetPasswordDialog(Window owner, StudentRecord student,
                              PasswordService passwordService,
                              Consumer<String> eventLogger, Runnable onComplete,
-                             ServiceFactory serviceFactory, AppConfig config) {
+                             ServiceFactory serviceFactory, AppConfig config,
+                             boolean mailAvailable) {
         setTitle("Nastavit heslo");
         setHeaderText("Nastavit heslo: " + student.getDisplayName());
         initOwner(owner);
@@ -69,6 +70,9 @@ public class SetPasswordDialog extends Dialog<Void> {
                 || config.getAdminMail().isBlank()) {
             sendNotification.setDisable(true);
             sendNotification.setText("Odeslat oznámení správci (pošta nekonfigurována)");
+        } else if (!mailAvailable) {
+            sendNotification.setDisable(true);
+            sendNotification.setText("Odeslat oznámení správci (SMTP nedostupné)");
         }
 
         // validace

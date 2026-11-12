@@ -23,6 +23,10 @@ import java.util.concurrent.Callable;
  * Dialog kontroly konektivity – zobrazuje stav připojení
  * ke konfiguraci, LDAP, SQL a SMTP se spinnery a ikonami OK/FAIL.
  *
+ * Pokračovat lze, pokud jsou dostupné kritické služby (konfigurace, AD, SQL).
+ * Nedostupné SMTP se zobrazí jako varování – aplikace pak běží bez odesílání e-mailů,
+ * výsledek je k dispozici přes {@link #isSmtpAvailable()}.
+ *
  * Přijímá {@link Callable} pro vytvoření CheckService, aby se inicializace
  * (připojení k LDAP/SQL) provedla na pozadí a nezablokovala FX vlákno.
  * Dialog se zobrazí okamžitě a při otevření rozmlží pozadí.
@@ -71,8 +75,18 @@ public class CheckDialog extends Dialog<Boolean> {
         // binding pro tlačítka – aktivovat po dokončení všech kontrol
         viewModel.allDoneProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal) {
-                getDialogPane().lookupButton(proceedType).setDisable(!viewModel.allOkProperty().get());
+                boolean criticalOk = viewModel.allOkProperty().get();
+                boolean smtpOk = viewModel.smtpOkProperty().get();
+                getDialogPane().lookupButton(proceedType).setDisable(!criticalOk);
                 getDialogPane().lookupButton(retryType).setDisable(false);
+
+                if (!criticalOk) {
+                    setHeaderText("Některé nezbytné služby nejsou dostupné.");
+                } else if (!smtpOk) {
+                    setHeaderText("SMTP není dostupné \u2013 lze pokračovat bez odesílání e-mailů.");
+                } else {
+                    setHeaderText("Všechny služby jsou dostupné.");
+                }
             }
         });
 
@@ -95,6 +109,20 @@ public class CheckDialog extends Dialog<Boolean> {
         });
 
         setOnHidden(e -> applyOwnerBlur(owner, false));
+    }
+
+    /**
+     * @return {@code true}, pokud kontroly doběhly
+     */
+    public boolean isChecksDone() {
+        return viewModel.allDoneProperty().get();
+    }
+
+    /**
+     * @return {@code true}, pokud kontroly doběhly a SMTP je dostupné
+     */
+    public boolean isSmtpAvailable() {
+        return viewModel.allDoneProperty().get() && viewModel.smtpOkProperty().get();
     }
 
     /**
@@ -169,22 +197,26 @@ public class CheckDialog extends Dialog<Boolean> {
         msgLabel.textProperty().bind(messageProperty);
 
         stateProperty.addListener((obs, oldVal, newVal) -> {
+            stateLabel.getStyleClass().removeAll("check-ok", "check-warn", "check-fail");
             switch (newVal) {
                 case PENDING -> {
                     spinner.setVisible(false);
                     stateLabel.setText("");
-                    stateLabel.getStyleClass().removeAll("check-ok", "check-fail");
                 }
                 case RUNNING -> {
                     spinner.setVisible(true);
                     spinner.setProgress(-1);
                     stateLabel.setText("");
-                    stateLabel.getStyleClass().removeAll("check-ok", "check-fail");
                 }
                 case OK -> {
                     spinner.setVisible(false);
                     stateLabel.setText("\u2714");
                     stateLabel.getStyleClass().add("check-ok");
+                }
+                case WARNING -> {
+                    spinner.setVisible(false);
+                    stateLabel.setText("\u26A0");
+                    stateLabel.getStyleClass().add("check-warn");
                 }
                 case FAILED -> {
                     spinner.setVisible(false);

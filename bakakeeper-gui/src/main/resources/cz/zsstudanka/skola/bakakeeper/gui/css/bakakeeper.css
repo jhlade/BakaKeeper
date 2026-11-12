@@ -153,6 +153,10 @@
     -fx-text-fill: -bk-success;
 }
 
+.check-warn {
+    -fx-text-fill: -bk-warning;
+}
+
 .check-fail {
     -fx-text-fill: -bk-error;
 }

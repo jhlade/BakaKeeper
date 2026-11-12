@@ -330,6 +330,11 @@ public class MainView extends BorderPane {
 
         updateSchoolYearIndicator();
 
+        // upozornění na nedostupné SMTP (provoz bez odesílání e-mailů)
+        viewModel.mailAvailableProperty().addListener((obs, oldVal, newVal) ->
+                updateMailIndicator());
+        updateMailIndicator();
+
         setBottom(statusBar);
     }
 
@@ -467,6 +472,18 @@ public class MainView extends BorderPane {
             return sf.getCheckService();
         });
         dialog.showAndWait();
+
+        // po opakované kontrole aktualizovat dostupnost SMTP (např. po obnovení služby)
+        if (dialog.isChecksDone()) {
+            boolean wasAvailable = viewModel.isMailAvailable();
+            boolean available = dialog.isSmtpAvailable();
+            viewModel.setMailAvailable(available);
+            if (wasAvailable != available) {
+                logEvent(available
+                        ? "SMTP je opět dostupné – odesílání e-mailů obnoveno."
+                        : "SMTP není dostupné – odesílání e-mailů vypnuto.");
+            }
+        }
     }
 
     /**
@@ -1308,7 +1325,8 @@ public class MainView extends BorderPane {
             StudentRecord student = resolveStudentForPassword(tree);
             if (student == null) return;
             var dialog = new PasswordResetDialog(stage, student, sf.getPasswordService(),
-                    this::logEvent, this::loadTreeData, sf, viewModel.getConfig());
+                    this::logEvent, this::loadTreeData, sf, viewModel.getConfig(),
+                    viewModel.isMailAvailable());
             dialog.showAndWait();
         } else {
             // hromadný reset – třída / ročník / všichni žáci
@@ -1351,6 +1369,12 @@ public class MainView extends BorderPane {
             });
 
             VBox dialogContent = new VBox(12, infoLabel, new Separator(), sendReport, sendAdmin);
+
+            // SMTP nedostupné – reset proběhne, sestavy se neodešlou
+            if (!viewModel.isMailAvailable()) {
+                disableMailOptions(sendReport, sendAdmin);
+                dialogContent.getChildren().add(mailUnavailableNotice());
+            }
             dialogContent.setPadding(new Insets(10));
             confirm.getDialogPane().setContent(dialogContent);
             confirm.getDialogPane().setPrefWidth(400);
@@ -1530,7 +1554,8 @@ public class MainView extends BorderPane {
         if (sf == null) return;
 
         var dialog = new SetPasswordDialog(stage, student, sf.getPasswordService(),
-                this::logEvent, this::loadTreeData, sf, viewModel.getConfig());
+                this::logEvent, this::loadTreeData, sf, viewModel.getConfig(),
+                viewModel.isMailAvailable());
         dialog.showAndWait();
     }
 
@@ -1721,6 +1746,35 @@ public class MainView extends BorderPane {
             }
             updateSchoolYearIndicator();
         });
+    }
+
+    /** Aktualizuje upozornění ve stavovém řádku na nedostupné SMTP. */
+    private void updateMailIndicator() {
+        statusBar.setMailWarningText(viewModel.isMailAvailable()
+                ? null
+                : "⚠ SMTP nedostupné – e-maily se neodesílají");
+    }
+
+    /**
+     * Zakáže volby odeslání sestav (SMTP nedostupné).
+     * Pořadí je podstatné – odškrtnutí první volby uvolňuje druhou přes listener.
+     */
+    public static void disableMailOptions(CheckBox... options) {
+        for (CheckBox cb : options) {
+            cb.setSelected(false);
+        }
+        for (CheckBox cb : options) {
+            cb.setDisable(true);
+        }
+    }
+
+    /** Upozornění do dialogů, že sestavy nelze odeslat (SMTP nedostupné). */
+    public static Label mailUnavailableNotice() {
+        Label notice = new Label("⚠ SMTP server není dostupný – sestavy nelze odeslat e-mailem. "
+                + "Operaci lze provést, výsledek si poznamenejte ručně.");
+        notice.setWrapText(true);
+        notice.setStyle("-fx-text-fill: #f59e0b;");
+        return notice;
     }
 
     /** Aktualizuje upozornění ve stavovém řádku dle {@code RuntimeContext.SCHOOL_YEAR_OVERRIDE}. */
