@@ -25,4 +25,4 @@ jobs:
           cache: maven
 
       - name: Build & Test
-        run: ./mvnw --batch-mode clean compile test
+        run: mvn --batch-mode clean compile test
