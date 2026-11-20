@@ -41,7 +41,7 @@ jobs:
           fi
 
           # kontrola shody s verzí v pom.xml (bez -SNAPSHOT a bez přípony tagu)
-          POM_VERSION=$(./mvnw -B -q help:evaluate -Dexpression=project.version -DforceStdout)
+          POM_VERSION=$(mvn -B -q help:evaluate -Dexpression=project.version -DforceStdout)
           if [[ "${POM_VERSION%-SNAPSHOT}" != "${VERSION%%-*}" ]]; then
             echo "::error::Verze tagu ($VERSION) neodpovídá verzi v pom.xml ($POM_VERSION)."
             exit 1
@@ -55,12 +55,12 @@ jobs:
 
       - name: Nastavení verze vydání
         run: |
-          ./mvnw -B -q org.codehaus.mojo:versions-maven-plugin:2.19.1:set \
+          mvn -B -q org.codehaus.mojo:versions-maven-plugin:2.19.1:set \
             -DnewVersion=${{ steps.version.outputs.version }} \
             -DgenerateBackupPoms=false -DprocessAllModules=true
 
       - name: Sestavení a testy
-        run: ./mvnw -B clean verify
+        run: mvn -B clean verify
 
       - name: Příprava artefaktů
         run: |
