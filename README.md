@@ -113,7 +113,7 @@ java -jar bakakeeper-gui.jar
 * `com.sun.mail:javax.mail` 1.6.2
 * `com.microsoft.sqlserver:mssql-jdbc` 13.2.1.jre11
 * `net.sourceforge.jtds:jtds` 1.3.1
-* `net.tirasa:adsddl` 1.9
+* `cz.jhlade:adsddl` 26.11.0
 * `org.projectlombok:lombok` 1.18.42
 * `org.yaml:snakeyaml` 2.3
 * `com.itextpdf:layout` 8.0.5 (PDF sestavy)

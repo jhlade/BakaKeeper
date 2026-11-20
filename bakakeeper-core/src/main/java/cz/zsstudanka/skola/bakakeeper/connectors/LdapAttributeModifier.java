@@ -1,6 +1,6 @@
 package cz.zsstudanka.skola.bakakeeper.connectors;
 
-import cz.zsstudanka.skola.bakakeeper.components.BakaSDDLHelper;
+import cz.jhlade.adsddl.dacl.DaclOperations;
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
@@ -118,7 +118,7 @@ class LdapAttributeModifier {
                     // inicializace SDDL
                     SDDL sddl = new SDDL(ntsdOrig);
                     // nová hodnota
-                    byte[] newSddlData = BakaSDDLHelper.userCannotChangePassword(sddl, uacPNXNew).toByteArray();
+                    byte[] newSddlData = DaclOperations.setUserCannotChangePassword(sddl, uacPNXNew).toByteArray();
 
                     // změna atributu - práce s ntSecurityDescriptorem namísto UAC
                     mod[0] = new ModificationItem(

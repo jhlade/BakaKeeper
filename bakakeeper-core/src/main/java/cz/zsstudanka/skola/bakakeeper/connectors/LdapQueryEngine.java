@@ -1,6 +1,6 @@
 package cz.zsstudanka.skola.bakakeeper.connectors;
 
-import cz.zsstudanka.skola.bakakeeper.components.BakaSDDLHelper;
+import cz.jhlade.adsddl.dacl.DaclOperations;
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaUAC;
@@ -154,7 +154,7 @@ class LdapQueryEngine {
 
                         // modifikace UAC
                         if (Arrays.stream(retAttributes).anyMatch(EBakaLDAPAttributes.UAC.attribute()::equals)) {
-                            if (BakaSDDLHelper.isUserCannotChangePassword(new SDDL((byte[]) objDetails.get(EBakaLDAPAttributes.NT_SECURITY_DESCRIPTOR.attribute())))) {
+                            if (DaclOperations.isUserCannotChangePassword(new SDDL((byte[]) objDetails.get(EBakaLDAPAttributes.NT_SECURITY_DESCRIPTOR.attribute())))) {
                                 // nastavení flagu do UAC; ve výchozím stavu MS AS vždy uvádí 0
                                 objDetails.replace(EBakaLDAPAttributes.UAC.attribute(), String.format("%d", EBakaUAC.PASSWD_CANT_CHANGE.setFlag((String) objDetails.get(EBakaLDAPAttributes.UAC.attribute()).toString())));
                             }
