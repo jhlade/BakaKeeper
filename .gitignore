@@ -26,3 +26,6 @@ ssl.jks
 *.jar
 !dev/.data/**/.gitkeep
 /bakakeeper-gui/target/
+
+# Python cache (seed skripty)
+__pycache__/

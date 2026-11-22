@@ -54,8 +54,8 @@ Directory, pokud v organizaci není nasazen Exchange a atributy tedy chybí.
 
 ### Postup
 
-1. **Upravte DN** v LDIF souboru – nahraďte `DC=skola,DC=local` za skutečné
-   DN vaší domény:
+1. **Zkontrolujte DN** v LDIF souboru – je připraven pro doménu `skola.local`
+   (`DC=skola,DC=local`). Pro jinou doménu nahraďte DN skutečným DN vaší domény:
 
    ```powershell
    (Get-Content exchange-schema.ldif) -replace 'DC=skola,DC=local','<DN vaší domény>' |
@@ -65,15 +65,18 @@ Directory, pokud v organizaci není nasazen Exchange a atributy tedy chybí.
 2. **Importujte atributy** pomocí `ldifde` (nativní Windows nástroj):
 
    ```cmd
-   ldifde -i -f exchange-schema-prod.ldif -s dc.skola.local -c "DC=skola,DC=local" "<DN vaší domény>"
+   ldifde -i -f exchange-schema.ldif -s dc.skola.local
    ```
+
+   Pro jinou doménu lze DN nahradit přímo při importu:
+   `-c "DC=skola,DC=local" "<DN vaší domény>"`.
 
    Alternativně přes `ldapadd` (pokud máte ldap-utils / OpenLDAP klienta):
 
    ```bash
    ldapadd -H ldap://dc.skola.local \
        -D "CN=Administrator,CN=Users,DC=skola,DC=local" \
-       -W -c -f exchange-schema-prod.ldif
+       -W -c -f exchange-schema.ldif
    ```
 
 3. **Vynuťte reload schématu** (PowerShell na DC):

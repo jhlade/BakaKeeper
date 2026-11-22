@@ -2,7 +2,7 @@
 # =============================================================================
 # Samba4 AD DC – inicializace struktury a testovacích dat
 #
-# Vytvoří strukturu organizačních jednotek odpovídající settings.conf šabloně
+# Vytvoří strukturu organizačních jednotek odpovídající šabloně settings.yml
 # a testovací účty pro vývoj a ladění BakaKeeperu.
 #
 # Volá se ze setup-dev.sh pomocí:
@@ -47,8 +47,7 @@ echo "[BakaDev] =========================================="
 #   │       ├── OU=Asistenti    ← asistenti pedagoga
 #   │       ├── OU=Vychovatelky ← vychovatelé školní družiny
 #   │       └── OU=Provoz       ← hospodářský/provozní personál
-#   │           └── OU=ICT
-#   │               └── OU=ServisniUcty  ← servisní účet bakalari
+#   ├── OU=ServisniUcty         ← servisní účet bakalari (mimo LDAP bázi)
 #   ├── OU=Skupiny
 #   │   ├── OU=Zaci
 #   │   ├── OU=Uzivatele
@@ -85,10 +84,11 @@ create_ou "Vedeni"        "${ZAMEST_BASE}"
 create_ou "Asistenti"     "${ZAMEST_BASE}"
 create_ou "Vychovatelky"  "${ZAMEST_BASE}"
 create_ou "Provoz"        "${ZAMEST_BASE}"
-PROVOZ_BASE="OU=Provoz,${ZAMEST_BASE}"
-create_ou "ICT"           "${PROVOZ_BASE}"
-ICT_BASE="OU=ICT,${PROVOZ_BASE}"
-create_ou "ServisniUcty" "${ICT_BASE}"
+
+# Servisní účty – záměrně mimo LDAP bázi (OU=Uzivatele), aby se servisní účet
+# nesynchronizoval jako zaměstnanec a ověřilo se přihlášení účtem mimo bázi
+create_ou "ServisniUcty"  "${SKOLA_BASE}"
+SERVIS_BASE="OU=ServisniUcty,${SKOLA_BASE}"
 
 # Skupiny
 create_ou "Skupiny"     "${SKOLA_BASE}"
@@ -250,8 +250,8 @@ echo ""
 echo "[BakaDev] Vytváření servisního účtu 'bakalari'..."
 
 # --userou očekává relativní cestu od base DN (bez DC= části)
-BAKA_OU="OU=ServisniUcty,OU=ICT,OU=Provoz,OU=Zamestnanci,OU=Uzivatele,OU=Skola"
-BAKA_DN="OU=ServisniUcty,${ICT_BASE}"
+BAKA_OU="OU=ServisniUcty,OU=Skola"
+BAKA_DN="${SERVIS_BASE}"
 
 # Servisní účet pro synchronizaci – neinteraktivní systémový účet
 samba-tool user create bakalari "${BAKALARI_PASSWORD}" \

@@ -141,7 +141,8 @@ podman exec bakadev-mssql \
 
 ## OU struktura v AD
 
-Ukázková struktura podle výchozích konvencí BakaKeeperu:
+Ukázková struktura podle výchozích konvencí BakaKeeperu (báze OU se nastavují
+v sekci `ldap` souboru `settings.yml`):
 
 ```
 DC=skola,DC=local
@@ -156,9 +157,8 @@ DC=skola,DC=local
         OU=Asistenti
         OU=Vychovatelky
         OU=Provoz
-          OU=ICT
-            OU=ServisniUcty
-              CN=Bakaláři Sync        ← servisní účet bakalari
+    OU=ServisniUcty
+      CN=Bakaláři Sync          ← servisní účet bakalari (mimo LDAP bázi)
     OU=Skupiny
       OU=Zaci          (bezpečnostní skupiny tříd)
       OU=Uzivatele     (globální skupiny)
