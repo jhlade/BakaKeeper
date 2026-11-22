@@ -1,6 +1,7 @@
 package cz.zsstudanka.skola.bakakeeper.service;
 
 import cz.zsstudanka.skola.bakakeeper.config.AppConfig;
+import cz.zsstudanka.skola.bakakeeper.config.DirectoryLayout;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
 import cz.zsstudanka.skola.bakakeeper.model.GuardianRecord;
 import cz.zsstudanka.skola.bakakeeper.model.StudentRecord;
@@ -99,9 +100,8 @@ public class GuardianServiceImpl implements GuardianService {
             }
 
             // zapamatovat DL členství pro třídu
-            if (sql.getClassName() != null) {
-                String dlDn = "CN=Rodice-Trida-" + sql.getClassName().replace(".", "")
-                        + "," + config.getLdapBaseDistributionLists();
+            String dlDn = parentsClassDlDn(sql.getClassName());
+            if (dlDn != null) {
                 GuardianRecord contact = (existing != null) ? existing : contactById.get(guardianId);
                 if (contact != null && contact.getDn() != null) {
                     classDlMembers.computeIfAbsent(dlDn, k -> new ArrayList<>())
@@ -345,6 +345,27 @@ public class GuardianServiceImpl implements GuardianService {
             if (!expectedMembers.contains(memberDn)) {
                 ldapRepo.removeFromGroup(memberDn, dlDn);
             }
+        }
+    }
+
+    /**
+     * DN distribučního seznamu rodičů třídy (např. „5.A“ → CN=Rodice-Trida-5A,...)
+     * dle konvencí struktury.
+     *
+     * @param className označení třídy ve tvaru ročník.písmeno
+     * @return DN seznamu, nebo null pro neplatné označení třídy
+     */
+    private String parentsClassDlDn(String className) {
+        if (className == null) return null;
+        String[] parts = className.split("\\.", 2);
+        if (parts.length != 2 || parts[1].isBlank()) return null;
+        try {
+            int year = Integer.parseInt(parts[0].trim());
+            return "CN=" + DirectoryLayout.of(config).classGroupCn(
+                    DirectoryLayout.GroupKind.PARENTS_CLASS, year, parts[1].trim())
+                    + "," + config.getLdapBaseDistributionLists();
+        } catch (NumberFormatException e) {
+            return null;
         }
     }
 }

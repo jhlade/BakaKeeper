@@ -50,6 +50,9 @@ public class InitCommand implements Callable<Integer> {
     /** Dokončení inicializace – validace, uložení, SSL. */
     private int finalizeInit() {
         if (!Settings.getInstance().isValid()) {
+            for (String err : Settings.getInstance().getStructureErrors()) {
+                ReportManager.log(EBakaLogType.LOG_ERR, "Konfigurace: " + err);
+            }
             ReportManager.log(EBakaLogType.LOG_ERR, "Nebylo možné vytvořit platná nastavení.");
             return 1;
         }

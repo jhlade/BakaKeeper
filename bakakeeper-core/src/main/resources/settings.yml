@@ -83,6 +83,38 @@ policies:
   # Ročníky se stálým heslem
   pwd_no_expire: [1, 2, 3, 4, 5, 6, 7, 8, 9]
 
+# Konvence pojmenování OU a skupin (volitelné – bez této sekce platí výchozí
+# konvence BakaKeeperu uvedené níže). Hodnoty jsou relativní k bázím v sekci ldap.
+# Zástupné symboly: {rocnik} = ročník 1–9, {trida} = písmeno třídy,
+#                   {stupen} = stupeň 1/2, {rok} = rok vyřazení.
+# Stačí uvést jen hodnoty, které se liší od výchozích.
+# structure:
+#   ou:
+#     grade: "Rocnik-{rocnik}"        # OU ročníku pod ldap.students
+#     class: "Trida-{trida}"          # OU třídy pod OU ročníku
+#     alumni_year: "{rok}"            # OU ročníku vyřazení pod ldap.alumni
+#   categories:                       # OU v DN určující kategorii (pravidla scope CATEGORY)
+#     ZAK: "Zaci"
+#     UCITEL: "Ucitele"
+#     VEDENI: "Vedeni"
+#     PROVOZ: "Provoz"
+#     ASISTENT: "Asistenti"
+#     VYCHOVATELKA: "Vychovatelky"
+#   groups:                           # cn = jméno skupiny, mail = část adresy před @mail.domain
+#     students_global:      { cn: "Skupina-Zaci",                   mail: "zaci-vsichni" }
+#     students_all:         { cn: "Zaci-Vsichni",                   mail: "zaci" }
+#     students_level:       { cn: "Zaci-Stupen-{stupen}",           mail: "zaci-stupen-{stupen}" }
+#     students_grade:       { cn: "Zaci-Rocnik-{rocnik}",           mail: "zaci-rocnik-{rocnik}" }
+#     students_class:       { cn: "Zaci-Trida-{rocnik}{trida}",     mail: "zaci-{rocnik}{trida}" }
+#     parents_all:          { cn: "Rodice-Vsichni",                 mail: "rodice-cela-skola" }
+#     parents_level:        { cn: "Rodice-Stupen-{stupen}",         mail: "rodice-stupen-{stupen}" }
+#     parents_grade:        { cn: "Rodice-Rocnik-{rocnik}",         mail: "rodice-rocnik-{rocnik}" }
+#     parents_class:        { cn: "Rodice-Trida-{rocnik}{trida}",   mail: "rodice-trida-{rocnik}{trida}" }
+#     class_teachers_all:   { cn: "Ucitele-Tridni",                 mail: "ucitele-tridni" }
+#     class_teachers_level: { cn: "Ucitele-Tridni-Stupen-{stupen}", mail: "tridni-stupen-{stupen}" }
+#     class_teachers_grade: { cn: "Ucitele-Tridni-Rocnik-{rocnik}", mail: "tridni-rocnik-{rocnik}" }
+#     class_teachers_class: { cn: "Ucitele-Tridni-{rocnik}{trida}", mail: "tridni-{rocnik}{trida}" }
+
 # Deklarativní pravidla synchronizace
 # Příklad:
 # rules:

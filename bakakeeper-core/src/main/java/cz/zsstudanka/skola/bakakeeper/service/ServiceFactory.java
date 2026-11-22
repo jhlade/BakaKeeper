@@ -1,5 +1,6 @@
 package cz.zsstudanka.skola.bakakeeper.service;
 
+import cz.zsstudanka.skola.bakakeeper.config.DirectoryLayout;
 import cz.zsstudanka.skola.bakakeeper.config.AppConfig;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaADAuthenticator;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
@@ -112,19 +113,19 @@ public class ServiceFactory {
         // repozitáře
         this.studentRepo = new BakaStudentRepository(sql);
         this.facultyRepo = new BakaFacultyRepository(sql);
-        this.ldapUserRepo = new BakaLDAPUserRepository(ldap);
+        this.ldapUserRepo = new BakaLDAPUserRepository(ldap, DirectoryLayout.of(config));
         this.guardianRepo = new BakaGuardianRepository(ldap);
 
         // služby
         this.structureService = new StructureServiceImpl(config, ldap);
         this.passwordService = new PasswordServiceImpl(ldapUserRepo);
         this.accountService = new AccountServiceImpl(ldapUserRepo);
-        this.pairingService = new PairingServiceImpl(ldapUserRepo);
+        this.pairingService = new PairingServiceImpl(ldapUserRepo, DirectoryLayout.of(config));
         this.studentService = new StudentServiceImpl(
                 config, studentRepo, ldapUserRepo, passwordService, pairingService);
         this.guardianService = new GuardianServiceImpl(config, guardianRepo, ldapUserRepo);
         this.facultyService = new FacultyServiceImpl(config, ldapUserRepo);
-        this.ruleService = new RuleServiceImpl(ldapUserRepo);
+        this.ruleService = new RuleServiceImpl(ldapUserRepo, DirectoryLayout.of(config));
         this.identifyService = new IdentifyServiceImpl(config, studentRepo, facultyRepo, ldapUserRepo);
 
         // orchestrátor

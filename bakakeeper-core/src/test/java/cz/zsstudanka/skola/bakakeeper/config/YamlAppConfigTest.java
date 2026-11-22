@@ -508,4 +508,50 @@ class YamlAppConfigTest {
         assertEquals(1, c.getRules().size());
         assertEquals("5.B", c.getRules().get(0).getMatch());
     }
+
+    // --- Struktura AD (sekce structure) ---
+
+    @Test
+    void bezSekceStructureVychoziKonvence() {
+        assertTrue(config.getDirectoryLayout().isDefault());
+        assertTrue(config.getStructureErrors().isEmpty());
+    }
+
+    @Test
+    void sekceStructureRoundTrip() {
+        InputStream is = YamlAppConfigTest.class.getResourceAsStream("/test-config.yml");
+        Map<String, Object> data = new org.yaml.snakeyaml.Yaml().load(is);
+        data.put("structure", Map.of(
+                "ou", Map.of("grade", "R{rocnik}"),
+                "groups", Map.of("students_class", Map.of("cn", "Zaci-{rocnik}{trida}"))));
+        YamlAppConfig c = new YamlAppConfig(data);
+        assertTrue(c.isValid());
+        assertEquals("OU=R5,OU=S", c.getDirectoryLayout().gradeOuDn(5, "OU=S"));
+
+        StringWriter sw = new StringWriter();
+        c.writeTo(sw);
+        assertTrue(sw.toString().contains("structure"));
+        YamlAppConfig reloaded = new YamlAppConfig(
+                new ByteArrayInputStream(sw.toString().getBytes(StandardCharsets.UTF_8)));
+        assertTrue(reloaded.isValid());
+        assertEquals(c.getDirectoryLayout(), reloaded.getDirectoryLayout());
+    }
+
+    @Test
+    void bezSekceStructureSeNezapisuje() {
+        StringWriter sw = new StringWriter();
+        config.writeTo(sw);
+        assertFalse(sw.toString().contains("structure"));
+    }
+
+    @Test
+    void nevalidniSekceStructureZneplatniKonfiguraci() {
+        InputStream is = YamlAppConfigTest.class.getResourceAsStream("/test-config.yml");
+        Map<String, Object> data = new org.yaml.snakeyaml.Yaml().load(is);
+        data.put("structure", Map.of("ou", Map.of("class", "Bez-symbolu")));
+        YamlAppConfig c = new YamlAppConfig(data);
+        assertFalse(c.isValid());
+        assertEquals(1, c.getStructureErrors().size());
+        assertTrue(c.getStructureErrors().getFirst().startsWith("structure.ou.class"));
+    }
 }

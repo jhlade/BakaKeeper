@@ -1,5 +1,6 @@
 package cz.zsstudanka.skola.bakakeeper.utils;
 
+import cz.zsstudanka.skola.bakakeeper.config.DirectoryLayout;
 import cz.zsstudanka.skola.bakakeeper.RuntimeContext;
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
@@ -340,36 +341,8 @@ public class BakaUtils {
     }
 
     /**
-     * Zpracování DN objektu pro identifikaci zařazení do školní třídy.
-     * Pokud objekt není aktivním žákem (nachází se mimo základní OU pro žáky),
-     * je vráceno pole prázdných položek (null).
-     *
-     * Př.:
-     * CN=Novák Josef,OU=Trida-A,OU=Rocnik-1,OU=Zaci,OU=Uzivatele,OU=Skola,DC=skola,DC=local
-     * => String[2] = {"1", "A"}
-     *
-     * @param dn celé DN objektu žáka
-     * @return pole řetězců ve tvaru {ročník, písmeno třídy}
-     */
-    private static String[] classFromDn(String dn) {
-        // null[2]
-        String[] result = new String[2];
-
-        if (dn.contains("Trida-") && dn.contains("Rocnik-")) {
-
-            // 0 = CN, 1 = Trida, 2 = Rocnik, 3 = Zaci, ...
-            String[] ous = dn.split(",");
-
-            result[0] = ous[1].replace("OU=Trida-", "");
-            result[1] = ous[2].replace("OU=Rocnik-", "").toUpperCase();
-        }
-
-        return result;
-    }
-
-    /**
      * Číslo ročníku žáka na základě jeho DN, které musí obsahovat
-     * odpovídající OU.
+     * odpovídající OU (výchozí konvence struktury, viz {@link DirectoryLayout}).
      *
      * Př.:
      * CN=Novák Josef,OU=Trida-A,OU=Rocnik-1,OU=Zaci,OU=Uzivatele,OU=Skola,DC=skola,DC=local
@@ -377,35 +350,37 @@ public class BakaUtils {
      *
      * @param dn plné DN objektu žáka
      * @return číslo ročníku
+     * @throws NumberFormatException pokud DN neobsahuje OU třídy
      */
     public static Integer classYearFromDn(String dn) {
-        return Integer.parseInt(classFromDn(dn)[1]);
+        return DirectoryLayout.defaults().classYear(dn);
     }
 
     /**
      * Písmeno třídy žáka na základě jeho DN, které musí obsahovat
-     * odpovídající OU.
+     * odpovídající OU (výchozí konvence struktury, viz {@link DirectoryLayout}).
      *
      * Př.:
      * CN=Novák Josef,OU=Trida-A,OU=Rocnik-1,OU=Zaci,OU=Uzivatele,OU=Skola,DC=skola,DC=local
      * => 'A'
      *
      * @param dn plné DN objektu žáka
-     * @return písmeno třídy
+     * @return písmeno třídy, nebo null
      */
     public static String classLetterFromDn(String dn) {
-        return classFromDn(dn)[0];
+        return DirectoryLayout.defaults().classLetter(dn);
     }
 
     /**
      * Textový řetězec označení třídy ve formátu X.Y na základě DN, které musí
-     * obsahovat odpovídající OU.
+     * obsahovat odpovídající OU (výchozí konvence struktury, viz {@link DirectoryLayout}).
      *
      * @param dn plné DN žáka
      * @return řetězec označení třídy
+     * @throws NumberFormatException pokud DN neobsahuje OU třídy
      */
     public static String classStringFromDN(String dn) {
-        return classYearFromDn(dn).toString() + "." + classLetterFromDn(dn);
+        return DirectoryLayout.defaults().classLabel(dn);
     }
 
     /**

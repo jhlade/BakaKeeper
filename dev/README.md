@@ -141,8 +141,10 @@ podman exec bakadev-mssql \
 
 ## OU struktura v AD
 
-Ukázková struktura podle výchozích konvencí BakaKeeperu (báze OU se nastavují
-v sekci `ldap` souboru `settings.yml`):
+Ukázková struktura podle výchozích konvencí BakaKeeperu. Báze OU se nastavují
+v sekci `ldap` souboru `settings.yml`, názvy OU ročníků/tříd, kategorií a
+automaticky spravovaných skupin lze změnit ve volitelné sekci `structure`
+(viz komentář v `settings.yml`):
 
 ```
 DC=skola,DC=local

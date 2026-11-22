@@ -1,6 +1,7 @@
 package cz.zsstudanka.skola.bakakeeper.service;
 
 import cz.zsstudanka.skola.bakakeeper.config.AppConfig;
+import cz.zsstudanka.skola.bakakeeper.config.DirectoryLayout;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
 import cz.zsstudanka.skola.bakakeeper.model.FacultyRecord;
 import cz.zsstudanka.skola.bakakeeper.model.StudentRecord;
@@ -57,12 +58,14 @@ public class FacultyServiceImpl implements FacultyService {
         // indexy pro vyhledávání
         FacultyLdapIndex index = new FacultyLdapIndex(facultyLdap);
 
+        DirectoryLayout layout = DirectoryLayout.of(config);
+
         // iterace přes třídy 1–9, A–E
         for (int year = 1; year <= 9; year++) {
             for (char letter = 'A'; letter <= 'E'; letter++) {
                 String classLabel = year + "." + letter;
-                String dlDn = "CN=Ucitele-Tridni-" + year + letter
-                        + "," + config.getLdapBaseDistributionLists();
+                String dlDn = "CN=" + layout.classGroupCn(DirectoryLayout.GroupKind.CLASS_TEACHERS_CLASS,
+                        year, String.valueOf(letter)) + "," + config.getLdapBaseDistributionLists();
 
                 FacultyRecord teacher = teacherByClass.get(classLabel);
                 List<String> currentMembers = ldapRepo.listDirectMembers(dlDn);

@@ -150,6 +150,9 @@ public class App implements Callable<Integer> {
 
         Settings.getInstance().load();
         if (!Settings.getInstance().isValid()) {
+            for (String err : Settings.getInstance().getStructureErrors()) {
+                ReportManager.log(EBakaLogType.LOG_ERR, "Konfigurace: " + err);
+            }
             throw new CommandLine.ExecutionException(
                     new CommandLine(this), "Konfigurační data nejsou platná.");
         }

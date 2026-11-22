@@ -146,6 +146,14 @@ public interface AppConfig {
     /** SMTP používá STARTTLS (výchozí: true). */
     default boolean isSmtpStarttls() { return true; }
 
+    // --- Struktura AD (konvence pojmenování OU a skupin) ---
+
+    /** Konvence pojmenování OU a skupin (výchozí: původní konvence BakaKeeperu). */
+    default DirectoryLayout getDirectoryLayout() { return DirectoryLayout.defaults(); }
+
+    /** Chyby v sekci {@code structure} (prázdný seznam = bez chyb). */
+    default List<String> getStructureErrors() { return List.of(); }
+
     // --- Deklarativní pravidla ---
 
     /** Seznam deklarativních pravidel pro synchronizaci. */

@@ -1,11 +1,11 @@
 package cz.zsstudanka.skola.bakakeeper.model.mapping;
 
+import cz.zsstudanka.skola.bakakeeper.config.DirectoryLayout;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaSQL;
 import cz.zsstudanka.skola.bakakeeper.model.StudentRecord;
 import cz.zsstudanka.skola.bakakeeper.model.entities.DataLDAP;
 import cz.zsstudanka.skola.bakakeeper.model.entities.DataSQL;
-import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -81,6 +81,17 @@ public class StudentMapper {
      * @return typovaný záznam žáka (partial = true, paired = false), nebo null
      */
     public static StudentRecord fromLDAP(DataLDAP ldap) {
+        return fromLDAP(ldap, DirectoryLayout.defaults());
+    }
+
+    /**
+     * Vytvoří StudentRecord z LDAP dat; třídu odvodí z DN dle konvencí struktury.
+     *
+     * @param ldap   data z Active Directory
+     * @param layout konvence OU (ročník/třída)
+     * @return typovaný záznam žáka (partial = true, paired = false), nebo null
+     */
+    public static StudentRecord fromLDAP(DataLDAP ldap, DirectoryLayout layout) {
         if (ldap == null) {
             return null;
         }
@@ -99,15 +110,13 @@ public class StudentMapper {
         record.setDn(dn);
 
         // derivace třídy z DN – např. CN=novak.jan,OU=Trida-A,OU=Rocnik-6,...
-        if (dn != null && dn.contains("Trida-") && dn.contains("Rocnik-")) {
-            try {
-                record.setClassYear(BakaUtils.classYearFromDn(dn));
-                record.setClassLetter(BakaUtils.classLetterFromDn(dn));
-                record.setClassName(BakaUtils.classStringFromDN(dn));
-            } catch (Exception ignored) {
-                // DN neobsahuje standardní strukturu (např. alumni) – ponechat výchozí
-            }
-        }
+        // (DN mimo OU tříd, např. alumni, ponechá výchozí hodnoty)
+        DirectoryLayout effective = (layout != null) ? layout : DirectoryLayout.defaults();
+        effective.parseClass(dn).ifPresent(c -> {
+            record.setClassYear(c.year());
+            record.setClassLetter(c.letter());
+            record.setClassName(c.label());
+        });
 
         record.setSamAccountName(MapperUtils.getStringAttr(ldap, EBakaLDAPAttributes.LOGIN));
         record.setUpn(MapperUtils.getStringAttr(ldap, EBakaLDAPAttributes.UPN));

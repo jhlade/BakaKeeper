@@ -1,5 +1,6 @@
 package cz.zsstudanka.skola.bakakeeper.service;
 
+import cz.zsstudanka.skola.bakakeeper.config.DirectoryLayout;
 import cz.zsstudanka.skola.bakakeeper.config.SyncRule;
 import cz.zsstudanka.skola.bakakeeper.config.SyncRuleAttribute;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
@@ -75,8 +76,16 @@ public class RuleServiceImpl implements RuleService {
 
     private final LDAPUserRepository ldapRepo;
 
+    /** konvence OU pro rozpoznání kategorií uživatelů */
+    private final DirectoryLayout layout;
+
     public RuleServiceImpl(LDAPUserRepository ldapRepo) {
+        this(ldapRepo, DirectoryLayout.defaults());
+    }
+
+    public RuleServiceImpl(LDAPUserRepository ldapRepo, DirectoryLayout layout) {
         this.ldapRepo = ldapRepo;
+        this.layout = (layout != null) ? layout : DirectoryLayout.defaults();
     }
 
     @Override
@@ -400,15 +409,13 @@ public class RuleServiceImpl implements RuleService {
             case LEVEL_2 -> user.getClassYear() >= 6 && user.getClassYear() <= 9;
 
             case ALL_STUDENTS -> {
-                // pouze žáci (DN obsahuje OU=Zaci nebo OU=Rocnik-)
-                String dn = user.getDn();
-                yield dn != null && (dn.contains("OU=Zaci") || dn.contains("OU=Rocnik-"));
+                // pouze žáci (DN obsahuje OU kategorie ZAK nebo OU ročníku)
+                yield layout.isStudentDn(user.getDn());
             }
 
             case TEACHERS -> {
-                // učitelé (DN obsahuje OU=Ucitele)
-                String dn = user.getDn();
-                yield dn != null && dn.contains("OU=Ucitele");
+                // učitelé (DN obsahuje OU kategorie UCITEL)
+                yield layout.matchesCategory(user.getDn(), "UCITEL");
             }
 
             case WHOLE_SCHOOL -> true;
@@ -418,22 +425,12 @@ public class RuleServiceImpl implements RuleService {
     /**
      * Ověří, zda uživatel odpovídá kategorii podle OU v DN.
      *
-     * Podporované kategorie:
-     * ZAK, UCITEL, VEDENI, PROVOZ, ASISTENT, VYCHOVATELKA
+     * Výchozí kategorie: ZAK, UCITEL, VEDENI, PROVOZ, ASISTENT, VYCHOVATELKA;
+     * názvy OU a další kategorie lze nastavit v sekci {@code structure.categories}.
      */
     private boolean matchesCategory(String match, StudentRecord user) {
         if (match == null || user.getDn() == null) return false;
-        String dn = user.getDn();
-
-        return switch (match.toUpperCase()) {
-            case "ZAK" -> dn.contains("OU=Zaci") || dn.contains("OU=Rocnik-");
-            case "UCITEL" -> dn.contains("OU=Ucitele");
-            case "VEDENI" -> dn.contains("OU=Vedeni");
-            case "PROVOZ" -> dn.contains("OU=Provoz");
-            case "ASISTENT" -> dn.contains("OU=Asistenti");
-            case "VYCHOVATELKA" -> dn.contains("OU=Vychovatelky");
-            default -> false;
-        };
+        return layout.matchesCategory(user.getDn(), match);
     }
 
     /**

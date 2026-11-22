@@ -1,6 +1,7 @@
 package cz.zsstudanka.skola.bakakeeper.gui.view.dialog;
 
 import cz.zsstudanka.skola.bakakeeper.config.AppConfig;
+import cz.zsstudanka.skola.bakakeeper.config.DirectoryLayout;
 import cz.zsstudanka.skola.bakakeeper.config.EncryptedConfigLoader;
 import cz.zsstudanka.skola.bakakeeper.config.YamlAppConfig;
 import cz.zsstudanka.skola.bakakeeper.settings.Settings;
@@ -251,6 +252,11 @@ public class SettingsDialog extends Dialog<Boolean> {
             }
             Map<String, Object> rulesMap = new LinkedHashMap<>();
             rulesMap.put("rules", rulesOut);
+            // konvence struktury AD – zobrazit jen pokud se liší od výchozích
+            DirectoryLayout layout = DirectoryLayout.of(config);
+            if (!layout.isDefault()) {
+                rulesMap.put("structure", layout.toMap());
+            }
             Yaml yaml = new Yaml();
             StringWriter sw = new StringWriter();
             yaml.dump(rulesMap, sw);
@@ -424,7 +430,8 @@ public class SettingsDialog extends Dialog<Boolean> {
         VBox content = new VBox(8);
         content.setPadding(new Insets(4));
 
-        Label info = new Label("Deklarativní pravidla synchronizace (YAML formát):");
+        Label info = new Label("Deklarativní pravidla synchronizace (YAML formát). "
+                + "Volitelně lze uvést i sekci structure s konvencemi názvů OU a skupin.");
         info.setWrapText(true);
 
         VBox.setVgrow(rulesEditor, Priority.ALWAYS);
@@ -500,12 +507,14 @@ public class SettingsDialog extends Dialog<Boolean> {
             }
         }
 
-        // parsování pravidel
+        // parsování pravidel (a volitelné sekce structure)
         List<Object> parsedRules;
+        Object parsedStructure = null;
         try {
             Yaml yaml = new Yaml();
             Object parsed = yaml.load(rulesEditor.getText());
             if (parsed instanceof Map<?, ?> map) {
+                parsedStructure = map.get("structure");
                 Object r = map.get("rules");
                 if (r instanceof List<?> list) {
                     parsedRules = (List<Object>) list;
@@ -525,10 +534,19 @@ public class SettingsDialog extends Dialog<Boolean> {
 
         // sestavení konfigurační mapy
         Map<String, Object> configMap = buildConfigMap(parsedRules);
+        if (parsedStructure != null) {
+            configMap.put("structure", parsedStructure);
+        }
 
         try {
             File file = new File(filePath);
             YamlAppConfig yamlConfig = new YamlAppConfig(configMap);
+
+            if (!yamlConfig.getStructureErrors().isEmpty()) {
+                saveStatus.setText("Chyba v sekci structure: " + yamlConfig.getStructureErrors().getFirst());
+                saveStatus.setStyle("-fx-text-fill: #ef4444;");
+                return;
+            }
 
             if (isEncrypted) {
                 // pokud nová passphrase → použít ji; jinak stávající ze Settings

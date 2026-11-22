@@ -106,4 +106,25 @@ class EncryptedConfigLoaderTest {
         assertEquals("extensionAttribute5", first.getAttribute());
         assertEquals("TRUE", first.getValue());
     }
+
+    @Test
+    void structurePreservedAfterRoundTrip() throws Exception {
+        InputStream is = getClass().getResourceAsStream("/test-config.yml");
+        java.util.Map<String, Object> data = new org.yaml.snakeyaml.Yaml().load(is);
+        data.put("structure", java.util.Map.of(
+                "ou", java.util.Map.of("grade", "R{rocnik}", "class", "T{trida}"),
+                "categories", java.util.Map.of("ICT", "Technici")));
+        YamlAppConfig original = new YamlAppConfig(data);
+        assertTrue(original.isValid());
+
+        File file = tempDir.resolve("structure.dat").toFile();
+        char[] pass = "hesloProStrukturu".toCharArray();
+        EncryptedConfigLoader.save(original, file, pass);
+        YamlAppConfig loaded = EncryptedConfigLoader.load(file, pass);
+
+        assertTrue(loaded.isValid());
+        assertFalse(loaded.getDirectoryLayout().isDefault());
+        assertEquals(original.getDirectoryLayout(), loaded.getDirectoryLayout());
+        assertEquals("OU=TA,OU=R1,OU=S", loaded.getDirectoryLayout().classOuDn(1, "A", "OU=S"));
+    }
 }

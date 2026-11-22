@@ -1,6 +1,8 @@
 package cz.zsstudanka.skola.bakakeeper.service;
 
 import cz.zsstudanka.skola.bakakeeper.config.AppConfig;
+import cz.zsstudanka.skola.bakakeeper.config.DirectoryLayout;
+import cz.zsstudanka.skola.bakakeeper.config.DirectoryLayout.GroupKind;
 import cz.zsstudanka.skola.bakakeeper.connectors.LDAPConnector;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
 
@@ -15,7 +17,8 @@ import java.util.Map;
  * Zajišťuje existenci organizačních jednotek, bezpečnostních skupin žáků
  * a distribučních seznamů rodičů/třídních učitelů nutných pro synchronizaci.
  *
- * Výchozí hierarchie skupin (konvence BakaKeeperu):
+ * Výchozí hierarchie skupin (konvence BakaKeeperu; názvy OU a skupin lze změnit
+ * v sekci {@code structure} konfigurace, viz {@link DirectoryLayout}):
  * <pre>
  *   OU=Skupiny,OU=Skola
  *   ├── OU=Uzivatele
@@ -124,18 +127,19 @@ public class StructureServiceImpl implements StructureService {
      *
      * @return seznam dvojic [DN, popisek]
      */
-    private List<String[]> buildOUDefinitions() {
+    List<String[]> buildOUDefinitions() {
         List<String[]> ous = new ArrayList<>();
+        DirectoryLayout layout = DirectoryLayout.of(config);
 
         ous.add(new String[]{config.getLdapBaseFaculty(), "Zaměstnanci (globální)"});
         ous.add(new String[]{config.getLdapBaseStudents(), "Žáci (globální)"});
 
         // ročníky 1–9 s třídami A–E
         for (int r = 1; r <= 9; r++) {
-            String rocnikOu = "OU=Rocnik-" + r + "," + config.getLdapBaseStudents();
+            String rocnikOu = layout.gradeOuDn(r, config.getLdapBaseStudents());
             ous.add(new String[]{rocnikOu, "Žáci " + r + ". ročníku"});
             for (char t = 'A'; t <= 'E'; t++) {
-                ous.add(new String[]{"OU=Trida-" + t + "," + rocnikOu,
+                ous.add(new String[]{layout.classOuDn(r, String.valueOf(t), config.getLdapBaseStudents()),
                         "Žáci třídy " + r + "." + t});
             }
         }
@@ -287,9 +291,10 @@ public class StructureServiceImpl implements StructureService {
      *
      * @return uspořádaný seznam definic skupin
      */
-    private List<GroupDef> buildGroupDefinitions() {
+    List<GroupDef> buildGroupDefinitions() {
         List<GroupDef> groups = new ArrayList<>();
 
+        DirectoryLayout layout = DirectoryLayout.of(config);
         String studentGroups = config.getLdapBaseStudentGroups();
         String globalGroups = config.getLdapBaseGlobalGroups();
         String dl = config.getLdapBaseDistributionLists();
@@ -297,52 +302,57 @@ public class StructureServiceImpl implements StructureService {
         String sec = EBakaLDAPAttributes.GT_SECURITY.value();
         String dist = EBakaLDAPAttributes.GT_DISTRIBUTION.value();
 
+        String studentsGlobalCn = layout.groupCn(GroupKind.STUDENTS_GLOBAL);
+        String studentsAllCn = layout.groupCn(GroupKind.STUDENTS_ALL);
+        String parentsAllCn = layout.groupCn(GroupKind.PARENTS_ALL);
+        String teachersAllCn = layout.groupCn(GroupKind.CLASS_TEACHERS_ALL);
+
         // --- Globální skupina žáků (kořen hierarchie) ---
-        groups.add(new GroupDef("Skupina-Zaci", globalGroups,
+        groups.add(new GroupDef(studentsGlobalCn, globalGroups,
                 null,
-                "zaci-vsichni@" + mailDomain, "Skupina – všichni žáci",
+                layout.groupMail(GroupKind.STUDENTS_GLOBAL, mailDomain), "Skupina – všichni žáci",
                 LIT_TRUE, LIT_TRUE, sec,
                 "Globální skupina všech žáků školy"));
 
         // --- Bezpečnostní skupina všech žáků ---
-        groups.add(new GroupDef("Zaci-Vsichni", studentGroups,
-                "CN=Skupina-Zaci," + globalGroups,
-                "zaci@" + mailDomain, "Všichni žáci školy",
+        groups.add(new GroupDef(studentsAllCn, studentGroups,
+                "CN=" + studentsGlobalCn + "," + globalGroups,
+                layout.groupMail(GroupKind.STUDENTS_ALL, mailDomain), "Všichni žáci školy",
                 LIT_TRUE, LIT_TRUE, sec,
                 "Všichni žáci školy"));
 
         // --- Distribuční seznamy – kořenové ---
-        groups.add(new GroupDef("Rodice-Vsichni", dl,
+        groups.add(new GroupDef(parentsAllCn, dl,
                 null,
-                "rodice-cela-skola@" + mailDomain, "Všichni rodiče",
+                layout.groupMail(GroupKind.PARENTS_ALL, mailDomain), "Všichni rodiče",
                 LIT_TRUE, LIT_TRUE, dist,
                 "Všichni rodiče všech žáků"));
 
-        groups.add(new GroupDef("Ucitele-Tridni", dl,
+        groups.add(new GroupDef(teachersAllCn, dl,
                 null,
-                "ucitele-tridni@" + mailDomain, "Všichni třídní učitelé",
+                layout.groupMail(GroupKind.CLASS_TEACHERS_ALL, mailDomain), "Všichni třídní učitelé",
                 LIT_TRUE, LIT_TRUE, dist,
                 "Všichni třídní učitelé"));
 
         // --- Stupně 1 a 2 ---
         for (int s = 1; s <= 2; s++) {
-            groups.add(new GroupDef("Zaci-Stupen-" + s, studentGroups,
-                    "CN=Zaci-Vsichni," + studentGroups,
-                    "zaci-stupen-" + s + "@" + mailDomain,
+            groups.add(new GroupDef(layout.levelGroupCn(GroupKind.STUDENTS_LEVEL, s), studentGroups,
+                    "CN=" + studentsAllCn + "," + studentGroups,
+                    layout.levelGroupMail(GroupKind.STUDENTS_LEVEL, s, mailDomain),
                     "Žáci - " + s + ". stupeň",
                     LIT_TRUE, LIT_TRUE, sec,
                     "Žáci - " + s + ". stupeň"));
 
-            groups.add(new GroupDef("Rodice-Stupen-" + s, dl,
-                    "CN=Rodice-Vsichni," + dl,
-                    "rodice-stupen-" + s + "@" + mailDomain,
+            groups.add(new GroupDef(layout.levelGroupCn(GroupKind.PARENTS_LEVEL, s), dl,
+                    "CN=" + parentsAllCn + "," + dl,
+                    layout.levelGroupMail(GroupKind.PARENTS_LEVEL, s, mailDomain),
                     "Rodiče žáků " + s + ". stupně",
                     LIT_TRUE, LIT_TRUE, dist,
                     "Rodiče žáků - " + s + ". stupeň"));
 
-            groups.add(new GroupDef("Ucitele-Tridni-Stupen-" + s, dl,
-                    "CN=Ucitele-Tridni," + dl,
-                    "tridni-stupen-" + s + "@" + mailDomain,
+            groups.add(new GroupDef(layout.levelGroupCn(GroupKind.CLASS_TEACHERS_LEVEL, s), dl,
+                    "CN=" + teachersAllCn + "," + dl,
+                    layout.levelGroupMail(GroupKind.CLASS_TEACHERS_LEVEL, s, mailDomain),
                     "Třídní učitelé " + s + ". stupně",
                     LIT_TRUE, LIT_TRUE, dist,
                     "Třídní učitelé - " + s + ". stupeň"));
@@ -350,50 +360,50 @@ public class StructureServiceImpl implements StructureService {
 
         // --- Ročníky 1–9 ---
         for (int r = 1; r <= 9; r++) {
-            String stupen = (r <= 5) ? "1" : "2";
+            int stupen = DirectoryLayout.levelOf(r);
 
-            groups.add(new GroupDef("Zaci-Rocnik-" + r, studentGroups,
-                    "CN=Zaci-Stupen-" + stupen + "," + studentGroups,
-                    "zaci-rocnik-" + r + "@" + mailDomain,
+            groups.add(new GroupDef(layout.gradeGroupCn(GroupKind.STUDENTS_GRADE, r), studentGroups,
+                    "CN=" + layout.levelGroupCn(GroupKind.STUDENTS_LEVEL, stupen) + "," + studentGroups,
+                    layout.gradeGroupMail(GroupKind.STUDENTS_GRADE, r, mailDomain),
                     "Žáci - " + r + ". ročník",
                     LIT_FALSE, LIT_TRUE, sec,
                     "Žáci - " + r + ". ročníku"));
 
-            groups.add(new GroupDef("Rodice-Rocnik-" + r, dl,
-                    "CN=Rodice-Stupen-" + stupen + "," + dl,
-                    "rodice-rocnik-" + r + "@" + mailDomain,
+            groups.add(new GroupDef(layout.gradeGroupCn(GroupKind.PARENTS_GRADE, r), dl,
+                    "CN=" + layout.levelGroupCn(GroupKind.PARENTS_LEVEL, stupen) + "," + dl,
+                    layout.gradeGroupMail(GroupKind.PARENTS_GRADE, r, mailDomain),
                     "Rodiče žáků " + r + ". ročníku",
                     LIT_TRUE, LIT_TRUE, dist,
                     "Rodiče žáků " + r + ". ročníku"));
 
-            groups.add(new GroupDef("Ucitele-Tridni-Rocnik-" + r, dl,
-                    "CN=Ucitele-Tridni-Stupen-" + stupen + "," + dl,
-                    "tridni-rocnik-" + r + "@" + mailDomain,
+            groups.add(new GroupDef(layout.gradeGroupCn(GroupKind.CLASS_TEACHERS_GRADE, r), dl,
+                    "CN=" + layout.levelGroupCn(GroupKind.CLASS_TEACHERS_LEVEL, stupen) + "," + dl,
+                    layout.gradeGroupMail(GroupKind.CLASS_TEACHERS_GRADE, r, mailDomain),
                     "Třídní učitelé " + r + ". ročníku",
                     LIT_TRUE, LIT_TRUE, dist,
                     "Třídní učitelé " + r + ". ročníku"));
 
             // --- Třídy A–E v rámci ročníku ---
             for (char t = 'A'; t <= 'E'; t++) {
-                String classId = "" + r + t;
+                String letter = String.valueOf(t);
 
-                groups.add(new GroupDef("Zaci-Trida-" + classId, studentGroups,
-                        "CN=Zaci-Rocnik-" + r + "," + studentGroups,
-                        ("zaci-" + classId + "@" + mailDomain).toLowerCase(),
+                groups.add(new GroupDef(layout.classGroupCn(GroupKind.STUDENTS_CLASS, r, letter), studentGroups,
+                        "CN=" + layout.gradeGroupCn(GroupKind.STUDENTS_GRADE, r) + "," + studentGroups,
+                        layout.classGroupMail(GroupKind.STUDENTS_CLASS, r, letter, mailDomain),
                         "Žáci " + r + "." + t,
                         LIT_FALSE, LIT_TRUE, sec,
                         "Žáci třídy " + r + "." + t));
 
-                groups.add(new GroupDef("Rodice-Trida-" + classId, dl,
-                        "CN=Rodice-Rocnik-" + r + "," + dl,
-                        ("rodice-trida-" + classId + "@" + mailDomain).toLowerCase(),
+                groups.add(new GroupDef(layout.classGroupCn(GroupKind.PARENTS_CLASS, r, letter), dl,
+                        "CN=" + layout.gradeGroupCn(GroupKind.PARENTS_GRADE, r) + "," + dl,
+                        layout.classGroupMail(GroupKind.PARENTS_CLASS, r, letter, mailDomain),
                         "Rodiče " + r + "." + t,
                         LIT_TRUE, LIT_TRUE, dist,
                         "Rodiče žáků třídy " + r + "." + t));
 
-                groups.add(new GroupDef("Ucitele-Tridni-" + classId, dl,
-                        "CN=Ucitele-Tridni-Rocnik-" + r + "," + dl,
-                        ("tridni-" + classId + "@" + mailDomain).toLowerCase(),
+                groups.add(new GroupDef(layout.classGroupCn(GroupKind.CLASS_TEACHERS_CLASS, r, letter), dl,
+                        "CN=" + layout.gradeGroupCn(GroupKind.CLASS_TEACHERS_GRADE, r) + "," + dl,
+                        layout.classGroupMail(GroupKind.CLASS_TEACHERS_CLASS, r, letter, mailDomain),
                         "Třídní učitel " + r + "." + t,
                         LIT_TRUE, LIT_TRUE, dist,
                         "Třídní učitel " + r + "." + t));
@@ -420,7 +430,7 @@ public class StructureServiceImpl implements StructureService {
      * @param groupType    typ skupiny (GT_SECURITY / GT_DISTRIBUTION hodnota)
      * @param description  popis skupiny
      */
-    private record GroupDef(
+    record GroupDef(
             String cn,
             String ou,
             String parentGroupDn,

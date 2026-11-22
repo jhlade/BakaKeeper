@@ -26,6 +26,9 @@ public class YamlAppConfig implements AppConfig {
     /** příznak validity */
     private boolean valid;
 
+    /** konvence pojmenování OU a skupin (sekce structure) */
+    private DirectoryLayout.ParseResult structure;
+
     /**
      * Načte konfiguraci z YAML vstupního proudu.
      *
@@ -35,6 +38,7 @@ public class YamlAppConfig implements AppConfig {
         Yaml yaml = new Yaml();
         Map<String, Object> loaded = yaml.load(input);
         this.root = (loaded != null) ? loaded : new LinkedHashMap<>();
+        this.structure = DirectoryLayout.parse(root.get("structure"));
         this.valid = validate();
     }
 
@@ -45,6 +49,7 @@ public class YamlAppConfig implements AppConfig {
      */
     public YamlAppConfig(Map<String, Object> data) {
         this.root = (data != null) ? data : new LinkedHashMap<>();
+        this.structure = DirectoryLayout.parse(root.get("structure"));
         this.valid = validate();
     }
 
@@ -303,6 +308,18 @@ public class YamlAppConfig implements AppConfig {
         return Collections.unmodifiableList(result);
     }
 
+    // --- Struktura AD ---
+
+    @Override
+    public DirectoryLayout getDirectoryLayout() {
+        return structure.layout();
+    }
+
+    @Override
+    public List<String> getStructureErrors() {
+        return structure.errors();
+    }
+
     // --- Runtime příznaky ---
 
     @Override
@@ -445,6 +462,24 @@ public class YamlAppConfig implements AppConfig {
     }
 
     /**
+     * Hluboká kopie YAML struktury (mapy a seznamy), aby výstup nesdílel
+     * měnitelné objekty se zdrojovými daty.
+     */
+    private static Object deepCopy(Object value) {
+        if (value instanceof Map<?, ?> map) {
+            Map<String, Object> copy = new LinkedHashMap<>();
+            map.forEach((k, v) -> copy.put(String.valueOf(k), deepCopy(v)));
+            return copy;
+        }
+        if (value instanceof List<?> list) {
+            List<Object> copy = new ArrayList<>();
+            list.forEach(v -> copy.add(deepCopy(v)));
+            return copy;
+        }
+        return value;
+    }
+
+    /**
      * Vloží hodnotu do mapy pouze pokud není null.
      */
     private void putIfPresent(Map<String, Object> map, String key, Object value) {
@@ -533,7 +568,8 @@ public class YamlAppConfig implements AppConfig {
                 && getString("sql", "database") != null
                 && getString("mail", "domain") != null
                 && getString("mail", "smtp_host") != null
-                && getString("mail", "admin") != null;
+                && getString("mail", "admin") != null
+                && structure.errors().isEmpty();
     }
 
     /**
@@ -621,6 +657,12 @@ public class YamlAppConfig implements AppConfig {
             rulesOut.add(r);
         }
         output.put("rules", rulesOut);
+
+        // konvence struktury – zapsat beze změny, pouze pokud byla sekce uvedena
+        Object rawStructure = root.get("structure");
+        if (rawStructure != null) {
+            output.put("structure", deepCopy(rawStructure));
+        }
 
         return output;
     }

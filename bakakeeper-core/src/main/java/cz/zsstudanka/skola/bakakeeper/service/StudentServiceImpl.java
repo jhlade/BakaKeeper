@@ -2,6 +2,8 @@ package cz.zsstudanka.skola.bakakeeper.service;
 
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.config.AppConfig;
+import cz.zsstudanka.skola.bakakeeper.config.DirectoryLayout;
+import cz.zsstudanka.skola.bakakeeper.config.DirectoryLayout.GroupKind;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLogType;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaUAC;
@@ -213,8 +215,7 @@ public class StudentServiceImpl implements StudentService {
         String letter = (student.getClassLetter() != null) ? student.getClassLetter() : "A";
 
         // generovat unikátní DN
-        String targetOu = "OU=Trida-" + letter.toUpperCase()
-                + ",OU=Rocnik-" + year + "," + config.getLdapBaseStudents();
+        String targetOu = classOuDn(year, letter);
         String cn = surname + " " + givenName;
         String dn = "CN=" + cn + "," + targetOu;
 
@@ -277,9 +278,8 @@ public class StudentServiceImpl implements StudentService {
         ldapRepo.createUser(cn, targetOu, data);
 
         // přidat do skupin
-        String baseGroup = "CN=Skupina-Zaci," + config.getLdapBaseGlobalGroups();
-        String classGroup = "CN=Zaci-Trida-" + year + letter.toUpperCase()
-                + "," + config.getLdapBaseStudentGroups();
+        String baseGroup = studentsGlobalGroupDn();
+        String classGroup = classGroupDn(year, letter);
 
         ldapRepo.addToGroup(dn, baseGroup);
         ldapRepo.addToGroup(dn, classGroup);
@@ -309,7 +309,7 @@ public class StudentServiceImpl implements StudentService {
         ldapRepo.removeFromAllGroups(dn);
 
         // přesunout do alumni OU (vytvořit OU pro rok, pokud neexistuje)
-        String alumniOu = "OU=" + yearStr + "," + config.getLdapBaseAlumni();
+        String alumniOu = DirectoryLayout.of(config).alumniYearOuDn(yearStr, config.getLdapBaseAlumni());
         boolean moved = ldapRepo.moveObject(dn, alumniOu, true);
 
         if (!moved) {
@@ -629,11 +629,9 @@ public class StudentServiceImpl implements StudentService {
     private String moveStudentToClass(String dn, int year, String letter) {
         if (letter == null) letter = "A";
 
-        String targetOu = "OU=Trida-" + letter.toUpperCase()
-                + ",OU=Rocnik-" + year + "," + config.getLdapBaseStudents();
-        String classGroup = "CN=Zaci-Trida-" + year + letter.toUpperCase()
-                + "," + config.getLdapBaseStudentGroups();
-        String baseGroup = "CN=Skupina-Zaci," + config.getLdapBaseGlobalGroups();
+        String targetOu = classOuDn(year, letter);
+        String classGroup = classGroupDn(year, letter);
+        String baseGroup = studentsGlobalGroupDn();
 
         // ověřit, že zdrojový objekt stále existuje na uvedeném DN
         if (!ldapRepo.checkDN(dn)) {
@@ -665,17 +663,26 @@ public class StudentServiceImpl implements StudentService {
      * Odhadne třídu z DN (např. "CN=...,OU=Trida-A,OU=Rocnik-5,..." → "5.A").
      */
     private String resolveClassFromDn(String dn) {
-        if (dn == null) return null;
-        try {
-            Integer year = BakaUtils.classYearFromDn(dn);
-            String letter = BakaUtils.classLetterFromDn(dn);
-            if (year != null && letter != null) {
-                return year + "." + letter;
-            }
-        } catch (NumberFormatException ignored) {
-            // DN neobsahuje platné označení třídy
-        }
-        return null;
+        return DirectoryLayout.of(config).parseClass(dn)
+                .map(DirectoryLayout.ClassRef::label)
+                .orElse(null);
+    }
+
+    /** DN organizační jednotky třídy dle konvencí struktury. */
+    private String classOuDn(int year, String letter) {
+        return DirectoryLayout.of(config).classOuDn(year, letter, config.getLdapBaseStudents());
+    }
+
+    /** DN bezpečnostní skupiny třídy dle konvencí struktury. */
+    private String classGroupDn(int year, String letter) {
+        return "CN=" + DirectoryLayout.of(config).classGroupCn(GroupKind.STUDENTS_CLASS, year, letter)
+                + "," + config.getLdapBaseStudentGroups();
+    }
+
+    /** DN globální skupiny všech žáků dle konvencí struktury. */
+    private String studentsGlobalGroupDn() {
+        return "CN=" + DirectoryLayout.of(config).groupCn(GroupKind.STUDENTS_GLOBAL)
+                + "," + config.getLdapBaseGlobalGroups();
     }
 
     /**

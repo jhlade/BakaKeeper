@@ -1,9 +1,9 @@
 package cz.zsstudanka.skola.bakakeeper.service;
 
+import cz.zsstudanka.skola.bakakeeper.config.DirectoryLayout;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
 import cz.zsstudanka.skola.bakakeeper.model.StudentRecord;
 import cz.zsstudanka.skola.bakakeeper.repository.LDAPUserRepository;
-import cz.zsstudanka.skola.bakakeeper.utils.BakaUtils;
 
 /**
  * Implementace párování SQL záznamů s existujícími LDAP účty.
@@ -18,8 +18,16 @@ public class PairingServiceImpl implements PairingService {
 
     private final LDAPUserRepository ldapRepo;
 
+    /** konvence OU pro odvození třídy z DN */
+    private final DirectoryLayout layout;
+
     public PairingServiceImpl(LDAPUserRepository ldapRepo) {
+        this(ldapRepo, DirectoryLayout.defaults());
+    }
+
+    public PairingServiceImpl(LDAPUserRepository ldapRepo, DirectoryLayout layout) {
         this.ldapRepo = ldapRepo;
+        this.layout = (layout != null) ? layout : DirectoryLayout.defaults();
     }
 
     @Override
@@ -48,14 +56,14 @@ public class PairingServiceImpl implements PairingService {
 
         // 3. ročník (z DN)
         Integer ldapYear = null;
-        try { ldapYear = BakaUtils.classYearFromDn(ldapStudent.getDn()); } catch (NumberFormatException ignored) {}
+        try { ldapYear = layout.classYear(ldapStudent.getDn()); } catch (NumberFormatException ignored) {}
         if (ldapYear != null && sqlStudent.getClassYear() == ldapYear) {
             score += 0.25;
             yearMatch = true;
         }
 
         // 4. třída (písmeno z DN)
-        String ldapLetter = BakaUtils.classLetterFromDn(ldapStudent.getDn());
+        String ldapLetter = layout.classLetter(ldapStudent.getDn());
         if (ldapLetter != null && ldapLetter.equalsIgnoreCase(sqlStudent.getClassLetter())) {
             score += 0.25;
         }

@@ -1,5 +1,6 @@
 package cz.zsstudanka.skola.bakakeeper.service;
 
+import cz.zsstudanka.skola.bakakeeper.config.DirectoryLayout;
 import cz.zsstudanka.skola.bakakeeper.config.AppConfig;
 import cz.zsstudanka.skola.bakakeeper.config.SyncRule;
 import cz.zsstudanka.skola.bakakeeper.model.FacultyRecord;
@@ -188,11 +189,11 @@ public class SyncOrchestrator {
                     if (s.getDn() == null) return false;
                     try {
                         if (classYear != null) {
-                            Integer dnYear = cz.zsstudanka.skola.bakakeeper.utils.BakaUtils.classYearFromDn(s.getDn());
+                            Integer dnYear = DirectoryLayout.of(config).classYear(s.getDn());
                             if (dnYear == null || !dnYear.equals(classYear)) return false;
                         }
                         if (classLetter != null) {
-                            String dnLetter = cz.zsstudanka.skola.bakakeeper.utils.BakaUtils.classLetterFromDn(s.getDn());
+                            String dnLetter = DirectoryLayout.of(config).classLetter(s.getDn());
                             if (!classLetter.equalsIgnoreCase(dnLetter)) return false;
                         }
                         return true;

@@ -871,4 +871,37 @@ class RuleServiceImplTest {
                 && r.getDescription().contains("Rekonciliace")));
         verify(ldapRepo, never()).updateAttribute(anyString(), any(), anyString());
     }
+
+    @Test
+    void pravidloKategorieSVlastniStrukturou() {
+        java.util.Map<String, Object> structure = java.util.Map.of(
+                "ou", java.util.Map.of("grade", "{rocnik}. rocnik", "class", "{trida}"),
+                "categories", java.util.Map.of("UCITEL", "Pedagogove"));
+        cz.zsstudanka.skola.bakakeeper.config.DirectoryLayout layout =
+                cz.zsstudanka.skola.bakakeeper.config.DirectoryLayout.parse(structure).layout();
+        RuleServiceImpl custom = new RuleServiceImpl(ldapRepo, layout);
+
+        SyncRule ruleUcitel = new SyncRule(SyncScope.CATEGORY, "UCITEL",
+                EBakaLDAPAttributes.TITLE.attribute(), "Učitel");
+        StudentRecord pedagog = teacher("T1",
+                "CN=Ucitel,OU=Pedagogove,OU=Zamestnanci,DC=skola,DC=local",
+                "ucitel", "ucitel@skola.ext");
+        StudentRecord puvodniOu = teacher("T2",
+                "CN=Jiny,OU=Ucitele,OU=Zamestnanci,DC=skola,DC=local",
+                "jiny", "jiny@skola.ext");
+        // žák pouze v OU ročníku (bez OU=Zaci) – musí být rozpoznán podle vlastní šablony
+        StudentRecord zak = student("001", "5.A", 5,
+                "CN=Zak,OU=A,OU=5. rocnik,OU=Studenti,DC=skola,DC=local");
+
+        when(ldapRepo.updateAttribute(anyString(), any(), anyString())).thenReturn(true);
+
+        custom.applyRules(List.of(ruleUcitel), List.of(pedagog, puvodniOu, zak), true, SyncProgressListener.SILENT);
+        verify(ldapRepo).updateAttribute(pedagog.getDn(), EBakaLDAPAttributes.TITLE, "Učitel");
+        verify(ldapRepo, never()).updateAttribute(eq(puvodniOu.getDn()), eq(EBakaLDAPAttributes.TITLE), anyString());
+
+        SyncRule ruleZak = new SyncRule(SyncScope.CATEGORY, "ZAK",
+                EBakaLDAPAttributes.TITLE.attribute(), "Žák");
+        custom.applyRules(List.of(ruleZak), List.of(zak), true, SyncProgressListener.SILENT);
+        verify(ldapRepo).updateAttribute(zak.getDn(), EBakaLDAPAttributes.TITLE, "Žák");
+    }
 }

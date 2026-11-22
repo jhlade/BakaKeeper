@@ -1,5 +1,7 @@
 package cz.zsstudanka.skola.bakakeeper.gui.view;
 
+import cz.zsstudanka.skola.bakakeeper.config.DirectoryLayout;
+import cz.zsstudanka.skola.bakakeeper.settings.Settings;
 import cz.zsstudanka.skola.bakakeeper.connectors.BakaMailer;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaUAC;
 import cz.zsstudanka.skola.bakakeeper.gui.view.component.StatusBar;
@@ -637,8 +639,8 @@ public class MainView extends BorderPane {
             diffs.add(new FieldDifference("Jméno", sql.getGivenName(), ldap.getGivenName()));
         }
 
-        // třída: SQL className vs. LDAP DN → BakaUtils.classStringFromDN()
-        String ldapClass = (ldap.getDn() != null) ? BakaUtils.classStringFromDN(ldap.getDn()) : null;
+        // třída: SQL className vs. LDAP DN → DirectoryLayout.classLabel()
+        String ldapClass = (ldap.getDn() != null) ? directoryLayout().classLabel(ldap.getDn()) : null;
         if (!Objects.equals(sql.getClassName(), ldapClass)) {
             diffs.add(new FieldDifference("Třída", sql.getClassName(), ldapClass));
         }
@@ -677,7 +679,7 @@ public class MainView extends BorderPane {
                 .collect(Collectors.groupingBy(cs -> {
                     int year = cs.student().getClassYear();
                     if (year <= 0 && cs.student().getDn() != null) {
-                        Integer dnYear = BakaUtils.classYearFromDn(cs.student().getDn());
+                        Integer dnYear = directoryLayout().classYear(cs.student().getDn());
                         if (dnYear != null && dnYear > 0) return dnYear;
                     }
                     return Math.max(year, 0);
@@ -695,7 +697,7 @@ public class MainView extends BorderPane {
                                 String cn = cs.student().getClassName();
                                 if (cn != null && !cn.isBlank()) return cn;
                                 if (cs.student().getDn() != null) {
-                                    String fromDn = BakaUtils.classStringFromDN(cs.student().getDn());
+                                    String fromDn = directoryLayout().classLabel(cs.student().getDn());
                                     if (fromDn != null && !fromDn.isBlank()) return fromDn;
                                 }
                                 return "\u2014";
@@ -999,12 +1001,12 @@ public class MainView extends BorderPane {
                 diffFields.contains("Jméno"));
         row = addComparedRow(row, "Třída",
                 sql != null ? sql.getClassName() : null,
-                ldap != null && ldap.getDn() != null ? BakaUtils.classStringFromDN(ldap.getDn()) : null,
+                ldap != null && ldap.getDn() != null ? directoryLayout().classLabel(ldap.getDn()) : null,
                 diffFields.contains("Třída"));
 
         // třídní učitel – dohledat z mapy
         String studentClass = sql != null ? sql.getClassName()
-                : (ldap != null && ldap.getDn() != null ? BakaUtils.classStringFromDN(ldap.getDn()) : null);
+                : (ldap != null && ldap.getDn() != null ? directoryLayout().classLabel(ldap.getDn()) : null);
         String teacher = studentClass != null ? classTeacherNames.get(studentClass) : null;
         if (teacher != null) {
             row = addComparedRow(row, "Třídní učitel", teacher.trim(), teacher.trim(), false);
@@ -1913,5 +1915,11 @@ public class MainView extends BorderPane {
                 getStyleClass().add("sync-ok");
             }
         }
+    }
+
+    /** Konvence struktury AD z načtené konfigurace (výchozí, pokud není načtena). */
+    private static DirectoryLayout directoryLayout() {
+        Settings settings = Settings.getInstance();
+        return settings.isValid() ? DirectoryLayout.of(settings) : DirectoryLayout.defaults();
     }
 }

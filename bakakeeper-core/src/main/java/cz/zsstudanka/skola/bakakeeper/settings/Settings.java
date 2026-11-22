@@ -2,6 +2,7 @@ package cz.zsstudanka.skola.bakakeeper.settings;
 
 import cz.zsstudanka.skola.bakakeeper.components.ReportManager;
 import cz.zsstudanka.skola.bakakeeper.config.AppConfig;
+import cz.zsstudanka.skola.bakakeeper.config.DirectoryLayout;
 import cz.zsstudanka.skola.bakakeeper.config.EncryptedConfigLoader;
 import cz.zsstudanka.skola.bakakeeper.config.SyncRule;
 import cz.zsstudanka.skola.bakakeeper.config.YamlAppConfig;
@@ -321,6 +322,8 @@ public class Settings implements AppConfig {
     @Override public List<Integer> getPwdNoExpire() { return delegate().getPwdNoExpire(); }
     @Override public List<Integer> getExtMailAllowed() { return delegate().getExtMailAllowed(); }
     @Override public List<SyncRule> getRules() { return delegate().getRules(); }
+    @Override public DirectoryLayout getDirectoryLayout() { return delegate().getDirectoryLayout(); }
+    @Override public List<String> getStructureErrors() { return (config != null) ? config.getStructureErrors() : List.of(); }
 
     // porty
     @Override public int getLdapPort() { return delegate().getLdapPort(); }

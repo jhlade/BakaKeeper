@@ -1,5 +1,6 @@
 package cz.zsstudanka.skola.bakakeeper.repository.impl;
 
+import cz.zsstudanka.skola.bakakeeper.config.DirectoryLayout;
 import cz.zsstudanka.skola.bakakeeper.connectors.LDAPConnector;
 import cz.zsstudanka.skola.bakakeeper.constants.EBakaLDAPAttributes;
 import cz.zsstudanka.skola.bakakeeper.model.StudentRecord;
@@ -21,6 +22,9 @@ import java.util.Map;
 public class BakaLDAPUserRepository implements LDAPUserRepository {
 
     private final LDAPConnector ldap;
+
+    /** konvence OU pro odvození třídy žáka z DN */
+    private final DirectoryLayout layout;
 
     /** atributy požadované pro uživatelské účty */
     private static final String[] USER_ATTRIBUTES = {
@@ -57,6 +61,15 @@ public class BakaLDAPUserRepository implements LDAPUserRepository {
     };
 
     public BakaLDAPUserRepository(LDAPConnector ldap) {
+        this(ldap, DirectoryLayout.defaults());
+    }
+
+    /**
+     * @param ldap   LDAP konektor
+     * @param layout konvence OU pro odvození třídy žáka z DN
+     */
+    public BakaLDAPUserRepository(LDAPConnector ldap, DirectoryLayout layout) {
+        this.layout = (layout != null) ? layout : DirectoryLayout.defaults();
         this.ldap = ldap;
     }
 
@@ -84,7 +97,7 @@ public class BakaLDAPUserRepository implements LDAPUserRepository {
             }
 
             DataLDAP data = new DataLDAP(entry);
-            StudentRecord record = StudentMapper.fromLDAP(data);
+            StudentRecord record = StudentMapper.fromLDAP(data, layout);
             if (record != null) {
                 result.add(record);
             }
@@ -109,7 +122,7 @@ public class BakaLDAPUserRepository implements LDAPUserRepository {
             }
 
             DataLDAP data = new DataLDAP(entry);
-            StudentRecord record = StudentMapper.fromLDAP(data);
+            StudentRecord record = StudentMapper.fromLDAP(data, layout);
             if (record != null) {
                 result.add(record);
             }
