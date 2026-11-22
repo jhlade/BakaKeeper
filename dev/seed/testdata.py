@@ -74,7 +74,7 @@ EVID_DO_ABSOLVENT     = "2024-08-31"
 #   ZZD:   JMENA 23 (prvočíslo) × PRIJMENI 41 (prvočíslo) → LCM = 943
 # =============================================================================
 
-# --- Žáci – mužská příjmení (59): inspirována zvířaty, přírodou, barvami ---
+# --- Žáci – mužská příjmení (72): inspirována zvířaty, přírodou, barvami ---
 PRIJMENI_ZAK_M = [
     # zvířata
     "Liščák",    "Bobřík",    "Ježura",     "Vydrýsek",  "Vlkoun",
@@ -112,7 +112,7 @@ def _f(s: str) -> str:
 
 PRIJMENI_ZAK_F = [_f(p) for p in PRIJMENI_ZAK_M]
 
-# --- Žáci – křestní jména (31): kaledářové variace + vymyšlené přezdívky ---
+# --- Žáci – křestní jména (40 chlapeckých, 38 dívčích): kaledářové variace + vymyšlené přezdívky ---
 JMENA_ZAK_M = [
     # kaledářové variace (–oslav, –mir, –boj atd.)
     "Radoušek",  "Světlomír",  "Kvítoslav",  "Zoroslav",   "Buřivoj",
@@ -129,7 +129,7 @@ JMENA_ZAK_M = [
     "Zlumek",    "Vrkos",      "Bublík",     "Šmudla",     "Chroust",
     "Hoblík",    "Milisálek",  "Mates",
 ]
-assert len(JMENA_ZAK_M) == 34
+assert len(JMENA_ZAK_M) == 40
 
 JMENA_ZAK_F = [
     # kaledářové variace (–slava, –mila, –na)
@@ -146,7 +146,7 @@ JMENA_ZAK_F = [
     "Šmudlenka",  "Lišejka",    "Pírečka",     "Mlsnička",    "Bublinka",
     "Chroustka",  "Cihlena",    "Borka",       "Typka",
 ]
-assert len(JMENA_ZAK_F) == 34
+assert len(JMENA_ZAK_F) == 38
 
 # --- Zákonní zástupci – příjmení (41): starší, serióznější variace ---
 PRIJMENI_ZZD_M = [
@@ -168,7 +168,7 @@ assert len(PRIJMENI_ZZD_M) == 41
 
 PRIJMENI_ZZD_F = [_f(p) for p in PRIJMENI_ZZD_M]
 
-# --- Zákonní zástupci – křestní jména (23): střízlivější, uvěřitelnější ---
+# --- Zákonní zástupci – křestní jména (25 mužských, 23 ženských): střízlivější, uvěřitelnější ---
 JMENA_ZZD_M = [
     "Lišomír",   "Bobřislav",  "Ježobor",   "Vlkomír",   "Srnomil",
     "Krkavoslav","Sovomír",    "Čapibor",   "Lososlav",  "Kaproslav",
